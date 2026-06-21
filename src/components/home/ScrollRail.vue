@@ -1,22 +1,22 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed } from "vue"
 
 const props = defineProps<{
-  progress: number;
-}>();
+  progress: number
+}>()
 
 const emit = defineEmits<{
-  scrollExplore: [];
-}>();
+  scrollExplore: []
+}>()
 
 const railStyle = computed(() => ({
   transform: `scaleY(${Math.max(0.08, props.progress)})`,
-}));
+}))
 </script>
 
 <template>
   <button
-    class="scroll-rail relative pointer-events-auto z-[9] w-9 cursor-pointer self-stretch justify-self-end border-0 bg-transparent p-0 text-white max-[860px]:hidden"
+    class="scroll-rail pointer-events-auto relative z-9 w-9 cursor-pointer self-stretch justify-self-end border-0 bg-transparent p-0 text-white max-[860px]:hidden"
     type="button"
     @click="emit('scrollExplore')"
     aria-label="Scroll to explore"

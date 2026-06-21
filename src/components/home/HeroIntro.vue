@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { exploreLinks } from "./homeData";
+import { exploreLinks } from "./homeData"
 </script>
 
 <template>
   <section
-    class="intro-copy pointer-events-auto z-[8] mt-[clamp(8px,1.2vw,16px)] w-full max-w-[760px] self-start max-[860px]:mt-0 max-[860px]:max-w-none"
+    class="intro-copy pointer-events-auto z-8 mt-[clamp(8px,1.2vw,16px)] w-full max-w-190 self-start max-[860px]:mt-0 max-[860px]:max-w-none"
     aria-label="Site introduction"
   >
     <p
@@ -17,7 +17,7 @@ import { exploreLinks } from "./homeData";
       class="brand-title m-0 flex items-baseline gap-[clamp(12px,1.5vw,28px)] text-[clamp(4.4rem,5vw,6rem)] leading-[0.9] font-extrabold tracking-normal text-white max-[860px]:flex-wrap max-[860px]:gap-x-4 max-[860px]:gap-y-2 max-[860px]:text-[clamp(4rem,17vw,6.4rem)]"
     >
       <span
-        class="brand-marker inline-block h-[clamp(52px,3.45vw,66px)] w-[clamp(13px,0.98vw,19px)] self-start bg-[#ffaae6] max-[860px]:h-[50px]"
+        class="brand-marker inline-block h-[clamp(52px,3.45vw,66px)] w-[clamp(13px,0.98vw,19px)] self-start bg-[#ffaae6] max-[860px]:h-12.5"
         aria-hidden="true"
       ></span>
       <span>I tanh</span>
@@ -26,14 +26,14 @@ import { exploreLinks } from "./homeData";
     </h1>
 
     <div
-      class="blog-label relative box-border mt-[clamp(10px,0.82vw,13px)] ml-[52px] flex h-[47px] w-[min(298px,70vw)] items-center border-[3px] border-white border-t-[#ffaae6] border-r-[#ffaae6] px-[17px] text-[clamp(1.05rem,1.1vw,1.32rem)] leading-none font-medium tracking-[0.2em] whitespace-nowrap uppercase max-[860px]:ml-0"
+      class="blog-label relative mt-[clamp(10px,0.82vw,13px)] ml-13 box-border flex h-11.75 w-[min(298px,70vw)] items-center border-[3px] border-white border-t-[#ffaae6] border-r-[#ffaae6] px-4.25 text-[clamp(1.05rem,1.1vw,1.32rem)] leading-none font-medium tracking-[0.2em] whitespace-nowrap uppercase max-[860px]:ml-0"
       aria-label="Personal blog"
     >
       <span>PERSONAL BLOG</span>
     </div>
 
     <p
-      class="mt-[clamp(20px,1.8vw,26px)] ml-[52px] text-[clamp(0.95rem,1.08vw,1.28rem)] leading-tight font-medium tracking-[0.22em] max-[860px]:ml-0 max-[860px]:tracking-[0.14em]"
+      class="mt-[clamp(20px,1.8vw,26px)] ml-13 text-[clamp(0.95rem,1.08vw,1.28rem)] leading-tight font-medium tracking-[0.22em] max-[860px]:ml-0 max-[860px]:tracking-[0.14em]"
     >
       DEVELOP · DESIGN · DEEPLEARNING
     </p>
@@ -51,10 +51,10 @@ import { exploreLinks } from "./homeData";
         <li v-for="link in exploreLinks" :key="link.label" class="relative list-none">
           <a
             :href="link.href"
-            class="inline-flex items-baseline gap-2 text-[clamp(0.86rem,0.98vw,1.1rem)] font-semibold tracking-[0.18em] text-white no-underline transition duration-150 hover:translate-x-[5px] hover:text-[#ffaae6] focus-visible:translate-x-[5px] focus-visible:text-[#ffaae6] focus-visible:outline-none"
+            class="inline-flex items-baseline gap-2 text-[clamp(0.86rem,0.98vw,1.1rem)] font-semibold tracking-[0.18em] text-white no-underline transition duration-150 hover:translate-x-1.25 hover:text-[#ffaae6] focus-visible:translate-x-1.25 focus-visible:text-[#ffaae6] focus-visible:outline-none"
           >
             <span>{{ link.label }}</span>
-            <small class="text-inherit tracking-[0.08em]">/ {{ link.cjk }}</small>
+            <small class="tracking-[0.08em] text-inherit">/ {{ link.cjk }}</small>
           </a>
         </li>
       </ul>

@@ -1,19 +1,19 @@
 <script setup lang="ts">
 defineProps<{
-  illustrationUrl: string;
-}>();
+  illustrationUrl: string
+}>()
 </script>
 
 <template>
   <img
-    class="absolute inset-x-0 top-0 z-0 h-[calc(100%-clamp(20px,2vw,33px))] w-full object-cover object-top opacity-90 saturate-[1.08] contrast-[1.04]"
+    class="absolute inset-x-0 top-0 z-0 h-[calc(100%-clamp(20px,2vw,33px))] w-full object-cover object-top opacity-90 contrast-[1.04] saturate-[1.08]"
     :src="illustrationUrl"
     alt=""
     loading="eager"
   />
   <div class="stage-tint absolute inset-0 z-[1]" aria-hidden="true"></div>
   <div
-    class="blueprint-grid absolute inset-0 z-[2] pointer-events-none opacity-90 mix-blend-screen"
+    class="blueprint-grid pointer-events-none absolute inset-0 z-[2] opacity-90 mix-blend-screen"
     aria-hidden="true"
   ></div>
   <div class="stage-markers absolute z-[8] grid gap-[19px] max-[860px]:hidden" aria-hidden="true">

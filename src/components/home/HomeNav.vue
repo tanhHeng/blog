@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { navItems } from "./homeData";
+import { navItems } from "./homeData"
 </script>
 
 <template>
   <nav
-    class="home-nav relative pointer-events-auto z-[8] mt-[clamp(30px,5.45vw,60px)] flex items-end gap-[clamp(22px,3.8vw,72px)] self-start text-white max-[860px]:mt-[30px] max-[860px]:justify-between max-[860px]:gap-3"
+    class="home-nav pointer-events-auto relative z-8 mt-[clamp(30px,5.45vw,60px)] flex items-end gap-[clamp(22px,3.8vw,72px)] self-start text-white max-[860px]:mt-7.5 max-[860px]:justify-between max-[860px]:gap-3"
     aria-label="Primary navigation"
   >
     <a
       v-for="item in navItems"
       :key="item.label"
-      class="nav-link relative grid min-w-[clamp(70px,4.9vw,88px)] gap-1 no-underline uppercase transition duration-200 max-[860px]:min-w-0"
+      class="nav-link relative grid min-w-[clamp(70px,4.9vw,88px)] gap-1 uppercase no-underline transition duration-200 max-[860px]:min-w-0"
       :href="item.href"
     >
       <span class="text-[clamp(0.72rem,0.84vw,1rem)] leading-none font-bold">{{ item.cjk }}</span>
