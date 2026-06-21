@@ -21,6 +21,7 @@
     "vue": "^3.5.38"
   },
   "devDependencies": {
+    "typescript": "^6.0.3",
     "vite-plus": "catalog:"
   },
   "engines": {
