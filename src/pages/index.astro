@@ -67,13 +67,21 @@ import 'animate.css'
     let currentSectionIndex = 0;
     let canScroll = true; // Cooldown flag
     
-    function updateSectionVisibility() {
+    function updateSectionVisibility(direction = 'down') {
+      const entranceAnimation = direction === 'down' ? 'animate__fadeInUp' : 'animate__fadeInDown';
+      const exitAnimation = direction === 'down' ? 'animate__fadeOutUp' : 'animate__fadeOutDown';
+
       sections.forEach((section, index) => {
         if (index === currentSectionIndex) {
-          section.classList.remove('animate__fadeOut');
+          section.classList.remove('animate__fadeOutUp', 'animate__fadeOutDown');
           section.style.display = 'flex';
+          section.classList.remove('animate__fadeInUp', 'animate__fadeInDown');
+          void section.offsetWidth;
+          section.classList.add(entranceAnimation);
         } else {
-          section.classList.add('animate__fadeOut');
+          section.classList.remove('animate__fadeOutUp', 'animate__fadeOutDown');
+          void section.offsetWidth;
+          section.classList.add(exitAnimation);
         }
       });
     }
@@ -87,6 +95,7 @@ import 'animate.css'
       if (!canScroll) return;
       
       let needsUpdate = false;
+      let direction = 'down';
       
       if (e.deltaY > 0) {
         // Scroll down - next section
@@ -98,13 +107,13 @@ import 'animate.css'
         // Scroll up - previous section
         if (currentSectionIndex > 0) {
           currentSectionIndex--;
+          direction = 'up';
           needsUpdate = true;
         }
       }
       
       if (needsUpdate) {
-        updateSectionVisibility();
-        console.log(currentSectionIndex);
+        updateSectionVisibility(direction);
         
         // Start 800ms cooldown
         canScroll = false;
@@ -132,7 +141,8 @@ p {
   --animate-duration: 800ms;
 }
 
-.animate__animated.animate__fadeOut {
+.animate__animated.animate__fadeOutUp,
+.animate__animated.animate__fadeOutDown {
   --animate-duration: 500ms;
 }
 
