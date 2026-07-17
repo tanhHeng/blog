@@ -12,79 +12,78 @@ $title-font-size: 1.75rem;
 $navbar-actual-height: $title-font-size + 2 * $navbar-margin-vertical;
 
 .navbar {
-margin-left: $navbar-margin-left;
-margin-top: $navbar-margin-vertical;
-margin-bottom: $navbar-margin-vertical;
-height: $title-font-size;
-line-height: 1;
+	margin-left: $navbar-margin-left;
+	margin-top: $navbar-margin-vertical;
+	margin-bottom: $navbar-margin-vertical;
+	height: $title-font-size;
+	line-height: 1;
 
+	.navbar-content {
+		position: fixed;
+		display: flex;
+		align-items: center;
+		gap: $content-font-size;
+		flex-wrap: nowrap;
+	}
 
-.navbar-content {
-    position: fixed;
-    display: flex;
-    align-items: center;
-    gap: $content-font-size;
-    flex-wrap: nowrap;
-}
+	.circles {
+		display: flex;
+		gap: $circle-size;
+		align-items: center;
+	}
 
-.circles {
-    display: flex;
-    gap: $circle-size;
-    align-items: center;
-}
+	.circle {
+		width: $circle-size;
+		height: $circle-size;
+		border-radius: 50%;
+		flex-shrink: 0;
+		margin-top: $circle-margin-top;
 
-.circle {
-    width: $circle-size;
-    height: $circle-size;
-    border-radius: 50%;
-    flex-shrink: 0;
-    margin-top: $circle-margin-top;
+		&.circle-ex-light {
+			background-color: $ex-light-blue;
+		}
 
-    &.circle-ex-light {
-    background-color: $ex-light-blue;
-    }
+		&.circle-light {
+			background-color: $light-blue;
+		}
 
-    &.circle-light {
-    background-color: $light-blue;
-    }
+		&.circle-primary {
+			background-color: $primary-blue;
+		}
+	}
 
-    &.circle-primary {
-    background-color: $primary-blue;
-    }
-}
+	.title {
+		font-family: 'Playfair Display SC', serif;
+		font-size: $title-font-size;
+		font-weight: 400;
+		margin: 0;
+		color: $home-title-color;
+		white-space: nowrap;
+		text-decoration: none;
+	}
 
-.title {
-    font-family: 'Playfair Display SC', serif;
-    font-size: $title-font-size;
-    font-weight: 400;
-    margin: 0;
-    color: $home-title-color;
-    white-space: nowrap;
-    text-decoration: none;
-}
+	.nav-link {
+		font-family: 'Playfair Display', serif;
+		font-size: $content-font-size;
+		color: $light-blue;
+		text-decoration: none;
+		white-space: nowrap;
+		transition: 300ms ease-out;
 
-.nav-link {
-    font-family: 'Playfair Display', serif;
-    font-size: $content-font-size;
-    color: $light-blue;
-    text-decoration: none;
-    white-space: nowrap;
-    transition: 300ms ease-out;
+		&:hover {
+			color: $primary-blue;
+			margin: 0 0.5rem;
+		}
 
-    &:hover {
-    color: $primary-blue;
-    margin: 0 0.5rem;
-    }
+		&.active {
+			color: $primary-blue;
+		}
+	}
 
-    &.active {
-    color: $primary-blue;
-    }
-}
-
-.divider {
-    font-family: 'Jeju Myeongjo', serif;
-    font-size: $content-font-size;
-    color: $ex-light-blue;
-    user-select: none;
-}
+	.divider {
+		font-family: 'Jeju Myeongjo', serif;
+		font-size: $content-font-size;
+		color: $ex-light-blue;
+		user-select: none;
+	}
 }
