@@ -1,13 +1,12 @@
 ---
 import DefaultLayout from '../layouts/DefaultLayout.astro';
 import '../styles/global.scss';
-import 'animate.css'
 ---
 
 <DefaultLayout>
 	<div class="left-content">
 		<div class="left-container">
-			<section class="main-content animate__animated animate__fadeInUp">
+			<section class="main-content is-active">
 				<div class="subtitle">
 					<p>Welcom to</p>
 					<img src="/svg/X.svg" alt="X"/>
@@ -24,7 +23,7 @@ import 'animate.css'
 					<p>Life is Piano.</p>
 				</div>
 			</section>
-			<section class="aboutme-content animate__animated animate__fadeInUp" style="display: none">
+			<section class="aboutme-content" hidden>
 				<p class="title">About Me</p>
 				<p class="text">这里是 tanh丶桁~一名深度学习爱好者，同时也是业余平面设计师，在代码、算法与视觉之间反复横跳的交叉领域探索者。<br>我热衷于用技术解决实际问题，也用设计表达技术背后的温度。GitHub 是我沉淀技术思考、与社区协作共创的地方——你看到的每个仓库都是我某一领域的实践痕迹。</p>
 				<div class="tags">
@@ -40,7 +39,7 @@ import 'animate.css'
 					))}
 				</div>
 			</section>
-			<section class="recent-content animate__animated animate__fadeInUp" style="display: none">
+			<section class="recent-content" hidden>
 				<p class="title">Recent</p>
 				<div class="recent-container">
 					<p class="recent-index">01</p>
@@ -53,7 +52,7 @@ import 'animate.css'
 					</div>
 				</div>
 			</section>
-			<section class="footpage-content animate__animated animate__fadeInUp" style="display: none;">
+			<section class="footpage-content" hidden>
 				<p class="signature">Life is Piano. You are Pianist.</p>
 				<p class="footnote">tanh.moe | Personal Blog | All Rights Reserved</p>
 			</section>
@@ -63,65 +62,56 @@ import 'animate.css'
 
 <script is:inline>
   (function() {
-    const sections = document.querySelectorAll('.left-container section');
+    const sections = Array.from(document.querySelectorAll('.left-container section'));
     let currentSectionIndex = 0;
-    let canScroll = true; // Cooldown flag
+    let isTransitioning = false;
+    const animationClasses = [
+      'animate__animated',
+      'animate__fadeInUp',
+      'animate__fadeInDown',
+      'animate__fadeOutUp',
+      'animate__fadeOutDown',
+    ];
     
-    function updateSectionVisibility(direction = 'down') {
+    function transitionTo(nextSectionIndex, direction) {
+      const currentSection = sections[currentSectionIndex];
+      const nextSection = sections[nextSectionIndex];
       const entranceAnimation = direction === 'down' ? 'animate__fadeInUp' : 'animate__fadeInDown';
       const exitAnimation = direction === 'down' ? 'animate__fadeOutUp' : 'animate__fadeOutDown';
 
-      sections.forEach((section, index) => {
-        if (index === currentSectionIndex) {
-          section.classList.remove('animate__fadeOutUp', 'animate__fadeOutDown');
-          section.style.display = 'flex';
-          section.classList.remove('animate__fadeInUp', 'animate__fadeInDown');
-          void section.offsetWidth;
-          section.classList.add(entranceAnimation);
-        } else {
-          section.classList.remove('animate__fadeOutUp', 'animate__fadeOutDown');
-          void section.offsetWidth;
-          section.classList.add(exitAnimation);
-        }
-      });
+      isTransitioning = true;
+      nextSection.hidden = false;
+      currentSection.classList.remove(...animationClasses, 'is-active');
+      nextSection.classList.remove(...animationClasses);
+      currentSection.classList.add('is-leaving', 'animate__animated', exitAnimation);
+      nextSection.classList.add('is-active', 'animate__animated', entranceAnimation);
+
+      let completedAnimations = 0;
+      const finishTransition = function() {
+        completedAnimations += 1;
+        if (completedAnimations !== 2) return;
+
+        currentSection.hidden = true;
+        currentSection.classList.remove(...animationClasses, 'is-leaving');
+        nextSection.classList.remove(...animationClasses);
+        currentSectionIndex = nextSectionIndex;
+        isTransitioning = false;
+      };
+
+      currentSection.addEventListener('animationend', finishTransition, { once: true });
+      nextSection.addEventListener('animationend', finishTransition, { once: true });
     }
-    
-    // Initialize: show first section only
-    updateSectionVisibility();
-    
-    // Handle scroll events with cooldown
+
     window.addEventListener('wheel', function(e) {
-      // Only process if not in cooldown
-      if (!canScroll) return;
-      
-      let needsUpdate = false;
-      let direction = 'down';
-      
-      if (e.deltaY > 0) {
-        // Scroll down - next section
-        if (currentSectionIndex < sections.length - 1) {
-          currentSectionIndex++;
-          needsUpdate = true;
-        }
-      } else {
-        // Scroll up - previous section
-        if (currentSectionIndex > 0) {
-          currentSectionIndex--;
-          direction = 'up';
-          needsUpdate = true;
-        }
-      }
-      
-      if (needsUpdate) {
-        updateSectionVisibility(direction);
-        
-        // Start 800ms cooldown
-        canScroll = false;
-        setTimeout(function() {
-          canScroll = true;
-        }, 800);
-      }
-    });
+      e.preventDefault();
+      if (isTransitioning || e.deltaY === 0) return;
+
+      const direction = e.deltaY > 0 ? 'down' : 'up';
+      const nextSectionIndex = currentSectionIndex + (direction === 'down' ? 1 : -1);
+      if (nextSectionIndex < 0 || nextSectionIndex >= sections.length) return;
+
+      transitionTo(nextSectionIndex, direction);
+    }, { passive: false });
   })();
 </script>
 
@@ -137,13 +127,15 @@ p {
 	margin: 0;
 }
 
-.animate__animated.animate__fadeInUp {
-  --animate-duration: 800ms;
+.left-container section[hidden] {
+	display: none;
 }
 
+.animate__animated.animate__fadeInUp,
+.animate__animated.animate__fadeInDown,
 .animate__animated.animate__fadeOutUp,
 .animate__animated.animate__fadeOutDown {
-  --animate-duration: 500ms;
+  --animate-duration: 600ms;
 }
 
 .left-content {
