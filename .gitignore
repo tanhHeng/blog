@@ -26,3 +26,6 @@ pnpm-debug.log*
 .design/
 
 .vscode/
+
+# installed skills
+.agents/skills
