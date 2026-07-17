@@ -1,17 +1,309 @@
 ---
-
+import DefaultLayout from '../layouts/DefaultLayout.astro';
+import '../styles/global.scss';
+import 'animate.css'
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<DefaultLayout>
+	<div class="left-content">
+		<div class="left-container">
+			<section class="main-content animate__animated animate__fadeInUp">
+				<div class="subtitle">
+					<p>Welcom to</p>
+					<img src="/svg/X.svg" alt="X"/>
+					<img src="/svg/X.svg" alt="X"/>
+					<img src="/svg/X.svg" alt="X"/>
+				</div>
+				<h1 class="title">tanh_Heng's Blog</h1>
+				<div class="signature">
+					<div class="circles-grid">
+						{Array.from({ length: 40 }).map(() => (
+							<span class="circle"></span>
+						))}
+					</div>
+					<p>Life is Piano.</p>
+				</div>
+			</section>
+			<section class="aboutme-content animate__animated animate__fadeInUp" style="display: none">
+				<p class="title">About Me</p>
+				<p class="text">这里是 tanh丶桁~一名深度学习爱好者，同时也是业余平面设计师，在代码、算法与视觉之间反复横跳的交叉领域探索者。<br>我热衷于用技术解决实际问题，也用设计表达技术背后的温度。GitHub 是我沉淀技术思考、与社区协作共创的地方——你看到的每个仓库都是我某一领域的实践痕迹。</p>
+				<div class="tags">
+					<p class="tag-title">language</p>
+					{Array.from(["python", "java"]).map((lang) => (
+						<p class="tag">{lang}</p>
+					))}
+				</div>
+				<div class="tags">
+					<p class="tag-title">interest</p>
+					{Array.from(["sleep", "eat", "graphic design", "deep learning"]).map((lang) => (
+						<p class="tag">{lang}</p>
+					))}
+				</div>
+			</section>
+			<section class="recent-content animate__animated animate__fadeInUp" style="display: none">
+				<p class="title">Recent</p>
+				<div class="recent-container">
+					<p class="recent-index">01</p>
+					<div class="recent-info">
+						<p class="recent-title">此功能仍在开发中</p>
+						<div class="recent-detail">
+							<p>2026-07-17</p>
+							<p>Developing</p>
+						</div>
+					</div>
+				</div>
+			</section>
+			<section class="footpage-content animate__animated animate__fadeInUp" style="display: none;">
+				<p class="signature">Life is Piano. You are Pianist.</p>
+				<p class="footnote">tanh.moe | Personal Blog | All Rights Reserved</p>
+			</section>
+		</div>
+	</div>
+</DefaultLayout>
+
+<script is:inline>
+  (function() {
+    const sections = document.querySelectorAll('.left-container section');
+    let currentSectionIndex = 0;
+    let canScroll = true; // Cooldown flag
+    
+    function updateSectionVisibility() {
+      sections.forEach((section, index) => {
+        if (index === currentSectionIndex) {
+          section.classList.remove('animate__fadeOut');
+          section.style.display = 'flex';
+        } else {
+          section.classList.add('animate__fadeOut');
+        }
+      });
+    }
+    
+    // Initialize: show first section only
+    updateSectionVisibility();
+    
+    // Handle scroll events with cooldown
+    window.addEventListener('wheel', function(e) {
+      // Only process if not in cooldown
+      if (!canScroll) return;
+      
+      let needsUpdate = false;
+      
+      if (e.deltaY > 0) {
+        // Scroll down - next section
+        if (currentSectionIndex < sections.length - 1) {
+          currentSectionIndex++;
+          needsUpdate = true;
+        }
+      } else {
+        // Scroll up - previous section
+        if (currentSectionIndex > 0) {
+          currentSectionIndex--;
+          needsUpdate = true;
+        }
+      }
+      
+      if (needsUpdate) {
+        updateSectionVisibility();
+        console.log(currentSectionIndex);
+        
+        // Start 800ms cooldown
+        canScroll = false;
+        setTimeout(function() {
+          canScroll = true;
+        }, 800);
+      }
+    });
+  })();
+</script>
+
+<style scoped lang="scss">
+@use '../styles/global.scss' as *;
+@use '../styles/Navbar.scss' as navbar;
+
+body, html {
+	overflow: hidden;
+}
+
+p {
+	margin: 0;
+}
+
+.animate__animated.animate__fadeInUp {
+  --animate-duration: 800ms;
+}
+
+.animate__animated.animate__fadeOut {
+  --animate-duration: 500ms;
+}
+
+.left-content {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	// position:;
+	width: calc(100vw - 70.5vh);
+	height: calc(100vh - navbar.$navbar-actual-height);
+}
+
+.left-container {
+	width: 40rem;
+	section {
+		position: absolute;
+		width: 40rem;
+		margin-top: 23vh;
+		// animation-duration: 1s;
+	}
+}
+
+.title {
+	font-family: $font-family-default;
+	font-size: $font-size-title;
+	color: $home-title-color;
+	margin: 0;
+	font-weight: 500;
+}
+
+.main-content {
+	display: flex;
+	flex-direction: column;
+	margin-top: 23vh;
+	.subtitle {
+		display: flex;
+		gap: 1rem;
+		p {
+			font-family: $font-family-default;
+			font-size: $font-size-larger-2;
+			color: $primary-blue;
+			margin: 0;
+			line-height: 1;
+		}
+		img {
+			width: $font-size-larger-2;
+			height: $font-size-larger-2;
+		}
+	}
+	.signature {
+		display: flex;
+
+		margin-top: 2rem;
+
+		.circles-grid {
+			display: grid;
+			grid-template-columns: repeat(10, 0.5rem);
+			grid-template-rows: repeat(4, 0.5rem);
+			gap: 2rem;
+			
+			.circle {
+				width: 0.5rem;
+				height: 0.5rem;
+				border-radius: 50%;
+				background-color: $ex-light-blue;
+			}
+		}
+
+		p {
+			font-family: $font-family-special;
+			font-size: $font-size-title;
+			color: $light-blue;
+			margin-left: 2rem;
+			margin-top: -0.5rem;
+			line-height: 1;
+		}
+	}
+}
+
+
+.aboutme-content {
+
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+
+	.text {
+		font-family: $font-family-chinese;
+		font-size: $font-size-content;
+		color: $content-color;
+		line-height: 2;
+		margin: 0;
+	}
+
+	.tags {
+		display: flex;
+		align-items: left;
+		gap: 1rem;
+		margin: 0;
+		color: $primary-blue;
+		font-family: $font-family-heading;
+		line-height: 1;
+
+		.tag-title {
+			font-weight: bold;
+			margin: 0;
+		}
+
+		.tag {
+			font-weight: normal;
+			margin: 0;
+		}
+	}
+}
+
+.recent-content {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+
+	.recent-container {
+		display: flex;
+		flex-direction: row;
+		gap: 1rem;
+		font-size: $font-size-larger-1;
+
+		.recent-index {
+			font-family: $font-family-default;
+			width: 2rem;
+			height: 2rem;
+			text-align: center;
+			color: #FFFFFF;
+			background-color: $primary-blue;
+		}
+
+		.recent-title {
+			font-family: $font-family-chinese;
+			color: $content-color;
+			line-height: 1;
+		}
+
+		.recent-detail {
+			display: flex;
+			flex-direction: row;
+			gap: 1rem;
+			font-size: $font-size-content;
+			color: $light-blue;
+			line-height: 2;
+		}
+
+	}
+}
+
+.footpage-content {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0;
+
+	.signature {
+		margin-top: 5vh;
+		font-size: 4rem;
+		font-family: $font-family-special;
+		color: $primary-blue;
+		letter-spacing: 2px;
+	}
+	.footnote {
+		font-size: $font-size-larger-1;
+		font-weight: 500;
+		color: $light-blue;
+	}
+}
+
+</style>
