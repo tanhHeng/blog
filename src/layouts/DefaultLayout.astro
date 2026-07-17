@@ -1,0 +1,167 @@
+---
+import Navbar from '../components/Navbar.astro';
+import DynamicCircles from '../components/DynamicCircles.astro';
+import MouseCircle from '../components/MouseCircle.astro';
+import '../styles/global.scss';
+import 'animate.css'
+
+const {activePage} = Astro.props
+---
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" href="/favicon.png" />
+		<meta name="viewport" content="width=device-width" />
+		<meta name="generator" content={Astro.generator} />
+	</head>
+	<body>
+		<DynamicCircles />
+		<MouseCircle />
+		<Navbar activePage={activePage} />
+        <p class="left-decoration">scoll to<br>explore</p>
+        <p class="right-decoration">math<br>physics<br>geography</p>
+        <slot />
+        <img src="/img/hero.png" alt="Hero Image" class="hero-image" />
+        <div class="rotating-circles-decoration">
+            <div class="hollow-circle" style="width: 40vh; height: 40vh;">
+                <span class="rotating-dot dot-1"></span>
+                <span class="rotating-dot dot-2"></span>
+            </div>
+            <div class="hollow-circle" style="width: 50vh; height: 50vh;">
+                <span class="rotating-dot dot-1"></span>
+                <span class="rotating-dot dot-2"></span>
+            </div>
+        </div>
+	</body>
+</html>
+
+<style scoped lang="scss">
+@use '../styles/global.scss' as *;
+@use '../styles/Navbar.scss' as navbar;
+
+slot {
+    width: calc(100vw - 70.5vh);
+}
+
+p {
+	margin: 0;
+}
+
+.content {
+	display: fixed;
+}
+
+.left-decoration {
+	font-family: $font-family-heading;
+	position: fixed;
+	left: navbar.$navbar-margin-left;
+	top: navbar.$navbar-actual-height;
+	font-size: $font-size-larger-1;
+	line-height: 1.5;
+	letter-spacing: 1px;
+	color: $light-blue;
+	white-space: nowrap;
+	margin: 0;
+}
+
+.right-decoration {
+	font-family: $font-family-heading;
+	position: fixed;
+	right: calc(70.5vh + navbar.$navbar-margin-left);
+	bottom: navbar.$navbar-margin-vertical;
+	font-size: $font-size-larger-1;
+	text-align: right;
+	letter-spacing: 1px;
+	color: $light-blue;
+	white-space: nowrap;
+	margin: 0;
+}
+
+.hero-image {
+	position: fixed;
+	right: 0;
+	top: 0;
+	height: 100vh;
+}
+
+.rotating-circles-decoration {
+	position: fixed;
+	left: -1vh;
+	bottom: 7vh;
+	pointer-events: none;
+	
+	.hollow-circle {
+		position: absolute;
+		left: 0;
+		bottom: 0;
+		border: 2px solid $ex-light-blue;
+		border-radius: 50%;
+		transform: translate(-50%, 50%);
+		
+		
+		&:nth-child(1) {
+			.rotating-dot {
+				
+				&.dot-1 {
+					transform: rotate(-90deg) translateX(20vh);
+					animation: rotate-20vh 7s linear infinite;
+				}
+				
+				&.dot-2 {
+					transform: rotate(-90deg) translateX(20vh);
+					animation: rotate-20vh 7s linear infinite 3.5s forwards;
+				}
+				
+			}
+		}
+		
+		&:nth-child(2) {
+			.rotating-dot {
+				
+				&.dot-1 {
+					transform: rotate(-90deg) translateX(25vh);
+					animation: rotate-25vh 10s linear infinite;
+				}
+				
+				&.dot-2 {
+					transform: rotate(-90deg) translateX(25vh);
+					animation: rotate-25vh 10s linear infinite 5s forwards;
+				}
+				
+			}
+		}
+		
+		.rotating-dot {
+			position: absolute;
+			width: 12px;
+			height: 12px;
+			border-radius: 50%;
+			background-color: $light-blue;
+			top: 50%;
+			left: 50%;
+			margin: -6px 0 0 -6px;
+		}
+	}
+}
+
+@keyframes rotate-20vh {
+	from {
+		transform: rotate(-90deg) translateX(20vh);
+	}
+	to {
+		transform: rotate(90deg) translateX(20vh);
+	}
+}
+
+@keyframes rotate-25vh {
+	from {
+		transform: rotate(-90deg) translateX(25vh);
+	}
+	to {
+		transform: rotate(90deg) translateX(25vh);
+	}
+}
+
+
+</style>

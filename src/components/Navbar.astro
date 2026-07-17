@@ -1,0 +1,35 @@
+---
+const { activePage = 'Home' } = Astro.props;
+
+const navLinks = [
+  { name: 'Home', href: '/' },
+  { name: 'About', href: '/about' },
+  { name: 'Article', href: '/articles' },
+  { name: 'Novel', href: '/novel' }
+];
+---
+
+<nav class="navbar">
+  <div class="navbar-content">
+    <a href="/" class="title">TANH.MOE</a>
+    <div class="circles">
+      <span class="circle circle-ex-light"></span>
+      <span class="circle circle-light"></span>
+      <span class="circle circle-primary"></span>
+    </div>
+    <span class="divider">|</span>
+    {navLinks.map((link, index) => (
+      <>
+        <a href={link.href} class:list={['nav-link', { active: link.name === activePage }]}>
+          {link.name}
+        </a>
+        {index < navLinks.length - 1 && <span class="divider">|</span>}
+      </>
+    ))}
+    <span class="divider">|</span>
+  </div>
+</nav>
+
+<style scoped lang="scss">
+@forward '../styles/Navbar.scss';
+</style>

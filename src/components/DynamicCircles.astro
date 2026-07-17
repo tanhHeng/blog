@@ -1,0 +1,347 @@
+---
+interface Props {
+  minRadius?: number;
+  maxRadius?: number;
+  minOrbitOffset?: number;
+  maxOrbitOffset?: number;
+  useMask?: boolean;
+}
+
+interface Circle {
+  id: number;
+  x: number;
+  y: number;
+  radius: number;
+  orbitOffset: number;
+  orbitOffsetX: number;
+  orbitOffsetY: number;
+  opacity: number;
+  duration: number;
+  direction: 'normal' | 'reverse';
+}
+
+const { 
+  minRadius = 7, 
+  maxRadius = 20,
+  minOrbitOffset = 20, // percentage
+  maxOrbitOffset = 50,  // percentage
+  useMask = true
+} = Astro.props;
+
+// Generate random circles on each render
+const circleCount: number = Math.floor(Math.random() * 7) + 12; // 12-18 circles
+const rightBoundary: number = 70.5; // in vw
+const circles: Circle[] = [];
+
+// Helper: Check if point (px, py) is inside circle (cx, cy, r)
+const isPointInCircle = (px: number, py: number, cx: number, cy: number, r: number): boolean => {
+  const dx = px - cx;
+  const dy = py - cy;
+  return (dx * dx + dy * dy) < (r * r);
+};
+
+// Helper: Calculate distance between two points
+const distance = (x1: number, y1: number, x2: number, y2: number): number => {
+  const dx = x1 - x2;
+  const dy = y1 - y2;
+  return Math.sqrt(dx * dx + dy * dy);
+};
+
+// Helper: Check if two rotating circles can intersect during rotation
+// When a circle rotates, its center traces a circle of radius = orbitOffset around (x, y)
+// At any point during rotation, the circle occupies space from its center minus radius to center plus radius
+// Two rotating circles can intersect if their swept annuli (ring-shaped regions) overlap
+const canIntersectDuringRotation = (
+  x1: number, y1: number, r1: number, orbitOffset1: number, 
+  x2: number, y2: number, r2: number, orbitOffset2: number
+): boolean => {
+  // Distance between the two orbit centers
+  const centerDist = distance(x1, y1, x2, y2);
+  
+  // Each circle sweeps out a torus (annulus in 2D)
+  // Inner boundary: max(0, orbitOffset - radius)
+  // Outer boundary: orbitOffset + radius
+  const circle1Inner = Math.max(0, orbitOffset1 - r1);
+  const circle1Outer = orbitOffset1 + r1;
+  const circle2Inner = Math.max(0, orbitOffset2 - r2);
+  const circle2Outer = orbitOffset2 + r2;
+  
+  // Two annuli intersect if:
+  // The outer radius of one can reach the inner radius of the other
+  // This happens when: centerDist - circle1Outer <= circle2Outer AND centerDist - circle2Outer <= circle1Outer
+  // Simplified: centerDist <= circle1Outer + circle2Outer AND centerDist + circle1Inner >= circle2Inner AND centerDist + circle2Inner >= circle1Inner
+  
+  // More direct: the annuli overlap if the closest approach is less than the sum of outer radii
+  // and the farthest reach can still touch
+  if (centerDist <= circle1Outer + circle2Outer) {
+    // They can potentially intersect
+    // But we also need to check they're not too far in the inner regions
+    // If centerDist > circle1Outer + circle2Inner, circle 1's outer can't reach circle 2's inner
+    return true; // Conservative: if outer boundaries can touch, consider it an intersection
+  }
+  
+  return false;
+};
+
+// Helper: Count how many existing circles the new circle would intersect during rotation
+const countIntersections = (x: number, y: number, r: number, orbitOffset: number, existingCircles: Circle[]): number => {
+  let count = 0;
+  for (const circle of existingCircles) {
+    if (canIntersectDuringRotation(x, y, r, orbitOffset, circle.x, circle.y, circle.radius, circle.orbitOffset)) {
+      count++;
+    }
+  }
+  return count;
+};
+
+// Helper: Check if adding this circle would cause any existing circle to exceed 3 intersections
+const wouldCauseExistingToExceedLimit = (
+  x: number, y: number, r: number, orbitOffset: number, existingCircles: Circle[]
+): boolean => {
+  for (const circle of existingCircles) {
+    if (canIntersectDuringRotation(x, y, r, orbitOffset, circle.x, circle.y, circle.radius, circle.orbitOffset)) {
+      // Count how many circles this existing circle already intersects with
+      let existingIntersections = 0;
+      for (const other of existingCircles) {
+        if (other.id !== circle.id && canIntersectDuringRotation(
+          circle.x, circle.y, circle.radius, circle.orbitOffset,
+          other.x, other.y, other.radius, other.orbitOffset
+        )) {
+          existingIntersections++;
+        }
+      }
+      // If this existing circle already has 3 intersections, adding new one would exceed limit
+      if (existingIntersections >= 3) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
+
+// Helper: Check if the new circle's orbit center is inside any existing circle's swept area
+// This ensures orbit centers don't overlap with the area another circle sweeps through
+const isOrbitCenterInsideSweptArea = (x: number, y: number, existingCircles: Circle[]): boolean => {
+  for (const circle of existingCircles) {
+    // The swept area is an annulus with outer radius = orbitOffset + radius
+    const outerRadius = circle.orbitOffset + circle.radius;
+    if (isPointInCircle(x, y, circle.x, circle.y, outerRadius)) {
+      return true;
+    }
+  }
+  return false;
+};
+
+// Helper: Check if any existing orbit center is inside this circle's swept area
+const wouldContainExistingOrbitCenter = (
+  x: number, y: number, r: number, orbitOffset: number, existingCircles: Circle[]
+): boolean => {
+  const outerRadius = orbitOffset + r;
+  for (const circle of existingCircles) {
+    if (isPointInCircle(circle.x, circle.y, x, y, outerRadius)) {
+      return true;
+    }
+  }
+  return false;
+};
+
+const maxAttempts: number = 100; // Prevent infinite loops
+
+for (let i = 0; i < circleCount; i++) {
+  let validPosition = false;
+  let attempts = 0;
+  let x: number, y: number, radius: number, orbitOffsetPercent: number, orbitOffset: number;
+  
+  while (!validPosition && attempts < maxAttempts) {
+    attempts++;
+    
+    // Random radius using parameters
+    radius = Math.random() * (maxRadius - minRadius) + minRadius;
+    
+    // Orbit offset: between minOrbitOffset% and maxOrbitOffset% of radius
+    orbitOffsetPercent = (Math.random() * (maxOrbitOffset - minOrbitOffset) + minOrbitOffset) / 100;
+    orbitOffset = orbitOffsetPercent * radius;
+    
+    // Allow circles to clip at edges - position centers anywhere in the viewport
+    const minX = 0;
+    const maxX = rightBoundary; // Can extend beyond but center stays within
+    const minY = 0;
+    const maxY = 100; // Full viewport height
+    
+    // Uniformly distributed position across entire allowed area
+    x = Math.random() * (maxX - minX) + minX; // in vw
+    y = Math.random() * (maxY - minY) + minY; // in vh
+    
+    // Check constraints accounting for rotation
+    const orbitCenterInside = isOrbitCenterInsideSweptArea(x, y, circles);
+    const containsExistingCenter = wouldContainExistingOrbitCenter(x, y, radius, orbitOffset, circles);
+    const intersectionCount = countIntersections(x, y, radius, orbitOffset, circles);
+    const wouldBreakExisting = wouldCauseExistingToExceedLimit(x, y, radius, orbitOffset, circles);
+    
+    // Valid if: 
+    // 1. orbit center not inside any circle's swept area
+    // 2. this circle's swept area doesn't contain any existing orbit center
+    // 3. new circle intersects with at most 3 circles during rotation
+    // 4. adding this circle won't cause any existing circle to exceed 3 intersections
+    if (!orbitCenterInside && !containsExistingCenter && intersectionCount <= 3 && !wouldBreakExisting) {
+      validPosition = true;
+    }
+  }
+  
+  // If we found a valid position, add the circle
+  if (validPosition) {
+    const orbitAngle = Math.random() * Math.PI * 2; // Random angle
+    const orbitOffsetX = Math.cos(orbitAngle) * orbitOffset;
+    const orbitOffsetY = Math.sin(orbitAngle) * orbitOffset;
+    
+    // Random opacity between 20-50%
+    const opacity = Math.random() * 0.45 + 0.25; // 0.2-0.5
+    
+    // Random rotation duration between 15-40 seconds
+    const duration = Math.random() * 7 + 3;
+    
+    // Random direction
+    const direction: 'normal' | 'reverse' = Math.random() < 0.5 ? 'normal' : 'reverse';
+    
+    circles.push({
+      id: i,
+      x,
+      y,
+      radius,
+      orbitOffset, // Store total offset for validation
+      orbitOffsetX,
+      orbitOffsetY,
+      opacity,
+      duration,
+      direction
+    });
+  }
+}
+---
+
+<div class={useMask ? "dynamic-circles-container with-mask" : "dynamic-circles-container"} id="circles-container">
+  {circles.map(circle => (
+    <div 
+      class="dynamic-circle"
+      style={`
+        --x: ${circle.x}vw;
+        --y: ${circle.y}vh;
+        --radius: min(${circle.radius}vh, ${circle.radius}vw);
+        --orbit-offset-x: min(${circle.orbitOffsetX}vh, ${circle.orbitOffsetX}vw);
+        --orbit-offset-y: min(${circle.orbitOffsetY}vh, ${circle.orbitOffsetY}vw);
+        --opacity: ${circle.opacity};
+        --duration: ${circle.duration}s;
+        --direction: ${circle.direction};
+      `}
+    />
+  ))}
+  <div class="dynamic-circle" style={`
+    width: 100vw;
+    height: 140vh;
+    background: radial-gradient(
+      circle at center,
+      rgba(137, 146, 189, 0.25) 0%,
+      rgba(137, 146, 189, 0.15) 80%,
+      rgba(137, 146, 189, 0) 100%
+    );
+    --x: 35vw;
+    --y: 50vh;
+    --radius: 0;
+    --orbit-offset-x: 0;
+    --orbit-offset-y: 0;
+    --opacity: 0.2;
+    --duration: 0s;
+    --direction: normal;
+  `}/>
+  <div 
+    class="dynamic-circle mouse-circle"
+    id="mask-mouse-circle"
+    style={`
+      background: radial-gradient(
+        circle at center,
+        rgba(137, 146, 189, var(--opacity)) 0%,
+        rgba(137, 146, 189, 1) 50%,
+        rgba(137, 146, 189, 0.5) 60%,
+        rgba(137, 146, 189, 0) 100%
+      );
+      --x: 50vw;
+      --y: 50vh;
+      --radius: 1.6rem;
+      --orbit-offset-x: 0;
+      --orbit-offset-y: 0;
+      --opacity: 1;
+      --duration: 0s;
+      --direction: normal;
+    `}
+  />
+</div>
+
+<script>
+  const mouseCircle = document.getElementById('mask-mouse-circle') as HTMLElement | null;
+  
+  if (mouseCircle) {
+    document.addEventListener('mousemove', (e: MouseEvent) => {
+      const x = (e.clientX / window.innerWidth) * 100;
+      const y = (e.clientY / window.innerHeight) * 100;
+      mouseCircle.style.setProperty('--x', `${x}vw`);
+      mouseCircle.style.setProperty('--y', `${y}vh`);
+    });
+  }
+</script>
+
+<style lang="scss">
+  .dynamic-circles-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+    
+    &.with-mask {
+      // Apply repeating grid pattern as a mask
+      mask-image: url('/svg/grid-decoration.svg');
+      mask-size: min(10vh, 10vw);
+      mask-repeat: repeat;
+      -webkit-mask-image: url('/svg/grid-decoration.svg');
+      -webkit-mask-size: min(10vh, 10vw);
+      -webkit-mask-repeat: repeat;
+    }
+  }
+
+  .dynamic-circle {
+    position: absolute;
+    width: calc(var(--radius) * 2);
+    height: calc(var(--radius) * 2);
+    border-radius: 50%;
+    background: radial-gradient(
+      circle at center,
+      rgba(137, 146, 189, var(--opacity)) 0%,
+      rgba(137, 146, 189, 0) 100%
+    );
+    left: var(--x);
+    top: var(--y);
+    transform: translate(-50%, -50%);
+    animation: orbit var(--duration) linear infinite;
+    animation-direction: var(--direction);
+    transform-origin: calc(50% + var(--orbit-offset-x)) calc(50% + var(--orbit-offset-y));
+    
+    &.mouse-circle {
+      // No animation for mouse circle
+      animation: none;
+      // Smooth transition when mouse moves
+      // transition: left 0.1s ease-out, top 0.1s ease-out;
+    }
+  }
+
+  @keyframes orbit {
+    from {
+      transform: translate(-50%, -50%) rotate(0deg);
+    }
+    to {
+      transform: translate(-50%, -50%) rotate(360deg);
+    }
+  }
+</style>

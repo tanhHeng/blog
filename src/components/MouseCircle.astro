@@ -1,0 +1,36 @@
+---
+// Mouse-following circle component
+---
+
+<div class="mouse-circle" id="mouse-circle" style="--x: 50vw; --y: 50vh"></div>
+
+<script is:inline lang="ts">
+  const mouseCircle = document.getElementById('mouse-circle');
+  
+  if (mouseCircle) {
+    document.addEventListener('mousemove', (e) => {
+      const x = (e.clientX / window.innerWidth) * 100;
+      const y = (e.clientY / window.innerHeight) * 100;
+      mouseCircle.style.setProperty('--x', `${x}vw`);
+      mouseCircle.style.setProperty('--y', `${y}vh`);
+    });
+  }
+</script>
+
+<style lang="scss">
+  @use '../styles/global.scss' as *;
+  
+  .mouse-circle {
+    position: fixed;
+    left: var(--x);
+    top: var(--y);
+    width: 1.6rem; // 1.5rem radius = 3rem diameter
+    height: 1.6rem;
+    border-radius: 50%;
+    background-color: rgba($light-blue, 0.25);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 9999;
+    transition: left top 0.1s ease-out, top 0.1s ease-out;
+  }
+</style>

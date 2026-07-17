@@ -1,0 +1,26 @@
+---
+import DefaultLayout from "../layouts/DefaultLayout.astro";
+---
+
+<DefaultLayout activePage="error">
+    <div class="container">
+        <p>404 Not Found</p>
+    </div>
+</DefaultLayout>
+
+<style scoped lang="scss">
+@use '../styles/global.scss' as *;
+
+.container {
+    width: calc(100vw - 70.5vh);
+    margin-top: 30vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    p {
+        color: $primary-blue;
+        font-size: 3rem;
+    }
+}
+</style>
