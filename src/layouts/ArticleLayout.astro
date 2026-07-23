@@ -1,0 +1,331 @@
+---
+import Navbar from '../components/Navbar.astro';
+import DynamicCircles from '../components/DynamicCircles.astro';
+import MouseCircle from '../components/MouseCircle.astro';
+import ArticleContents from '../components/ArticleContents.astro';
+import '../styles/global.scss';
+
+const { frontmatter = {}, getHeadings } = Astro.props;
+const title = frontmatter.title ?? 'Untitled article';
+const date = frontmatter.date instanceof Date
+  ? frontmatter.date.toISOString().slice(0, 10)
+  : String(frontmatter.date ?? '').slice(0, 10);
+const tags = frontmatter.tags ?? [];
+const readingTime = frontmatter.readingTime ?? '3 min';
+const headings = typeof getHeadings === 'function' ? await getHeadings() : [];
+---
+
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title} | TANH.MOE</title>
+    {frontmatter.description && <meta name="description" content={frontmatter.description} />}
+  </head>
+  <body>
+    <DynamicCircles />
+    <MouseCircle />
+    <Navbar activePage="Article" />
+
+    <p class="left-decoration">scoll to<br />read more</p>
+
+    <main class="reading-shell">
+      <article class="article-card">
+        <header class="article-header">
+          <p class="article-kicker">ARTICLE <span>/</span> ARTICLE</p>
+          <h1>{title}</h1>
+          <div class="article-meta">
+            <time datetime={date}>{date}</time>
+            <span aria-hidden="true">·</span>
+            <span>{frontmatter.wordCount ?? '520'} 字</span>
+            <span aria-hidden="true">·</span>
+            <span>阅读 {readingTime}</span>
+          </div>
+          <div class="tag-list" aria-label="文章标签">
+            {tags.map((tag: string) => <span>#{tag}</span>)}
+          </div>
+        </header>
+        <div class="article-body">
+          <slot />
+        </div>
+      </article>
+      <aside class="contents-column">
+        <ArticleContents headings={headings} />
+      </aside>
+    </main>
+
+    <p class="right-decoration">math<br />physics<br />geography</p>
+  </body>
+</html>
+
+<style scoped lang="scss">
+@use '../styles/global.scss' as *;
+@use '../styles/Navbar.scss' as navbar;
+
+:global(html) {
+  scroll-behavior: smooth;
+}
+
+:global(body) {
+  min-height: 100vh;
+  overflow-x: hidden;
+  background: #fff;
+}
+
+:global(p) {
+  margin: 0;
+}
+
+.left-decoration,
+.right-decoration {
+  position: fixed;
+  margin: 0;
+  color: $light-blue;
+  font-family: $font-family-heading;
+  font-size: $font-size-larger-1;
+  letter-spacing: 1px;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+
+.left-decoration {
+  top: navbar.$navbar-actual-height + 0.7rem;
+  left: navbar.$navbar-margin-left;
+}
+
+.right-decoration {
+  right: 3.5rem;
+  bottom: 2.5rem;
+  text-align: right;
+}
+.reading-shell {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 11rem minmax(40rem, 56rem) 11rem;
+  grid-template-areas: '. article contents';
+  justify-content: center;
+  gap: clamp(1.5rem, 2.5vw, 3rem);
+  width: min(calc(100vw - 4rem), 92rem);
+  margin: 3.2rem auto 5rem;
+}
+
+
+
+
+.contents-column {
+  grid-area: contents;
+  width: 11rem;
+}
+
+.article-card {
+  grid-area: article;
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 2.45rem 3.25rem 5.5rem;
+  border: 1px solid rgba($primary-blue, 0.78);
+  background: rgba(#fff, 0.84);
+  clip-path: inset(0);
+
+  &::before {
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 2;
+    width: 100vw;
+    height: calc(navbar.$navbar-actual-height + 3rem);
+    background: linear-gradient(to bottom, rgba(#fff, 0.9) 0%, rgba(#fff, 0.81) 56%, rgba(#fff, 0) 100%);
+    content: '';
+    pointer-events: none;
+  }
+}
+
+
+.article-header {
+  .article-kicker {
+    color: $ex-light-blue;
+    font-family: $font-family-heading;
+    font-size: 1rem;
+    letter-spacing: 0.22em;
+  }
+
+  h1 {
+    position: relative;
+    margin: 1.2rem 0 0.85rem;
+    padding-left: 1.55rem;
+    color: $content-color;
+    font-family: $font-family-chinese;
+    font-size: clamp(2rem, 3vw, 2.75rem);
+    font-weight: 400;
+    line-height: 1.2;
+
+    &::before {
+      position: absolute;
+      top: 0.08em;
+      left: 0;
+      width: 0.65rem;
+      height: 1.15em;
+      background: $ex-light-blue;
+      content: '';
+    }
+  }
+}
+
+.article-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  color: $light-blue;
+  font-family: $font-family-default;
+  font-size: 0.9rem;
+  letter-spacing: 0.03em;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+
+  span {
+    padding: 0.25rem 0.65rem;
+    border: 1px solid rgba($primary-blue, 0.55);
+    color: $primary-blue;
+    font-family: $font-family-heading;
+    font-size: 0.82rem;
+    letter-spacing: 0.08em;
+  }
+}
+
+.article-body {
+  margin-top: 1.35rem;
+  color: $content-color;
+  font-family: $font-family-chinese;
+  font-size: 1rem;
+  line-height: 2.05;
+
+  :global(p) {
+    margin: 0 0 1.35rem;
+  }
+
+  :global(hr) {
+    position: relative;
+    height: 1px;
+    margin: 1.75rem 0 1.6rem;
+    border: 0;
+    background: rgba($primary-blue, 0.65);
+  }
+
+  :global(h2),
+  :global(h3) {
+    margin: 2.2rem 0 0.8rem;
+    color: $content-color;
+    font-weight: 400;
+    line-height: 1.4;
+  }
+
+  :global(h2) {
+    font-size: 1.35rem;
+  }
+
+  :global(h3) {
+    font-size: 1.1rem;
+  }
+
+  :global(blockquote) {
+    margin: 1.8rem 0;
+    padding: 0.65rem 1.1rem;
+    border-left: 0.4rem solid $ex-light-blue;
+    color: $primary-blue;
+  }
+
+  :global(ul),
+  :global(ol) {
+    margin: 0.4rem 0 1.5rem;
+    padding-left: 1.5rem;
+  }
+
+  :global(li) {
+    padding-left: 0.35rem;
+  }
+
+  :global(a) {
+    color: $primary-blue;
+  }
+
+  :global(code) {
+    padding: 0.12rem 0.35rem;
+    background: rgba($ex-light-blue, 0.45);
+    font-family: ui-monospace, monospace;
+    font-size: 0.88em;
+  }
+}
+
+@media (max-width: 1120px) {
+  .reading-shell {
+    grid-template-columns: minmax(0, 1fr) 11rem;
+    grid-template-areas: 'article contents';
+    gap: 1.5rem;
+    width: calc(100vw - 4rem);
+    margin-left: 2rem;
+    margin-right: 2rem;
+  }
+}
+@media (max-width: 850px) {
+  .reading-shell {
+    --reading-shell-gutter: 1rem;
+    display: block;
+    width: auto;
+    margin: 8rem 1rem 3rem;
+  }
+
+  .left-decoration,
+  .right-decoration {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+
+  .article-card {
+    padding: 1.65rem 1.15rem 3rem;
+    background: rgba(#fff, 0.96);
+  }
+
+  .article-header {
+    .article-kicker {
+      font-size: 0.82rem;
+      letter-spacing: 0.16em;
+    }
+
+    h1 {
+      margin-top: 1rem;
+      padding-left: 1.1rem;
+      font-size: clamp(1.75rem, 8vw, 2.15rem);
+    }
+  }
+
+  .article-meta {
+    gap: 0.4rem;
+    font-size: 0.78rem;
+  }
+
+  .tag-list {
+    gap: 0.4rem;
+
+    span {
+      padding: 0.2rem 0.5rem;
+      font-size: 0.72rem;
+    }
+  }
+
+  .article-body {
+    font-size: 0.95rem;
+    line-height: 1.85;
+    overflow-wrap: anywhere;
+  }
+}
+</style>

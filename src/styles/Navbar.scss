@@ -12,14 +12,18 @@ $title-font-size: 1.75rem;
 $navbar-actual-height: $title-font-size + 2 * $navbar-margin-vertical;
 
 .navbar {
+	position: relative;
+	z-index: 10;
 	margin-left: $navbar-margin-left;
 	margin-top: $navbar-margin-vertical;
 	margin-bottom: $navbar-margin-vertical;
 	height: $title-font-size;
 	line-height: 1;
 
+
 	.navbar-content {
 		position: fixed;
+		z-index: 1;
 		display: flex;
 		align-items: center;
 		gap: $content-font-size;
@@ -85,5 +89,12 @@ $navbar-actual-height: $title-font-size + 2 * $navbar-margin-vertical;
 		font-size: $content-font-size;
 		color: $ex-light-blue;
 		user-select: none;
+	}
+}
+@media (max-width: 900px) {
+	.navbar-content {
+		gap: 1rem;
+		transform: scale(0.82);
+		transform-origin: left center;
 	}
 }
