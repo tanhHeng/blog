@@ -1,0 +1,49 @@
+---
+interface Props {
+  leftText?: string;
+  rightText?: string;
+  showLeft?: boolean;
+  showRight?: boolean;
+}
+
+const {
+  leftText = 'scoll to<br>explore',
+  rightText = 'math<br>physics<br>geography',
+  showLeft = true,
+  showRight = true,
+} = Astro.props;
+---
+
+{showLeft && <p class="left-decoration" set:html={leftText}></p>}
+{showRight && <p class="right-decoration" set:html={rightText}></p>}
+
+<style lang="scss">
+@use '../styles/global.scss' as *;
+@use '../styles/Navbar.scss' as navbar;
+
+.left-decoration {
+  font-family: $font-family-heading;
+  position: fixed;
+  left: navbar.$navbar-margin-left;
+  top: navbar.$navbar-actual-height;
+  font-size: $font-size-larger-1;
+  line-height: 1.5;
+  letter-spacing: 1px;
+  color: $light-blue;
+  white-space: nowrap;
+  margin: 0;
+}
+
+.right-decoration {
+  font-family: $font-family-heading;
+  position: fixed;
+  right: calc(70.5vh + navbar.$navbar-margin-left);
+  bottom: navbar.$navbar-margin-vertical;
+  font-size: $font-size-larger-1;
+  text-align: right;
+  letter-spacing: 1px;
+  color: $light-blue;
+  white-space: nowrap;
+  margin: 0;
+}
+</style>

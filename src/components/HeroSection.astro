@@ -1,0 +1,27 @@
+---
+import RotatingCircles from './RotatingCircles.astro';
+interface Props {
+  imageSrc?: string;
+  imageAlt?: string;
+}
+
+const {
+  imageSrc = '/img/hero.png',
+  imageAlt = 'Hero Image',
+} = Astro.props;
+---
+
+<img src={imageSrc} alt={imageAlt} class="hero-image" />
+<RotatingCircles />
+
+<style lang="scss">
+@use '../styles/global.scss' as *;
+
+.hero-image {
+  position: fixed;
+  right: 0;
+  top: 0;
+  height: 100vh;
+}
+
+</style>

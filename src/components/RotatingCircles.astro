@@ -1,0 +1,93 @@
+<div class="rotating-circles-decoration">
+  <div class="hollow-circle circle-small">
+    <span class="rotating-dot dot-1"></span>
+    <span class="rotating-dot dot-2"></span>
+  </div>
+  <div class="hollow-circle circle-large">
+    <span class="rotating-dot dot-1"></span>
+    <span class="rotating-dot dot-2"></span>
+  </div>
+</div>
+
+<style lang="scss">
+@use '../styles/global.scss' as *;
+
+.rotating-circles-decoration {
+  position: fixed;
+  left: -1vh;
+  bottom: 7vh;
+  pointer-events: none;
+
+  .hollow-circle {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    border: 2px solid $ex-light-blue;
+    border-radius: 50%;
+    transform: translate(-50%, 50%);
+
+    &.circle-small {
+      width: 40vh;
+      height: 40vh;
+
+      .rotating-dot {
+        &.dot-1 {
+          transform: rotate(-90deg) translateX(20vh);
+          animation: rotate-20vh 7s linear infinite;
+        }
+
+        &.dot-2 {
+          transform: rotate(-90deg) translateX(20vh);
+          animation: rotate-20vh 7s linear infinite 3.5s forwards;
+        }
+      }
+    }
+
+    &.circle-large {
+      width: 50vh;
+      height: 50vh;
+
+      .rotating-dot {
+        &.dot-1 {
+          transform: rotate(-90deg) translateX(25vh);
+          animation: rotate-25vh 10s linear infinite;
+        }
+
+        &.dot-2 {
+          transform: rotate(-90deg) translateX(25vh);
+          animation: rotate-25vh 10s linear infinite 5s forwards;
+        }
+      }
+    }
+
+    .rotating-dot {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: $light-blue;
+      top: 50%;
+      left: 50%;
+      margin: -6px 0 0 -6px;
+    }
+  }
+}
+
+@keyframes rotate-20vh {
+  from {
+    transform: rotate(-90deg) translateX(20vh);
+  }
+  to {
+    transform: rotate(90deg) translateX(20vh);
+  }
+}
+
+@keyframes rotate-25vh {
+  from {
+    transform: rotate(-90deg) translateX(25vh);
+  }
+  to {
+    transform: rotate(90deg) translateX(25vh);
+  }
+}
+</style>

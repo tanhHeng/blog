@@ -1,0 +1,46 @@
+---
+import Navbar from '../components/Navbar.astro';
+import DynamicCircles from '../components/DynamicCircles.astro';
+import MouseCircle from '../components/MouseCircle.astro';
+import '../styles/global.scss';
+import 'animate.css';
+
+interface Props {
+  activePage?: string;
+  title?: string;
+  description?: string;
+  lang?: string;
+}
+
+const {
+  activePage,
+  title,
+  description,
+  lang = 'en',
+} = Astro.props;
+---
+
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="/favicon.png" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    {title && <title>{title}</title>}
+    {description && <meta name="description" content={description} />}
+  </head>
+  <body>
+    <DynamicCircles />
+    <MouseCircle />
+    <Navbar activePage={activePage} />
+    <slot />
+  </body>
+</html>
+
+<style>
+  body {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    min-height: 100vh;
+  }
+</style>
