@@ -1,0 +1,383 @@
+---
+interface Heading {
+  depth: number;
+  slug: string;
+  text: string;
+}
+
+interface Props {
+  headings?: Heading[];
+}
+
+const { headings = [] } = Astro.props;
+const visibleHeadings = headings.filter(({ depth }) => depth >= 2 && depth <= 4);
+---
+
+<details class="article-contents" aria-label="文章目录" data-article-contents open>
+  <summary class="contents-heading">
+    <span class="contents-marker" aria-hidden="true"></span>
+    <span>目录</span>
+  </summary>
+  <div class="contents-body">
+    <div class="contents-body-inner">
+      <nav>
+        <ol>
+          {visibleHeadings.map((heading) => (
+            <li class:list={['toc-item', `level-${heading.depth}`, { nested: heading.depth > 2 }]}> 
+              <a href={`#${heading.slug}`}>{heading.text}</a>
+            </li>
+          ))}
+        </ol>
+      </nav>
+    </div>
+  </div>
+</details>
+
+<script>
+  function initializeArticleContents() {
+    const contents = document.querySelector('[data-article-contents]');
+    const article = document.querySelector('.article-body');
+    const list = contents?.querySelector('ol');
+    if (!contents || !article || !list) return;
+
+    if (contents.children.length > 0 && list.children.length === 0) {
+      article.querySelectorAll('h2, h3, h4').forEach((heading) => {
+        if (!heading.id) return;
+        const item = document.createElement('li');
+        item.className = `toc-item level-${heading.tagName.slice(1)}`;
+        const link = document.createElement('a');
+        link.href = `#${heading.id}`;
+        link.textContent = heading.textContent;
+        item.append(link);
+        list.append(item);
+      });
+    }
+
+    const links = Array.from(contents.querySelectorAll('a'));
+    const sections = links
+      .map((link) => document.getElementById(decodeURIComponent(link.hash.slice(1))))
+      .filter((heading) => heading instanceof HTMLElement);
+
+    if (sections.length > 0 && 'IntersectionObserver' in window) {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          const link = links.find((candidate) => decodeURIComponent(candidate.hash.slice(1)) === entry.target.id);
+          link?.parentElement?.classList.toggle('is-current', entry.isIntersecting);
+        });
+      }, { rootMargin: '-18% 0px -72% 0px', threshold: 0 });
+
+      sections.forEach((heading) => observer.observe(heading));
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeArticleContents, { once: true });
+  } else {
+    initializeArticleContents();
+  }
+  const contents = document.querySelector('[data-article-contents]');
+  let closeTimer: number | undefined;
+  const mobileContentsQuery = window.matchMedia('(max-width: 850px)');
+  const collapseContents = () => {
+    if (!contents?.hasAttribute('data-expanded')) return;
+    window.clearTimeout(closeTimer);
+    contents.removeAttribute('data-expanded');
+    closeTimer = window.setTimeout(() => contents.removeAttribute('open'), 320);
+  };
+
+  contents?.addEventListener('click', (event) => {
+    if (!(event.target instanceof Element) || !event.target.closest('summary')) return;
+    event.preventDefault();
+    if (contents.hasAttribute('data-expanded')) {
+      collapseContents();
+    } else {
+      window.clearTimeout(closeTimer);
+      contents.setAttribute('open', '');
+      requestAnimationFrame(() => contents.setAttribute('data-expanded', ''));
+    }
+  });
+
+  document.addEventListener('pointerdown', (event) => {
+    if (!mobileContentsQuery.matches || !(event.target instanceof Node) || contents?.contains(event.target)) return;
+    collapseContents();
+  });
+
+  document.addEventListener('focusin', (event) => {
+    if (!mobileContentsQuery.matches || !(event.target instanceof Node) || contents?.contains(event.target)) return;
+    collapseContents();
+  });
+
+  if (mobileContentsQuery.matches) {
+    contents?.removeAttribute('open');
+    contents?.removeAttribute('data-expanded');
+  } else {
+    contents?.setAttribute('data-expanded', '');
+  }
+</script>
+
+<style scoped lang="scss">
+@use '../styles/global.scss' as *;
+
+.article-contents {
+  position: fixed;
+  top: 10.4rem;
+  z-index: 2;
+  width: 11rem;
+  box-sizing: border-box;
+  color: $light-blue;
+  font-family: $font-family-chinese;
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.article-contents::before {
+  display: none;
+}
+
+.contents-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  list-style: none;
+  white-space: nowrap;
+  font-size: 0.95rem;
+}
+
+.contents-heading::marker {
+  content: '';
+}
+
+.contents-heading::-webkit-details-marker {
+  display: none;
+}
+
+
+.contents-marker {
+  flex: 0 0 auto;
+  display: inline-block;
+  width: 0.45rem;
+  height: 0.45rem;
+  border: 1px solid $primary-blue;
+  background: #fff;
+  transform: rotate(45deg);
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms ease-out;
+}
+
+.contents-heading:hover .contents-marker {
+  background-color: $ex-light-blue;
+}
+
+.article-contents:not([data-expanded]) .contents-marker {
+  transform: rotate(45deg);
+}
+
+.article-contents[data-expanded] .contents-marker {
+  transform: rotate(135deg);
+}
+
+.contents-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 240ms ease, opacity 180ms ease;
+}
+
+.contents-body-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.article-contents[data-expanded] .contents-body {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+nav {
+  margin: 0.6rem 0 0 0.2rem;
+  padding-left: 0.7rem;
+  border-left: 1px solid rgba($primary-blue, 0.6);
+}
+
+ol {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+li {
+  position: relative;
+  line-height: 1.4;
+}
+
+.article-contents :global(.toc-item.level-2) {
+  margin-top: 0.25rem;
+  color: $primary-blue;
+  font-family: $font-family-heading;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  overflow: visible;
+}
+
+
+.article-contents :global(.toc-item.level-3) {
+  padding-left: 0.7rem;
+  color: $light-blue;
+  font-family: $font-family-chinese;
+  font-size: 0.75rem;
+}
+
+.article-contents :global(.toc-item.level-4) {
+  padding-left: 1.35rem;
+  color: rgba($light-blue, 0.8);
+  font-family: $font-family-chinese;
+  font-size: 0.68rem;
+  letter-spacing: 0;
+}
+
+.article-contents :global(a),
+.article-contents :global(a:link),
+.article-contents :global(a:visited) {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  color: inherit;
+  font: inherit;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  transition: color 180ms ease-out, transform 180ms ease-out;
+}
+
+.article-contents :global(a)::after {
+  position: absolute;
+  top: 50%;
+  right: -0.8rem;
+  width: 0.32rem;
+  height: 0.32rem;
+  border: 1px solid currentColor;
+  content: '';
+  opacity: 0;
+  transform: translate(0.3rem, -50%) rotate(45deg) scale(0.45);
+  transition: opacity 180ms ease-out, transform 220ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms ease-out;
+}
+
+
+
+.article-contents :global(a:hover),
+.article-contents :global(a:focus-visible),
+.article-contents :global(a:active),
+.article-contents :global(.is-current a) {
+  color: $primary-blue;
+  text-decoration: none;
+  outline: none;
+  transform: translateX(0.2rem);
+}
+
+.article-contents :global(a:hover)::after,
+.article-contents :global(a:focus-visible)::after,
+.article-contents :global(.is-current a)::after {
+  background: rgba($ex-light-blue, 0.55);
+  opacity: 1;
+  transform: translate(0, -50%) rotate(45deg) scale(1);
+}
+
+
+
+
+@media (max-width: 850px) {
+  .article-contents {
+    position: fixed;
+    top: calc(10.4rem + 1.85rem - 2.25rem);
+    right: calc(var(--reading-shell-gutter, 2rem) - 1rem);
+    width: 2rem;
+    max-height: calc(100dvh - 12rem);
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    border: 0;
+    overflow: hidden;
+    transform-origin: right top;
+    transition: width 320ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms ease, box-shadow 180ms ease;
+  }
+
+  .article-contents[data-expanded] {
+    right: var(--reading-shell-gutter, 2rem);
+    width: calc(100vw - (2 * var(--reading-shell-gutter, 2rem)));
+    padding: 1rem;
+    background: rgba(#fff, 0.98);
+    border: 1px solid rgba($primary-blue, 0.55);
+    box-shadow: 0 1rem 2.5rem rgba($primary-blue, 0.14);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .contents-heading {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    min-height: 4.5rem;
+    gap: 0.25rem;
+    padding: 0;
+    box-sizing: border-box;
+    color: $light-blue;
+    writing-mode: vertical-rl;
+    transform: translateY(0.035rem);
+    letter-spacing: 0.18em;
+  }
+
+
+  .article-contents[data-expanded] .contents-heading {
+    position: absolute;
+    top: 0.85rem;
+    right: 0.85rem;
+    width: 1.5rem;
+    min-height: 1.5rem;
+    padding: 0;
+    writing-mode: horizontal-tb;
+  }
+
+
+  .article-contents::before {
+    display: none;
+  }
+
+  .contents-body {
+    min-width: calc(100vw - 4rem);
+    transform: translateX(1.5rem);
+    transition: grid-template-rows 240ms ease, opacity 180ms ease, transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .article-contents[data-expanded] .contents-body {
+    transform: translateX(0);
+
+    nav {
+      margin-bottom: 0.25rem;
+    }
+  }
+
+  nav {
+    margin-top: 0;
+    padding-left: 0;
+    border-left: 0;
+  }
+
+
+  .contents-marker {
+    width: 0.35rem;
+    height: 0.35rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .article-contents,
+  .contents-body,
+  .contents-marker {
+    transition: none;
+  }
+}
+</style>
