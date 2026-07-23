@@ -1,9 +1,7 @@
 ---
-import Navbar from '../components/Navbar.astro';
-import DynamicCircles from '../components/DynamicCircles.astro';
-import MouseCircle from '../components/MouseCircle.astro';
+import BaseLayout from './BaseLayout.astro';
 import ArticleContents from '../components/ArticleContents.astro';
-import '../styles/global.scss';
+import RotatingCircles from '../components/RotatingCircles.astro';
 
 const { frontmatter = {}, getHeadings } = Astro.props;
 const title = frontmatter.title ?? 'Untitled article';
@@ -15,18 +13,12 @@ const readingTime = frontmatter.readingTime ?? '3 min';
 const headings = typeof getHeadings === 'function' ? await getHeadings() : [];
 ---
 
-<html lang="zh-CN">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width" />
-    <meta name="generator" content={Astro.generator} />
-    <title>{title} | TANH.MOE</title>
-    {frontmatter.description && <meta name="description" content={frontmatter.description} />}
-  </head>
-  <body>
-    <DynamicCircles />
-    <MouseCircle />
-    <Navbar activePage="Article" />
+<BaseLayout
+  activePage="Article"
+  lang="zh-CN"
+  title={`${title} | TANH.MOE`}
+  description={frontmatter.description}
+>
 
     <p class="left-decoration">scoll to<br />read more</p>
 
@@ -55,9 +47,9 @@ const headings = typeof getHeadings === 'function' ? await getHeadings() : [];
       </aside>
     </main>
 
+    <RotatingCircles />
     <p class="right-decoration">math<br />physics<br />geography</p>
-  </body>
-</html>
+</BaseLayout>
 
 <style scoped lang="scss">
 @use '../styles/global.scss' as *;
