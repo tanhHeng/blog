@@ -2,29 +2,65 @@
 // Mouse-following circle component
 ---
 
-<div class="mouse-circle" id="mouse-circle" style="--x: 50vw; --y: 50vh"></div>
+<div class="mouse-circle" id="mouse-circle" hidden aria-hidden="true" style="--x: 50vw; --y: 50vh"></div>
 
-<script is:inline lang="ts">
+<script is:inline>
   const mouseCircle = document.getElementById('mouse-circle');
-  
+
   if (mouseCircle) {
-    document.addEventListener('mousemove', (e) => {
+    const coarsePointer = window.matchMedia('(pointer: coarse)');
+    const narrowViewport = window.matchMedia('(max-width: 900px)');
+
+    const isMobileDevice = () =>
+      coarsePointer.matches || narrowViewport.matches || navigator.maxTouchPoints > 0;
+
+    const hideMouseCircle = () => {
+      mouseCircle.hidden = true;
+      mouseCircle.setAttribute('aria-hidden', 'true');
+    };
+
+    const showMouseCircle = () => {
+      if (!isMobileDevice() && document.hasFocus()) {
+        mouseCircle.hidden = false;
+        mouseCircle.setAttribute('aria-hidden', 'false');
+      }
+    };
+
+    const updateMouseCircle = (e) => {
+      if (isMobileDevice() || !document.hasFocus()) {
+        hideMouseCircle();
+        return;
+      }
+
       const x = (e.clientX / window.innerWidth) * 100;
       const y = (e.clientY / window.innerHeight) * 100;
       mouseCircle.style.setProperty('--x', `${x}vw`);
       mouseCircle.style.setProperty('--y', `${y}vh`);
+      showMouseCircle();
+    };
+
+    document.addEventListener('mousemove', updateMouseCircle);
+    document.addEventListener('mouseleave', hideMouseCircle);
+    window.addEventListener('blur', hideMouseCircle);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') hideMouseCircle();
+    });
+    coarsePointer.addEventListener('change', hideMouseCircle);
+    narrowViewport.addEventListener('change', hideMouseCircle);
+    window.addEventListener('resize', () => {
+      if (isMobileDevice()) hideMouseCircle();
     });
   }
 </script>
 
 <style lang="scss">
   @use '../styles/global.scss' as *;
-  
+
   .mouse-circle {
     position: fixed;
     left: var(--x);
     top: var(--y);
-    width: 1.6rem; // 1.5rem radius = 3rem diameter
+    width: 1.6rem;
     height: 1.6rem;
     border-radius: 50%;
     background-color: rgba($light-blue, 0.25);
@@ -34,3 +70,4 @@
     transition: left top 0.1s ease-out, top 0.1s ease-out;
   }
 </style>
+
