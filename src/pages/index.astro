@@ -5,6 +5,10 @@ import '../styles/global.scss';
 
 <DefaultLayout>
 	<div class="left-content">
+			<div class="scroll-snap-section"></div>
+			<div class="scroll-snap-section"></div>
+			<div class="scroll-snap-section"></div>
+			<div class="scroll-snap-section"></div>
 		<div class="left-container">
 			<section class="main-content is-active">
 				<div class="subtitle">
@@ -62,9 +66,10 @@ import '../styles/global.scss';
 
 <script is:inline>
   (function() {
-    const sections = Array.from(document.querySelectorAll('.left-container section'));
-    let currentSectionIndex = 0;
-    let isTransitioning = false;
+    const snapSections = Array.from(document.querySelectorAll('.scroll-snap-section'));
+    const contentSections = Array.from(document.querySelectorAll('.left-container section'));
+    let currentIndex = 0;
+    let transitionController;
     const animationClasses = [
       'animate__animated',
       'animate__fadeInUp',
@@ -72,46 +77,50 @@ import '../styles/global.scss';
       'animate__fadeOutUp',
       'animate__fadeOutDown',
     ];
-    
-    function transitionTo(nextSectionIndex, direction) {
-      const currentSection = sections[currentSectionIndex];
-      const nextSection = sections[nextSectionIndex];
+
+    function transitionTo(nextIndex, direction) {
+      if (nextIndex === currentIndex) return;
+
+      transitionController?.abort();
+      const controller = new AbortController();
+      transitionController = controller;
+
+      const currentSection = contentSections[currentIndex];
+      const nextSection = contentSections[nextIndex];
       const entranceAnimation = direction === 'down' ? 'animate__fadeInUp' : 'animate__fadeInDown';
       const exitAnimation = direction === 'down' ? 'animate__fadeOutUp' : 'animate__fadeOutDown';
 
-      isTransitioning = true;
+      contentSections.forEach((section, index) => {
+        section.hidden = index !== currentIndex;
+        section.classList.remove(...animationClasses, 'is-active', 'is-leaving');
+      });
+
       nextSection.hidden = false;
-      currentSection.classList.remove(...animationClasses, 'is-active');
-      nextSection.classList.remove(...animationClasses);
       currentSection.classList.add('is-leaving', 'animate__animated', exitAnimation);
       nextSection.classList.add('is-active', 'animate__animated', entranceAnimation);
+      currentIndex = nextIndex;
 
-      let completedAnimations = 0;
-      const finishTransition = function() {
-        completedAnimations += 1;
-        if (completedAnimations !== 2) return;
-
+      nextSection.addEventListener('animationend', function() {
         currentSection.hidden = true;
         currentSection.classList.remove(...animationClasses, 'is-leaving');
         nextSection.classList.remove(...animationClasses);
-        currentSectionIndex = nextSectionIndex;
-        isTransitioning = false;
-      };
-
-      currentSection.addEventListener('animationend', finishTransition, { once: true });
-      nextSection.addEventListener('animationend', finishTransition, { once: true });
+        controller.abort();
+        if (transitionController === controller) transitionController = undefined;
+      }, { signal: controller.signal });
     }
 
-    window.addEventListener('wheel', function(e) {
-      e.preventDefault();
-      if (isTransitioning || e.deltaY === 0) return;
+    const observer = new IntersectionObserver((entries) => {
+      const visibleEntries = entries.filter((entry) => entry.isIntersecting && entry.intersectionRatio >= 0.5);
+      if (visibleEntries.length === 0) return;
 
-      const direction = e.deltaY > 0 ? 'down' : 'up';
-      const nextSectionIndex = currentSectionIndex + (direction === 'down' ? 1 : -1);
-      if (nextSectionIndex < 0 || nextSectionIndex >= sections.length) return;
+      const nextIndex = snapSections.indexOf(visibleEntries.reduce((mostVisible, entry) => (
+        entry.intersectionRatio > mostVisible.intersectionRatio ? entry : mostVisible
+      )).target);
+      const direction = nextIndex > currentIndex ? 'down' : 'up';
+      transitionTo(nextIndex, direction);
+    }, { threshold: [0.5] });
 
-      transitionTo(nextSectionIndex, direction);
-    }, { passive: false });
+    snapSections.forEach((section) => observer.observe(section));
   })();
 </script>
 
@@ -119,8 +128,14 @@ import '../styles/global.scss';
 @use '../styles/global.scss' as *;
 @use '../styles/Navbar.scss' as navbar;
 
-body, html {
-	overflow: hidden;
+html {
+	overflow-x: hidden;
+	overflow-y: scroll;
+	scroll-snap-type: y mandatory;
+}
+
+body {
+	overflow: visible;
 }
 
 p {
@@ -139,16 +154,25 @@ p {
 }
 
 .left-content {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	// position:;
+	position: relative;
 	width: calc(100vw - 70.5vh);
-	height: calc(100vh - navbar.$navbar-actual-height);
+	margin-top: calc(-1 * navbar.$navbar-actual-height);
+}
+
+
+.scroll-snap-section {
+	height: 100vh;
+	scroll-snap-align: start;
+	scroll-snap-stop: always;
 }
 
 .left-container {
+	position: fixed;
+	top: navbar.$navbar-actual-height;
+	left: calc((100vw - 70.5vh - 40rem) / 2);
 	width: 40rem;
+	z-index: 2;
+	pointer-events: none;
 	section {
 		position: absolute;
 		width: 40rem;
