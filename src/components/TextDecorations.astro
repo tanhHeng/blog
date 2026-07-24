@@ -37,7 +37,7 @@ const {
 .right-decoration {
   font-family: $font-family-heading;
   position: fixed;
-  right: calc(70.5vh + navbar.$navbar-margin-left);
+  right: calc(70.5vh + navbar.$navbar-margin-left - var(--hero-right-overflow, 0px));
   bottom: navbar.$navbar-margin-vertical;
   font-size: $font-size-larger-1;
   text-align: right;

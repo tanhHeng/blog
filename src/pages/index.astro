@@ -57,7 +57,7 @@ import '../styles/global.scss';
 				</div>
 			</section>
 			<section class="footpage-content" hidden>
-				<p class="signature">Life is Piano. You are Pianist.</p>
+				<p class="signature"><span>Life is Piano.</span><span>You are Pianist.</span></p>
 				<p class="footnote">tanh.moe | Personal Blog | All Rights Reserved</p>
 			</section>
 		</div>
@@ -189,7 +189,7 @@ p {
 
 .left-content {
 	position: relative;
-	width: calc(100vw - 70.5vh);
+	width: calc(100vw - 70.5vh + var(--hero-right-overflow, 0px));
 	margin-top: calc(-1 * navbar.$navbar-actual-height);
 }
 
@@ -203,7 +203,7 @@ p {
 .left-container {
 	position: fixed;
 	top: calc(navbar.$navbar-margin-vertical / 1.5);
-	left: calc((100vw - 70.5vh - 40rem) / 2);
+	left: max(navbar.$navbar-margin-left, calc((100vw - 70.5vh + var(--hero-right-overflow, 0px) - 40rem) / 2));
 	width: 40rem;
 	height: 100vh;
 	display: grid;
@@ -212,6 +212,7 @@ p {
 	section {
 		grid-area: 1 / 1;
 		width: 40rem;
+		min-width: 0;
 	}
 	z-index: 2;
 	pointer-events: none;
@@ -224,6 +225,7 @@ p {
 	margin: 0;
 	font-weight: 500;
 }
+
 
 .main-content {
 	display: flex;
@@ -266,6 +268,7 @@ p {
 			font-family: $font-family-special;
 			font-size: $font-size-title;
 			color: $light-blue;
+			white-space: nowrap;
 			margin-left: 2rem;
 			margin-top: -0.5rem;
 		}
@@ -355,12 +358,21 @@ p {
 	padding-bottom: 3rem;
 
 	.signature {
+		display: flex;
+		gap: 0;
 		font-size: 4rem;
 		font-family: $font-family-special;
 		color: $primary-blue;
 		letter-spacing: 2px;
+		flex-direction: column;
+		line-height: 1;
+
+		span {
+			white-space: wrap;
+		}
 	}
 	.footnote {
+		margin-top: 0.75rem;
 		font-size: $font-size-larger-1;
 		font-weight: 500;
 		color: $light-blue;
@@ -368,7 +380,25 @@ p {
 }
 
 
+@media (min-width: 901px) and (max-width: 1200px) {
+	.left-content {
+		width: calc(100vw - 70.5vh + var(--hero-right-overflow, 0px));
+	}
+
+	.left-container {
+		left: max(1rem, navbar.$navbar-margin-left);
+		width: min(40rem, calc(100vw - 70.5vh + var(--hero-right-overflow, 0px) - 2rem));
+		min-width: 0;
+
+		section {
+			width: 100%;
+			min-width: 0;
+			max-width: 100%;
+		}
+	}
+}
 @media (max-width: 900px) {
+
 	.left-content {
 		width: 100%;
 		margin-top: 0;

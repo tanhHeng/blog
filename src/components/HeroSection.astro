@@ -14,6 +14,43 @@ const {
 <img src={imageSrc} alt={imageAlt} class="hero-image" />
 <RotatingCircles />
 
+<script is:inline>
+  (() => {
+    const heroImage = document.querySelector('.hero-image');
+    const navbar = document.querySelector('.navbar-content');
+    if (!heroImage || !navbar) return;
+
+    function syncHeroLayout() {
+      const isMobile = matchMedia('(max-width: 900px)').matches;
+      const navbarRect = navbar.getBoundingClientRect();
+
+      heroImage.classList.remove('hero-image--centered', 'hero-image--masked');
+      heroImage.style.right = '0px';
+
+      const imageRect = heroImage.getBoundingClientRect();
+      if (isMobile) {
+        const fitsViewport = imageRect.width <= innerWidth;
+        heroImage.classList.toggle('hero-image--centered', !fitsViewport);
+        heroImage.classList.toggle('hero-image--masked', !fitsViewport);
+        heroImage.style.removeProperty('right');
+        document.documentElement.style.setProperty('--hero-right-overflow', '0px');
+        return;
+      }
+
+      const overlap = Math.max(0, navbarRect.right - imageRect.left);
+      const rightOffset = -Math.min(100, overlap);
+      heroImage.style.right = `${rightOffset}px`;
+      document.documentElement.style.setProperty('--hero-right-overflow', `${-rightOffset}px`);
+      heroImage.classList.toggle('hero-image--masked', rightOffset <= -100);
+    }
+
+    window.addEventListener('resize', syncHeroLayout);
+    navbar.addEventListener('transitionend', syncHeroLayout);
+    heroImage.addEventListener('load', syncHeroLayout, { once: true });
+    syncHeroLayout();
+  })();
+</script>
+
 <style lang="scss">
 @use '../styles/global.scss' as *;
 
@@ -24,17 +61,30 @@ const {
   height: 100vh;
 }
 
+.hero-image--masked {
+  mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.72) 18%, #000 42%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.72) 18%, #000 42%);
+}
 
 @media (max-width: 900px) {
   .hero-image {
+    left: auto;
+    right: 0;
+    width: auto;
+    height: 100dvh;
+    object-fit: contain;
+    object-position: right center;
+    opacity: 0.18;
+    transform: none;
+  }
+
+  .hero-image--centered {
     left: 50%;
     right: auto;
     width: 100vw;
-    height: 100dvh;
     object-fit: cover;
     object-position: 72% center;
     transform: translateX(-50%);
-    opacity: 0.18;
   }
 }
 </style>
