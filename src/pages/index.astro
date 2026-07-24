@@ -19,12 +19,12 @@ import '../styles/global.scss';
 				</div>
 				<h1 class="title">tanh_Heng's Blog</h1>
 				<div class="signature">
+					<p>Life is Piano.</p>
 					<div class="circles-grid">
 						{Array.from({ length: 40 }).map(() => (
 							<span class="circle"></span>
 						))}
 					</div>
-					<p>Life is Piano.</p>
 				</div>
 			</section>
 			<section class="aboutme-content" hidden>
@@ -68,6 +68,10 @@ import '../styles/global.scss';
   (function() {
     const snapSections = Array.from(document.querySelectorAll('.scroll-snap-section'));
     const contentSections = Array.from(document.querySelectorAll('.left-container section'));
+    const circlesGrid = document.querySelector('.main-content .circles-grid');
+    const signatureCircles = Array.from(circlesGrid?.querySelectorAll('.circle') ?? []);
+    const mainTitle = document.querySelector('.main-content > .title');
+    const signature = document.querySelector('.main-content > .signature');
     let currentIndex = 0;
     let transitionController;
     const animationClasses = [
@@ -77,6 +81,36 @@ import '../styles/global.scss';
       'animate__fadeOutUp',
       'animate__fadeOutDown',
     ];
+
+    function syncSignaturePosition() {
+      if (!mainTitle || !signature) return;
+
+      const titleStyle = getComputedStyle(mainTitle);
+      const lineHeight = Number.parseFloat(titleStyle.lineHeight);
+      const wrapOffset = matchMedia('(max-width: 900px)').matches
+        ? Math.max(0, mainTitle.getBoundingClientRect().height - lineHeight)
+        : 0;
+      signature.style.setProperty('--title-wrap-offset', `${wrapOffset}px`);
+    }
+
+    new ResizeObserver(syncSignaturePosition).observe(mainTitle);
+    syncSignaturePosition();
+
+    function syncSignatureCircles() {
+      if (!circlesGrid || signatureCircles.length === 0) return;
+
+      const isMobile = matchMedia('(max-width: 900px)').matches;
+      const columns = isMobile ? 8 : 10;
+      const rows = isMobile ? 3 : 4;
+      circlesGrid.style.setProperty('--signature-columns', String(columns));
+      circlesGrid.style.setProperty('--signature-rows', String(rows));
+      signatureCircles.forEach((circle, index) => {
+        circle.hidden = index >= columns * rows;
+      });
+    }
+
+    new ResizeObserver(syncSignatureCircles).observe(circlesGrid);
+    syncSignatureCircles();
 
     function transitionTo(nextIndex, direction) {
       if (nextIndex === currentIndex) return;
@@ -211,11 +245,11 @@ p {
 	}
 	.signature {
 		display: flex;
-
 		margin-top: 2rem;
 
 		.circles-grid {
 			display: grid;
+			order: -1;
 			grid-template-columns: repeat(10, 0.5rem);
 			grid-template-rows: repeat(4, 0.5rem);
 			gap: 2rem;
@@ -234,7 +268,6 @@ p {
 			color: $light-blue;
 			margin-left: 2rem;
 			margin-top: -0.5rem;
-			line-height: 1;
 		}
 	}
 }
@@ -322,7 +355,6 @@ p {
 	padding-bottom: 3rem;
 
 	.signature {
-		margin-top: 5vh;
 		font-size: 4rem;
 		font-family: $font-family-special;
 		color: $primary-blue;
@@ -335,4 +367,110 @@ p {
 	}
 }
 
+
+@media (max-width: 900px) {
+	.left-content {
+		width: 100%;
+		margin-top: 0;
+	}
+
+	.left-container {
+		top: 0;
+		left: 0;
+		box-sizing: border-box;
+		width: 100%;
+		height: 100dvh;
+		padding: (6.5rem - navbar.$navbar-margin-vertical) 1.25rem 2rem;
+		align-items: center;
+
+		section {
+			width: 100%;
+			max-height: calc(100dvh - #{8.5rem - navbar.$navbar-margin-vertical});
+			overflow-y: auto;
+		}
+	}
+
+	.title {
+		font-size: clamp(2.25rem, 12vw, 3.25rem);
+		line-height: 1.1;
+	}
+
+	.main-content {
+		.subtitle {
+			gap: 0.6rem;
+
+			p {
+				font-size: 1.1rem;
+			}
+
+			img {
+				width: 1.1rem;
+				height: 1.1rem;
+			}
+		}
+
+		.signature {
+			align-self: flex-end;
+			align-items: flex-end;
+			position: relative;
+			top: calc(-1 * var(--title-wrap-offset, 0px));
+			margin-top: 0.25rem;
+			flex-direction: column;
+
+			.circles-grid {
+				order: 0;
+				grid-template-columns: repeat(var(--signature-columns, 10), 0.35rem);
+				grid-template-rows: repeat(var(--signature-rows, 4), 0.35rem);
+				gap: clamp(0.85rem, 5vw, 1.25rem);
+
+				.circle {
+					width: 0.35rem;
+					height: 0.35rem;
+				}
+			}
+
+			p {
+				align-self: flex-end;
+				font-size: 2.75rem;
+				margin: 0 0 0.75rem;
+				text-align: right;
+			}
+		}
+	}
+
+	.aboutme-content {
+		gap: 0.75rem;
+
+		.text {
+			font-size: 0.95rem;
+			line-height: 1.7;
+		}
+
+		.tags {
+			flex-wrap: wrap;
+			gap: 0.5rem 0.75rem;
+			line-height: 1.35;
+		}
+	}
+
+	.recent-content {
+		// min-height: 0;
+	}
+
+	.footpage-content {
+		padding-bottom: 0;
+		text-align: center;
+
+		.signature {
+			margin-top: 0;
+			font-size: clamp(2.5rem, 14vw, 4rem);
+			line-height: 1;
+		}
+
+		.footnote {
+			font-size: 0.9rem;
+			line-height: 1.5;
+		}
+	}
+}
 </style>

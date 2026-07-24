@@ -11,22 +11,26 @@ const navLinks = [
 
 <nav class="navbar">
   <div class="navbar-content">
-    <a href="/" class="title">TANH.MOE</a>
-    <div class="circles">
-      <span class="circle circle-ex-light"></span>
-      <span class="circle circle-light"></span>
-      <span class="circle circle-primary"></span>
+    <div class="brand">
+      <a href="/" class="title">TANH.MOE</a>
+      <div class="circles" aria-hidden="true">
+        <span class="circle circle-ex-light"></span>
+        <span class="circle circle-light"></span>
+        <span class="circle circle-primary"></span>
+      </div>
+      <span class="divider">|</span>
     </div>
-    <span class="divider">|</span>
-    {navLinks.map((link, index) => (
-      <>
-        <a href={link.href} class:list={['nav-link', { active: link.name === activePage }]}>
-          {link.name}
-        </a>
-        {index < navLinks.length - 1 && <span class="divider">|</span>}
-      </>
-    ))}
-    <span class="divider">|</span>
+    <div class="nav-links">
+      {navLinks.map((link, index) => (
+        <>
+          <a href={link.href} class:list={['nav-link', { active: link.name === activePage }]}>
+            {link.name}
+          </a>
+          {index < navLinks.length - 1 && <span class="divider">|</span>}
+        </>
+      ))}
+      <span class="divider">|</span>
+    </div>
   </div>
 </nav>
 

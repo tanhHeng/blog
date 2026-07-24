@@ -2,7 +2,7 @@
 import DefaultLayout from "../layouts/DefaultLayout.astro";
 ---
 
-<DefaultLayout activePage="error" showHero={false}>
+<DefaultLayout activePage="error" showHero={true}>
     <div class="container">
         <p>404 Not Found</p>
     </div>
@@ -12,15 +12,37 @@ import DefaultLayout from "../layouts/DefaultLayout.astro";
 @use '../styles/global.scss' as *;
 
 .container {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 2;
+    box-sizing: border-box;
     width: calc(100vw - 70.5vh);
-    margin-top: 30vh;
+    min-width: 0;
+    height: 100dvh;
     display: flex;
     align-items: center;
     justify-content: center;
-    
+    padding: 0 2rem;
+
     p {
+        margin: 0;
         color: $primary-blue;
-        font-size: 3rem;
+        font-size: clamp(2.5rem, 4vw, 3rem);
+        line-height: 1.1;
+        text-align: center;
+        white-space: nowrap;
+    }
+}
+
+@media (max-width: 900px) {
+    .container {
+        width: 100%;
+        padding: 0 1.25rem;
+
+        p {
+            font-size: clamp(2rem, 11vw, 3rem);
+            text-shadow: 0 0 1.5rem rgba(255, 255, 255, 0.95);
+        }
     }
 }
 </style>
