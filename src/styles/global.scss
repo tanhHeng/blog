@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display+SC:wght@400;700&family=Playfair+Display:wght@400;700&family=Italianno&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700&family=Playfair+Display+SC:wght@400;700&family=Playfair+Display:wght@400;700&family=Italianno&display=swap');
 
 $ex-light-blue: #d4e5f5;
 $light-blue: #a2a9d3;
@@ -6,12 +6,9 @@ $primary-blue: #8992bd;
 $content-color: #505b82;
 $home-title-color: #7b85b4;
 
-$font-family-default: 'Playfair Display', serif;
+$font-family-default: 'Playfair Display', 'Noto Serif SC', serif;
 $font-family-heading: 'Playfair Display SC', serif;
 $font-family-special: 'Italianno', serif;
-$font-family-chinese:
-	'STZhongSong', 'STSong', 'Songti SC', 'SimSun', 'NSimSun', 'FangSong', 'KaiTi', 'Microsoft YaHei',
-	'WenQuanYi Micro Hei', sans-serif;
 
 $font-size-content: 1.1rem;
 $font-size-larger-1: 1.25rem;
