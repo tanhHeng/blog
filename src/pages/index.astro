@@ -67,6 +67,11 @@ import '../styles/global.scss';
       </section>
 		</div>
 	</div>
+	<svg class="circle-attraction-layer" aria-hidden="true" focusable="false">
+		{Array.from({ length: 7 }).map(() => (
+			<line class="circle-attraction-line" x1="0" y1="0" x2="0" y2="0"></line>
+		))}
+	</svg>
 </DefaultLayout>
 
 <script is:inline>
@@ -173,6 +178,288 @@ import '../styles/global.scss';
 
     snapSections.forEach((section) => observer.observe(section));
   })();
+</script>
+
+<script is:inline>
+	(function() {
+		const maxConnectionLines = 7;
+		const mainContent = document.querySelector('.main-content');
+		const signatureCircles = Array.from(document.querySelectorAll('.main-content .circles-grid .circle'));
+		const attractionLines = Array.from(document.querySelectorAll('.circle-attraction-line'));
+		if (!mainContent || signatureCircles.length === 0 || attractionLines.length !== maxConnectionLines) return;
+
+		const interactivePointer = matchMedia('(hover: hover) and (pointer: fine) and (min-width: 901px)');
+		const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+		const influenceDistance = 96;
+		const maximumPull = 12;
+		const lineTurnoverInterval = 500;
+		const minimumBreakChance = 0.01;
+		const distanceBreakChance = 0.12;
+		const pointer = { x: 0, y: 0, present: false };
+		const circleStates = signatureCircles.map((element, index) => ({
+			index,
+			element,
+			x: 0,
+			y: 0,
+			baseX: 0,
+			baseY: 0,
+			radius: 0,
+			distance: 0,
+			edgeDistance: Infinity,
+			proximity: 0,
+			attracted: false,
+			lineEligible: false,
+		}));
+		const lineSlots = attractionLines.map((element) => ({
+			element,
+			owner: undefined,
+			pendingOwner: undefined,
+			releasing: false,
+			opacity: 0,
+		}));
+		let animationFrame = 0;
+		let lastFrameTime = performance.now();
+		let nextLineTurnoverAt = 0;
+		let lineTurnoverTimer = 0;
+
+		function canInteract() {
+			return pointer.present && interactivePointer.matches && !reducedMotion.matches &&
+				mainContent.classList.contains('is-active') && !mainContent.hidden && !document.hidden;
+		}
+
+		function requestAttractionFrame() {
+			if (!animationFrame) animationFrame = requestAnimationFrame(animateAttraction);
+		}
+
+		function cancelLineTurnover() {
+			if (lineTurnoverTimer) clearTimeout(lineTurnoverTimer);
+			lineTurnoverTimer = 0;
+			nextLineTurnoverAt = 0;
+		}
+
+		function scheduleLineTurnover(time) {
+			if (lineTurnoverTimer) return;
+			const delay = Math.max(0, nextLineTurnoverAt - time);
+			lineTurnoverTimer = window.setTimeout(() => {
+				lineTurnoverTimer = 0;
+				requestAttractionFrame();
+			}, delay);
+		}
+
+		function finishLineSlot(slot) {
+			slot.owner = undefined;
+			slot.pendingOwner = undefined;
+			slot.releasing = false;
+			slot.opacity = 0;
+			slot.element.style.opacity = '0';
+			slot.element.removeAttribute('data-circle-index');
+		}
+
+		function releaseLineSlot(slot, pendingOwner) {
+			if (slot.releasing) return;
+			slot.pendingOwner = pendingOwner;
+			slot.releasing = true;
+		}
+
+		function assignLineSlot(slot, owner) {
+			slot.owner = owner;
+			slot.pendingOwner = undefined;
+			slot.releasing = false;
+			slot.opacity = 0;
+			slot.element.style.opacity = '0';
+			slot.element.dataset.circleIndex = String(owner.index);
+		}
+
+		function updateAttractedCircles() {
+			const enabled = canInteract();
+
+			for (const state of circleStates) {
+				state.attracted = false;
+				state.lineEligible = false;
+				state.proximity = 0;
+				state.edgeDistance = Infinity;
+				if (!enabled || state.element.hidden) continue;
+
+				const rect = state.element.getBoundingClientRect();
+				if (rect.width === 0) continue;
+
+				state.baseX = rect.left + rect.width / 2 - state.x;
+				state.baseY = rect.top + rect.height / 2 - state.y;
+				state.radius = rect.width / 2;
+				const deltaX = pointer.x - state.baseX;
+				const deltaY = pointer.y - state.baseY;
+				state.distance = Math.hypot(deltaX, deltaY);
+				state.edgeDistance = Math.max(0, state.distance - state.radius);
+
+				if (state.edgeDistance <= influenceDistance) {
+					state.attracted = true;
+					state.proximity = 1 - state.edgeDistance / influenceDistance;
+					state.lineEligible = state.edgeDistance > 0;
+				}
+			}
+		}
+
+		function updateLineAssignments(time) {
+			for (const slot of lineSlots) {
+				if (slot.releasing && slot.pendingOwner && !slot.pendingOwner.lineEligible) {
+					slot.pendingOwner = undefined;
+				}
+				if (slot.owner && !slot.owner.lineEligible && !slot.releasing) {
+					releaseLineSlot(slot);
+				}
+			}
+
+			const eligibleCircles = circleStates.filter((state) => state.lineEligible);
+			const assignedCircles = new Set(lineSlots.flatMap((slot) => (
+				[slot.owner, slot.pendingOwner].filter(Boolean)
+			)));
+			const waitingCircles = eligibleCircles
+				.filter((state) => !assignedCircles.has(state))
+				.sort((first, second) => first.distance - second.distance);
+
+			for (const slot of lineSlots) {
+				if (slot.owner || slot.releasing || waitingCircles.length === 0) continue;
+				assignLineSlot(slot, waitingCircles.shift());
+			}
+
+			const overCapacity = eligibleCircles.length > maxConnectionLines;
+			if (!overCapacity) {
+				cancelLineTurnover();
+				return;
+			}
+
+			if (!nextLineTurnoverAt) nextLineTurnoverAt = time + lineTurnoverInterval;
+			if (time >= nextLineTurnoverAt) {
+				const reservedCircles = new Set(lineSlots.flatMap((slot) => (
+					[slot.owner, slot.pendingOwner].filter(Boolean)
+				)));
+				const currentWaitingCircles = eligibleCircles.filter((state) => !reservedCircles.has(state));
+				const breakableSlots = lineSlots.filter((slot) => {
+					if (!slot.owner || slot.releasing) return false;
+					const distanceRatio = Math.min(1, slot.owner.edgeDistance / influenceDistance);
+					const breakChance = minimumBreakChance + distanceBreakChance * distanceRatio * distanceRatio;
+					return Math.random() < breakChance;
+				});
+
+				if (breakableSlots.length > 0 && currentWaitingCircles.length > 0) {
+					const slot = breakableSlots[Math.floor(Math.random() * breakableSlots.length)];
+					const nextOwner = currentWaitingCircles[Math.floor(Math.random() * currentWaitingCircles.length)];
+					releaseLineSlot(slot, nextOwner);
+				}
+
+				nextLineTurnoverAt = time + lineTurnoverInterval;
+			}
+
+			scheduleLineTurnover(time);
+		}
+
+		function animateAttraction(time) {
+			animationFrame = 0;
+			updateAttractedCircles();
+			updateLineAssignments(time);
+
+			const elapsed = Math.min(50, time - lastFrameTime);
+			lastFrameTime = time;
+			const attractionBlend = 1 - Math.exp(-elapsed * 0.018);
+			const returnBlend = 1 - Math.exp(-elapsed * 0.012);
+			let animationOngoing = false;
+
+			for (const state of circleStates) {
+				let targetX = 0;
+				let targetY = 0;
+
+				if (state.attracted && state.distance > 0.001) {
+					const pull = Math.min(maximumPull * state.proximity * state.proximity, state.distance * 0.55);
+					targetX = (pointer.x - state.baseX) / state.distance * pull;
+					targetY = (pointer.y - state.baseY) / state.distance * pull;
+				}
+
+				const blend = state.attracted ? attractionBlend : returnBlend;
+				const nextX = state.x + (targetX - state.x) * blend;
+				const nextY = state.y + (targetY - state.y) * blend;
+				const settled = Math.abs(nextX - targetX) < 0.01 && Math.abs(nextY - targetY) < 0.01;
+
+				state.x = settled ? targetX : nextX;
+				state.y = settled ? targetY : nextY;
+				if (state.x === 0 && state.y === 0) {
+					state.element.style.removeProperty('translate');
+				} else {
+					state.element.style.translate = `${state.x.toFixed(2)}px ${state.y.toFixed(2)}px`;
+				}
+
+				if (!settled) animationOngoing = true;
+			}
+
+			for (const slot of lineSlots) {
+				const owner = slot.owner;
+				const targetOpacity = owner && !slot.releasing ? 0.25 + owner.proximity * 0.5 : 0;
+				const blend = targetOpacity > slot.opacity ? attractionBlend : returnBlend;
+				slot.opacity += (targetOpacity - slot.opacity) * blend;
+				const settled = Math.abs(slot.opacity - targetOpacity) < 0.005;
+				if (settled) slot.opacity = targetOpacity;
+
+				let lineVisible = false;
+				if (owner) {
+					const circleX = owner.baseX + owner.x;
+					const circleY = owner.baseY + owner.y;
+					const deltaX = pointer.x - circleX;
+					const deltaY = pointer.y - circleY;
+					const distance = Math.hypot(deltaX, deltaY);
+					const directionX = distance > 0.001 ? deltaX / distance : 0;
+					const directionY = distance > 0.001 ? deltaY / distance : 0;
+					const startDistance = Math.min(owner.radius, distance);
+					const endDistance = distance;
+					lineVisible = distance > startDistance;
+
+					slot.element.setAttribute('x1', String(circleX + directionX * startDistance));
+					slot.element.setAttribute('y1', String(circleY + directionY * startDistance));
+					slot.element.setAttribute('x2', String(circleX + directionX * endDistance));
+					slot.element.setAttribute('y2', String(circleY + directionY * endDistance));
+				}
+
+				slot.element.style.opacity = lineVisible ? slot.opacity.toFixed(3) : '0';
+				if (slot.releasing && settled) {
+					const pendingOwner = slot.pendingOwner;
+					finishLineSlot(slot);
+					if (pendingOwner?.lineEligible) assignLineSlot(slot, pendingOwner);
+					animationOngoing = true;
+				} else if (!settled) {
+					animationOngoing = true;
+				}
+			}
+
+			if (animationOngoing) requestAttractionFrame();
+		}
+
+		function releaseAttraction() {
+			pointer.present = false;
+			requestAttractionFrame();
+		}
+
+		document.addEventListener('pointermove', (event) => {
+			if (event.pointerType !== 'mouse') {
+				releaseAttraction();
+				return;
+			}
+
+			pointer.x = event.clientX;
+			pointer.y = event.clientY;
+			pointer.present = true;
+			requestAttractionFrame();
+		}, { passive: true });
+		document.documentElement.addEventListener('mouseleave', releaseAttraction);
+		window.addEventListener('blur', releaseAttraction);
+		window.addEventListener('resize', requestAttractionFrame);
+		interactivePointer.addEventListener('change', releaseAttraction);
+		reducedMotion.addEventListener('change', releaseAttraction);
+		document.addEventListener('visibilitychange', () => {
+			if (document.hidden) releaseAttraction();
+		});
+		new MutationObserver(requestAttractionFrame).observe(mainContent, {
+			attributes: true,
+			attributeFilter: ['class', 'hidden'],
+		});
+	})();
 </script>
 
 <style scoped lang="scss">
@@ -305,6 +592,24 @@ p {
 			margin-top: -0.5rem;
 		}
 	}
+}
+
+.circle-attraction-layer {
+	position: fixed;
+	inset: 0;
+	z-index: 1;
+	width: 100vw;
+	height: 100vh;
+	overflow: visible;
+	pointer-events: none;
+}
+
+.circle-attraction-line {
+	stroke: rgba(137, 146, 189, 0.8);
+	stroke-width: 1;
+	stroke-linecap: round;
+	vector-effect: non-scaling-stroke;
+	opacity: 0;
 }
 
 
