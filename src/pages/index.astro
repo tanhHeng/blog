@@ -195,6 +195,8 @@ import '../styles/global.scss';
 		const lineTurnoverInterval = 500;
 		const minimumBreakChance = 0.01;
 		const distanceBreakChance = 0.12;
+		const minimumFadeDuration = 140;
+		const maximumFadeDuration = 420;
 		const pointer = { x: 0, y: 0, present: false };
 		const circleStates = signatureCircles.map((element, index) => ({
 			index,
@@ -213,10 +215,10 @@ import '../styles/global.scss';
 		const lineSlots = attractionLines.map((element) => ({
 			element,
 			owner: undefined,
-			pendingOwner: undefined,
-			releasing: false,
 			opacity: 0,
+			baseOpacity: 0.25,
 		}));
+		const fadingLines = [];
 		let animationFrame = 0;
 		let lastFrameTime = performance.now();
 		let nextLineTurnoverAt = 0;
@@ -245,28 +247,46 @@ import '../styles/global.scss';
 				requestAttractionFrame();
 			}, delay);
 		}
+		function clearFadingLines() {
+			for (const fadingLine of fadingLines) fadingLine.element.remove();
+			fadingLines.length = 0;
+		}
 
-		function finishLineSlot(slot) {
+		function clearLineSlot(slot) {
 			slot.owner = undefined;
-			slot.pendingOwner = undefined;
-			slot.releasing = false;
 			slot.opacity = 0;
+			slot.baseOpacity = 0.25;
 			slot.element.style.opacity = '0';
 			slot.element.removeAttribute('data-circle-index');
 		}
 
-		function releaseLineSlot(slot, pendingOwner) {
-			if (slot.releasing) return;
-			slot.pendingOwner = pendingOwner;
-			slot.releasing = true;
+		function releaseLineSlot(slot) {
+			if (!slot.owner) return;
+
+			if (slot.opacity > 0.005) {
+				const element = slot.element.cloneNode(false);
+				element.style.opacity = slot.opacity.toFixed(3);
+				element.removeAttribute('data-circle-index');
+				slot.element.parentNode?.appendChild(element);
+				const opacityRatio = Math.max(0, Math.min(1, (slot.baseOpacity - 0.25) / 0.5));
+				const duration = minimumFadeDuration + opacityRatio * (maximumFadeDuration - minimumFadeDuration);
+				fadingLines.push({
+					element,
+					opacity: slot.opacity,
+					startOpacity: slot.opacity,
+					elapsed: 0,
+					duration,
+				});
+			}
+
+			clearLineSlot(slot);
 		}
 
 		function assignLineSlot(slot, owner) {
 			slot.owner = owner;
-			slot.pendingOwner = undefined;
-			slot.releasing = false;
 			slot.opacity = 0;
 			slot.element.style.opacity = '0';
+			slot.baseOpacity = 0.25 + owner.proximity * 0.5;
 			slot.element.dataset.circleIndex = String(owner.index);
 		}
 
@@ -298,27 +318,28 @@ import '../styles/global.scss';
 				}
 			}
 		}
+		function hasLineAvailableArea() {
+			return circleStates.some((state) => state.lineEligible);
+		}
 
 		function updateLineAssignments(time) {
+			const pointerOutsideLineArea = !hasLineAvailableArea();
+			if (pointerOutsideLineArea) clearFadingLines();
+
 			for (const slot of lineSlots) {
-				if (slot.releasing && slot.pendingOwner && !slot.pendingOwner.lineEligible) {
-					slot.pendingOwner = undefined;
-				}
-				if (slot.owner && !slot.owner.lineEligible && !slot.releasing) {
-					releaseLineSlot(slot);
-				}
+				if (!slot.owner || slot.owner.lineEligible) continue;
+				if (pointerOutsideLineArea) clearLineSlot(slot);
+				else releaseLineSlot(slot);
 			}
 
 			const eligibleCircles = circleStates.filter((state) => state.lineEligible);
-			const assignedCircles = new Set(lineSlots.flatMap((slot) => (
-				[slot.owner, slot.pendingOwner].filter(Boolean)
-			)));
+			const assignedCircles = new Set(lineSlots.map((slot) => slot.owner).filter(Boolean));
 			const waitingCircles = eligibleCircles
 				.filter((state) => !assignedCircles.has(state))
 				.sort((first, second) => first.distance - second.distance);
 
 			for (const slot of lineSlots) {
-				if (slot.owner || slot.releasing || waitingCircles.length === 0) continue;
+				if (slot.owner || waitingCircles.length === 0) continue;
 				assignLineSlot(slot, waitingCircles.shift());
 			}
 
@@ -330,12 +351,10 @@ import '../styles/global.scss';
 
 			if (!nextLineTurnoverAt) nextLineTurnoverAt = time + lineTurnoverInterval;
 			if (time >= nextLineTurnoverAt) {
-				const reservedCircles = new Set(lineSlots.flatMap((slot) => (
-					[slot.owner, slot.pendingOwner].filter(Boolean)
-				)));
-				const currentWaitingCircles = eligibleCircles.filter((state) => !reservedCircles.has(state));
+				const currentOwners = new Set(lineSlots.map((slot) => slot.owner).filter(Boolean));
+				const currentWaitingCircles = eligibleCircles.filter((state) => !currentOwners.has(state));
 				const breakableSlots = lineSlots.filter((slot) => {
-					if (!slot.owner || slot.releasing) return false;
+					if (!slot.owner) return false;
 					const distanceRatio = Math.min(1, slot.owner.edgeDistance / influenceDistance);
 					const breakChance = minimumBreakChance + distanceBreakChance * distanceRatio * distanceRatio;
 					return Math.random() < breakChance;
@@ -344,7 +363,8 @@ import '../styles/global.scss';
 				if (breakableSlots.length > 0 && currentWaitingCircles.length > 0) {
 					const slot = breakableSlots[Math.floor(Math.random() * breakableSlots.length)];
 					const nextOwner = currentWaitingCircles[Math.floor(Math.random() * currentWaitingCircles.length)];
-					releaseLineSlot(slot, nextOwner);
+					releaseLineSlot(slot);
+					assignLineSlot(slot, nextOwner);
 				}
 
 				nextLineTurnoverAt = time + lineTurnoverInterval;
@@ -392,7 +412,8 @@ import '../styles/global.scss';
 
 			for (const slot of lineSlots) {
 				const owner = slot.owner;
-				const targetOpacity = owner && !slot.releasing ? 0.25 + owner.proximity * 0.5 : 0;
+				const targetOpacity = owner ? 0.25 + owner.proximity * 0.5 : 0;
+				if (owner) slot.baseOpacity = targetOpacity;
 				const blend = targetOpacity > slot.opacity ? attractionBlend : returnBlend;
 				slot.opacity += (targetOpacity - slot.opacity) * blend;
 				const settled = Math.abs(slot.opacity - targetOpacity) < 0.005;
@@ -408,22 +429,28 @@ import '../styles/global.scss';
 					const directionX = distance > 0.001 ? deltaX / distance : 0;
 					const directionY = distance > 0.001 ? deltaY / distance : 0;
 					const startDistance = Math.min(owner.radius, distance);
-					const endDistance = distance;
 					lineVisible = distance > startDistance;
 
 					slot.element.setAttribute('x1', String(circleX + directionX * startDistance));
 					slot.element.setAttribute('y1', String(circleY + directionY * startDistance));
-					slot.element.setAttribute('x2', String(circleX + directionX * endDistance));
-					slot.element.setAttribute('y2', String(circleY + directionY * endDistance));
+					slot.element.setAttribute('x2', String(pointer.x));
+					slot.element.setAttribute('y2', String(pointer.y));
 				}
 
 				slot.element.style.opacity = lineVisible ? slot.opacity.toFixed(3) : '0';
-				if (slot.releasing && settled) {
-					const pendingOwner = slot.pendingOwner;
-					finishLineSlot(slot);
-					if (pendingOwner?.lineEligible) assignLineSlot(slot, pendingOwner);
-					animationOngoing = true;
-				} else if (!settled) {
+				if (!settled) animationOngoing = true;
+			}
+
+			for (let index = fadingLines.length - 1; index >= 0; index--) {
+				const fadingLine = fadingLines[index];
+				fadingLine.elapsed += elapsed;
+				const progress = Math.min(1, fadingLine.elapsed / fadingLine.duration);
+				fadingLine.opacity = fadingLine.startOpacity * (1 - progress) ** 2;
+				if (progress >= 1 || fadingLine.opacity < 0.005) {
+					fadingLine.element.remove();
+					fadingLines.splice(index, 1);
+				} else {
+					fadingLine.element.style.opacity = fadingLine.opacity.toFixed(3);
 					animationOngoing = true;
 				}
 			}
@@ -546,6 +573,11 @@ p {
 	display: flex;
 	flex-direction: column;
 	max-width: var(--main-content-max-width);
+	scrollbar-width: none;
+
+	&::-webkit-scrollbar {
+		display: none;
+	}
 	.title {
 		width: fit-content;
 	}
