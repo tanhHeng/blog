@@ -7,6 +7,7 @@ interface Props {
   activePage?: string;
   showHero?: boolean;
   showTextDecorations?: boolean;
+  showFootnote?: boolean;
   leftText?: string;
   rightText?: string;
   heroImage?: string;
@@ -16,13 +17,14 @@ const {
   activePage,
   showHero = true,
   showTextDecorations = true,
+  showFootnote = true,
   leftText,
   rightText,
   heroImage,
 } = Astro.props;
 ---
 
-<BaseLayout activePage={activePage}>
+<BaseLayout activePage={activePage} showFootnote={showFootnote}>
   {showTextDecorations && (
     <TextDecorations leftText={leftText} rightText={rightText} />
   )}
