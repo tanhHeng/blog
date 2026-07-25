@@ -25,5 +25,5 @@
 	"engines": {
 		"node": ">=22.12.0"
 	},
-	"packageManager": "yarn@4.17.1+sha512.dad89242e24d97f2f74304ddaeaea52960e991c9e9f4c1af093feb22574771bbb74967e72dd99e86fb777ae957d614fb145b751a37eadc27ac17e92f8458a9ea"
+	"packageManager": "yarn@4.17.1"
 }
