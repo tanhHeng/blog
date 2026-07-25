@@ -57,7 +57,6 @@ import '../styles/global.scss';
 				</div>
 			</section>
       <section class="footpage-content" hidden>
-        <p class="footnote-kicker">TANH.MOE <span>/</span> PERSONAL BLOG</p>
         <p class="signature"><span>Life is Piano.</span><span>You are Pianist.</span></p>
         <nav class="footnote-links" aria-label="Footer links">
           <a class="link-underline" href="mailto:contact@tanh.moe">Contact</a>
@@ -395,44 +394,33 @@ p {
   justify-content: center;
   box-sizing: border-box;
   min-height: 15rem;
-  padding: 3rem 1.5rem 2.5rem;
-  border-top: 1px solid rgba($primary-blue, 0.45);
   color: $light-blue;
-  mask-image: linear-gradient(to bottom, transparent, #000 1.75rem, #000);
   text-align: center;
 
-  .footnote-kicker,
-  .footnote-copyright {
-    margin: 0;
-    font-family: $font-family-heading;
-    letter-spacing: 0.12em;
-  }
-
-  .footnote-kicker {
-    color: $primary-blue;
-    font-size: 0.82rem;
-
-    span {
-      color: $ex-light-blue;
-      padding: 0 0.5rem;
-    }
-  }
 
   .signature {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     justify-content: center;
     gap: 0 0.65rem;
+    width: fit-content;
     max-width: 100%;
-    margin: 0.85rem 0 0.5rem;
+    margin: 2rem 0 0.5rem;
     color: $primary-blue;
     font-family: $font-family-special;
     font-size: 4rem;
     line-height: 1;
-    white-space: nowrap;
 
     span {
       white-space: nowrap;
+
+      &:first-child {
+        margin-right: auto;
+      }
+
+      &:last-child {
+        margin-left: auto;
+      }
     }
   }
 
@@ -470,7 +458,6 @@ p {
 @media (max-width: 900px) {
   .footpage-content {
     min-height: 12rem;
-    padding: 2.5rem 1rem 2rem;
 
     .footnote-kicker,
     .footnote-copyright {
