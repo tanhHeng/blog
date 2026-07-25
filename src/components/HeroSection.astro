@@ -18,36 +18,50 @@ const {
   (() => {
     const heroImage = document.querySelector('.hero-image');
     const navbar = document.querySelector('.navbar-content');
+	const root = document.documentElement;
     if (!heroImage || !navbar) return;
 
     function syncHeroLayout() {
-      const isMobile = matchMedia('(max-width: 900px)').matches;
       const navbarRect = navbar.getBoundingClientRect();
 
-      heroImage.classList.remove('hero-image--centered', 'hero-image--masked');
+      root.classList.remove('home-mobile-layout');
+		heroImage.classList.remove('hero-image--mobile-layout', 'hero-image--centered');
+      heroImage.style.removeProperty('left');
       heroImage.style.right = '0px';
+      root.style.setProperty('--hero-right-overflow', '0px');
 
-      const imageRect = heroImage.getBoundingClientRect();
-      if (isMobile) {
-        const fitsViewport = imageRect.width <= innerWidth;
-        heroImage.classList.toggle('hero-image--centered', !fitsViewport);
-        heroImage.classList.toggle('hero-image--masked', !fitsViewport);
+      const baseImageRect = heroImage.getBoundingClientRect();
+      const overlap = Math.max(0, navbarRect.right - baseImageRect.left);
+      const rightOffset = -Math.min(100, overlap);
+      heroImage.style.right = `${rightOffset}px`;
+
+      const cssMobileLayout = getComputedStyle(root)
+        .getPropertyValue('--home-mobile-layout')
+        .trim() === '1';
+      root.classList.toggle('home-mobile-layout', cssMobileLayout);
+      heroImage.classList.toggle('hero-image--mobile-layout', cssMobileLayout);
+
+      if (cssMobileLayout) {
+        const mobileImageRect = heroImage.getBoundingClientRect();
+        const fitsViewport = mobileImageRect.width <= innerWidth;
+		heroImage.classList.toggle('hero-image--centered', !fitsViewport);
         heroImage.style.removeProperty('right');
-        document.documentElement.style.setProperty('--hero-right-overflow', '0px');
+        root.style.setProperty('--hero-right-overflow', '0px');
+        root.style.setProperty('--hero-left-edge', `${mobileImageRect.left}px`);
         return;
       }
 
-      const overlap = Math.max(0, navbarRect.right - imageRect.left);
-      const rightOffset = -Math.min(100, overlap);
-      heroImage.style.right = `${rightOffset}px`;
-      document.documentElement.style.setProperty('--hero-right-overflow', `${-rightOffset}px`);
-      heroImage.classList.toggle('hero-image--masked', rightOffset <= -100);
+      const desktopImageRect = heroImage.getBoundingClientRect();
+      root.style.setProperty('--hero-right-overflow', `${-rightOffset}px`);
+      root.style.setProperty('--hero-left-edge', `${desktopImageRect.left}px`);
     }
 
-    window.addEventListener('resize', syncHeroLayout);
-    navbar.addEventListener('transitionend', syncHeroLayout);
-    heroImage.addEventListener('load', syncHeroLayout, { once: true });
-    syncHeroLayout();
+	window.addEventListener('load', syncHeroLayout, { once: true });
+
+	window.addEventListener('resize', syncHeroLayout);
+	navbar.addEventListener('transitionend', syncHeroLayout);
+	heroImage.addEventListener('load', syncHeroLayout, { once: true });
+	syncHeroLayout();
   })();
 </script>
 
@@ -61,9 +75,25 @@ const {
   height: 100vh;
 }
 
-.hero-image--masked {
-  mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.72) 18%, #000 42%);
-  -webkit-mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.72) 18%, #000 42%);
+
+.hero-image--mobile-layout {
+  left: auto;
+  right: 0;
+  width: auto;
+  height: 100dvh;
+  object-fit: contain;
+  object-position: right center;
+  opacity: 0.18;
+  transform: none;
+}
+
+.hero-image--mobile-layout.hero-image--centered {
+  left: 50%;
+  right: auto;
+  width: 100vw;
+  object-fit: cover;
+  object-position: 72% center;
+  transform: translateX(-50%);
 }
 
 @media (max-width: 900px) {
@@ -78,13 +108,5 @@ const {
     transform: none;
   }
 
-  .hero-image--centered {
-    left: 50%;
-    right: auto;
-    width: 100vw;
-    object-fit: cover;
-    object-position: 72% center;
-    transform: translateX(-50%);
-  }
 }
 </style>
