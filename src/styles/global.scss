@@ -24,3 +24,31 @@ html {
 	padding: 0;
 	font-family: $font-family-default;
 }
+
+.link-underline {
+	position: relative;
+	text-decoration: none;
+
+	&::after {
+		position: absolute;
+		right: 0;
+		bottom: -0.2rem;
+		left: 0;
+		height: 1px;
+		background: currentColor;
+		content: '';
+		transform: scaleX(0);
+		transform-origin: left;
+		transition: transform 240ms ease-out;
+	}
+
+	&:hover::after,
+	&:focus-visible::after {
+		transform: scaleX(1);
+	}
+
+	&:focus-visible {
+		outline: 1px solid currentColor;
+		outline-offset: 0.25rem;
+	}
+}
