@@ -1,9 +1,9 @@
 ---
-import DefaultLayout from '../layouts/DefaultLayout.astro';
+import PageLayout from '../layouts/PageLayout.astro';
 import '../styles/global.scss';
 ---
 
-<DefaultLayout showFootnote={false}>
+<PageLayout title="TANH.MOE | Personal Blog" showFootnote={false}>
 	<div class="left-content">
 			<div class="scroll-snap-section"></div>
 			<div class="scroll-snap-section"></div>
@@ -72,7 +72,7 @@ import '../styles/global.scss';
 			<line class="circle-attraction-line" x1="0" y1="0" x2="0" y2="0"></line>
 		))}
 	</svg>
-</DefaultLayout>
+</PageLayout>
 
 <script is:inline>
   (function() {

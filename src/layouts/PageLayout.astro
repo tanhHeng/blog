@@ -11,6 +11,7 @@ interface Props {
   leftText?: string;
   rightText?: string;
   heroImage?: string;
+  title?: string;
 }
 
 const {
@@ -21,10 +22,11 @@ const {
   leftText,
   rightText,
   heroImage,
+  title = "TANH.MOE"
 } = Astro.props;
 ---
 
-<BaseLayout activePage={activePage} showFootnote={showFootnote}>
+<BaseLayout activePage={activePage} showFootnote={showFootnote} title={title}>
   {showTextDecorations && (
     <TextDecorations leftText={leftText} rightText={rightText} />
   )}

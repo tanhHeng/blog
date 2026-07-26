@@ -1,12 +1,12 @@
 ---
-import DefaultLayout from "../layouts/DefaultLayout.astro";
+import PageLayout from "../layouts/PageLayout.astro";
 ---
 
-<DefaultLayout activePage="error" showHero={true} showFootnote={false}>
+<PageLayout activePage="error" showHero={true} showFootnote={false}>
     <div class="container">
         <p>404 Not Found</p>
     </div>
-</DefaultLayout>
+</PageLayout>
 
 <style scoped lang="scss">
 @use '../styles/global.scss' as *;
