@@ -1,29 +1,30 @@
 {
-	"name": "21-blog2",
-	"version": "0.0.1",
-	"type": "module",
-	"scripts": {
-		"dev": "astro dev",
-		"build": "astro build",
-		"preview": "astro preview",
-		"astro": "astro",
-		"check:astro": "astro check"
-	},
-	"dependencies": {
-		"animate.css": "^4.1.1",
-		"astro": "^7.1.6",
-		"sass": "^1.102.0"
-	},
-	"devDependencies": {
-		"@astrojs/check": "^0.9.10",
-		"typescript": "6",
-		"vite-plus": "^0.2.7"
-	},
-	"resolutions": {
-		"vite": "npm:@voidzero-dev/vite-plus-core@0.2.5"
-	},
-	"engines": {
-		"node": ">=22.12.0"
-	},
-	"packageManager": "yarn@4.18.0+sha512.fcb8716fe7cd0eece141ffc18b92193a9df9204c1ba83189c288835223fc0bbe64af473bab0d5e9927a7daeb5caf2bb07eb2787cc9338ca040ea125f2a1f2f7e"
+  "name": "21-blog2",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "check:astro": "astro check"
+  },
+  "dependencies": {
+    "animate.css": "^4.1.1",
+    "astro": "^7.1.6",
+    "sass": "^1.102.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "typescript": "6",
+    "vite-plus": "^0.2.7"
+  },
+  "resolutions": {
+    "typescript": "npm:typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2",
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.2.5"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "packageManager": "yarn@4.18.0+sha512.fcb8716fe7cd0eece141ffc18b92193a9df9204c1ba83189c288835223fc0bbe64af473bab0d5e9927a7daeb5caf2bb07eb2787cc9338ca040ea125f2a1f2f7e"
 }
