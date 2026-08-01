@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700&family=Playfair+Display+SC:wght@400;700&family=Playfair+Display:wght@400;700&family=Italianno&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700&family=Playfair+Display+SC:wght@400;700&family=Playfair+Display:wght@400;700&family=Italianno&display=swap");
 
 $ex-light-blue: #d4e5f5;
 $light-blue: #a2a9d3;
@@ -6,9 +6,9 @@ $primary-blue: #8992bd;
 $content-color: #505b82;
 $home-title-color: #7b85b4;
 
-$font-family-default: 'Playfair Display', 'Noto Serif SC', serif;
-$font-family-heading: 'Playfair Display SC', serif;
-$font-family-special: 'Italianno', serif;
+$font-family-default: "Playfair Display", "Noto Serif SC", serif;
+$font-family-heading: "Playfair Display SC", serif;
+$font-family-special: "Italianno", serif;
 
 $font-size-content: 1.1rem;
 $font-size-larger-1: 1.25rem;
@@ -17,35 +17,35 @@ $font-size-title: 3.5rem;
 
 body,
 html {
-	margin: 0;
-	padding: 0;
-	font-family: $font-family-default;
+  margin: 0;
+  padding: 0;
+  font-family: $font-family-default;
 }
 
 .link-underline {
-	position: relative;
-	text-decoration: none;
+  position: relative;
+  text-decoration: none;
 
-	&::after {
-		position: absolute;
-		right: 0;
-		bottom: -0.2rem;
-		left: 0;
-		height: 1px;
-		background: currentColor;
-		content: '';
-		transform: scaleX(0);
-		transform-origin: left;
-		transition: transform 240ms ease-out;
-	}
+  &::after {
+    position: absolute;
+    right: 0;
+    bottom: -0.2rem;
+    left: 0;
+    height: 1px;
+    background: currentColor;
+    content: "";
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 240ms ease-out;
+  }
 
-	&:hover::after,
-	&:focus-visible::after {
-		transform: scaleX(1);
-	}
+  &:hover::after,
+  &:focus-visible::after {
+    transform: scaleX(1);
+  }
 
-	&:focus-visible {
-		outline: 1px solid currentColor;
-		outline-offset: 0.25rem;
-	}
+  &:focus-visible {
+    outline: 1px solid currentColor;
+    outline-offset: 0.25rem;
+  }
 }
