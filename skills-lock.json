@@ -7,17 +7,23 @@
       "skillPath": "skills/antfu/SKILL.md",
       "computedHash": "e6629200b1f033c78150985fb1b1ec2aa848a378c0637f9a850cb33f650bce19"
     },
+    "astro": {
+      "source": "astrolicious/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/astro/SKILL.md",
+      "computedHash": "ebefe26b231d32379c14e41a46c2de7b4b0184543bedab7febdabe4fb21fba4e"
+    },
     "frontend-design": {
       "source": "anthropics/skills",
       "sourceType": "github",
       "skillPath": "skills/frontend-design/SKILL.md",
       "computedHash": "4eabc66183767153e404b39d1b839b1c37f2d82d86f0a0d7e880a579d8d62336"
     },
-    "pnpm": {
-      "source": "antfu/skills",
+    "scss-best-practices": {
+      "source": "mindrally/skills",
       "sourceType": "github",
-      "skillPath": "skills/pnpm/SKILL.md",
-      "computedHash": "318f9fca2441a3e06fedc336e195dd18be5dbe901064e4fa71b76b40b096ab3a"
+      "skillPath": "scss-best-practices/SKILL.md",
+      "computedHash": "16ac9e8bf135304254a358776c5fac043799c1c3ac40221da1338ee972506de5"
     },
     "tsdown": {
       "source": "antfu/skills",
