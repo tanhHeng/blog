@@ -13,7 +13,7 @@ __metadata:
     animate.css: "npm:^4.1.1"
     astro: "npm:^7.1.6"
     sass: "npm:^1.102.0"
-    typescript: "npm:6"
+    typescript: "npm:7"
     vite-plus: "npm:^0.2.7"
   languageName: unknown
   linkType: soft
