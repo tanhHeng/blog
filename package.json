@@ -16,8 +16,8 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
-    "typescript": "6",
-    "vite-plus": "^0.2.7"
+    "typescript": "7",
+    "vite-plus": "^0.3.0"
   },
   "resolutions": {
     "typescript": "npm:typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2",
