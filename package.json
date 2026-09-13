@@ -10,14 +10,14 @@
     "check:astro": "astro check"
   },
   "dependencies": {
-    "@astrojs/react": "^6.0.2",
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.4",
+    "@astrojs/react": "^6.0.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "animate.css": "^4.1.1",
-    "astro": "^7.1.6",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "sass": "^1.102.0"
+    "astro": "^7.3.2",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "sass": "^1.104.0"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
