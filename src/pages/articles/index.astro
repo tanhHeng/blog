@@ -1,0 +1,332 @@
+---
+import type { MarkdownInstance } from 'astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import RotatingCircles from '../../components/RotatingCircles.astro';
+
+interface ArticleFrontmatter {
+  title: string;
+  date: string | Date;
+  tags?: string[];
+  description?: string;
+  readingTime?: string;
+  wordCount?: number | string;
+}
+
+const modules = import.meta.glob<MarkdownInstance<ArticleFrontmatter>>('./*.md', { eager: true });
+const titleOrder = new Intl.Collator('en', { numeric: true });
+
+function estimateReadingMinutes(article: MarkdownInstance<ArticleFrontmatter>) {
+  const wordCount = Number(article.frontmatter.wordCount);
+  if (!Number.isFinite(wordCount) || wordCount <= 0) return undefined;
+
+  const body = article.rawContent();
+  const cjk = body.match(/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/gu)?.length ?? 0;
+  const words = body.match(/[A-Za-z]+(?:['’-][A-Za-z]+)*/g)?.length ?? 0;
+  return Math.max(1, Math.ceil(wordCount / (cjk >= words ? 400 : 200)));
+}
+
+const articles = Object.values(modules).map((article) => {
+  const { frontmatter } = article;
+  const date = frontmatter.date instanceof Date
+    ? frontmatter.date.toISOString().slice(0, 10)
+    : String(frontmatter.date ?? '').slice(0, 10);
+  const timestamp = Date.parse(date);
+  if (!Number.isFinite(timestamp)) {
+    throw new Error(`Article ${article.file} requires a valid date.`);
+  }
+  if (!article.url) {
+    throw new Error(`Article ${article.file} has no page URL.`);
+  }
+
+  const tags = new Map<string, string>();
+  for (const value of frontmatter.tags ?? []) {
+    const label = value.trim();
+    const key = label.toLowerCase();
+    if (label && !tags.has(key)) tags.set(key, label);
+  }
+
+  return {
+    title: frontmatter.title,
+    url: article.url,
+    date,
+    timestamp,
+    tags,
+    description: frontmatter.description?.trim(),
+    readingTime: frontmatter.readingTime?.trim(),
+    estimatedMinutes: estimateReadingMinutes(article),
+  };
+}).sort((a, b) => b.timestamp - a.timestamp
+  || titleOrder.compare(a.title, b.title)
+  || titleOrder.compare(a.url, b.url));
+
+const tagIndex = new Map<string, { key: string; label: string; count: number }>();
+let totalMinutes = 0;
+let estimatedArticles = 0;
+for (const article of articles) {
+  if (article.estimatedMinutes !== undefined) {
+    totalMinutes += article.estimatedMinutes;
+    estimatedArticles += 1;
+  }
+  for (const [key, label] of article.tags) {
+    const existing = tagIndex.get(key);
+    if (existing) existing.count += 1;
+    else tagIndex.set(key, { key, label, count: 1 });
+  }
+}
+const tags = [...tagIndex.values()].sort((a, b) => b.count - a.count || titleOrder.compare(a.label, b.label));
+const ringTags = tags.slice(0, 8);
+const sectorCount = Math.max(5, ringTags.length);
+const sectorAngle = 180 / sectorCount;
+const description = '记录设计、数学与游戏之间的思考，在结构与诗意之间寻找可感知的秩序。';
+const formatIndex = (index: number) => String(index).padStart(2, '0');
+---
+
+<BaseLayout activePage="Article" title="Articles | TANH.MOE" description={description}>
+  <div class="archive-decoration" aria-hidden="true">
+    <div class="archive-grid-texture"></div>
+    <RotatingCircles />
+    <p class="archive-edge-words">math<br />physics<br />geography</p>
+  </div>
+
+  <main class="articles-page" data-articles-page>
+    <div class="articles-grid">
+      <aside class="archive-sidebar" aria-label="Article filters and statistics">
+        <header class="archive-header">
+          <p class="archive-eyebrow">ARTICLES <span>/</span> OVERVIEW</p>
+          <h1>Articles<span class="heading-dot" aria-hidden="true"></span></h1>
+          <p class="archive-intro" lang="zh-CN">{description}</p>
+        </header>
+
+        <div class="filter-orbit" role="group" aria-label="Popular tag shortcuts">
+          <div class="orbit-guide" aria-hidden="true"></div>
+          <div class="orbit-sectors">
+          {Array.from({ length: sectorCount }, (_, index) => {
+            const tag = ringTags[index];
+            const radians = ((index + 0.5) * sectorAngle - 90) * Math.PI / 180;
+            return (
+              <div class="orbit-option">
+              {tag && (
+              <button
+                class="orbit-tag"
+                type="button"
+                data-filter-tag={tag.key}
+                data-tag-label={tag.label}
+                style={`--node-x: ${50 + 43 * Math.cos(radians)}%; --node-y: ${50 + 43 * Math.sin(radians)}%;`}
+                aria-pressed="false"
+                aria-controls="article-list"
+                aria-label={`Filter by ${tag.label}`}
+                title={tag.label}
+                disabled
+              >
+                <span class="orbit-tag-index" aria-hidden="true">{formatIndex(index + 1)}</span>
+                <span class="orbit-tag-label">{tag.label}</span>
+              </button>
+              )}
+              <span
+                class="orbit-sector"
+                aria-hidden="true"
+                style={`--sector-start: ${index * sectorAngle + 3}deg; --sector-sweep: ${sectorAngle - 6}deg;`}
+              ></span>
+              </div>
+            );
+          })}
+          </div>
+          <div class="orbit-core">
+            <span class="orbit-eyebrow">BROWSE BY TAG</span>
+            <h2>Filter</h2>
+            <p class="orbit-summary" data-filter-summary>All articles</p>
+            <p class="orbit-selection" data-selected-tags>Select tags to narrow the index.</p>
+            <span class="orbit-core-rule" aria-hidden="true"></span>
+            <span class="orbit-mode">MATCH ALL SELECTED</span>
+          </div>
+        </div>
+
+        <dl class="archive-stats">
+          <div class="stat-articles">
+            <dt>Total Articles</dt>
+            <dd>{formatIndex(articles.length)}</dd>
+          </div>
+          {estimatedArticles > 0 && (
+            <div class="stat-reading">
+              <dt>Total Reading Time <span class="stat-estimate">/ est.</span></dt>
+              <dd>
+                <span class="stat-approx" aria-hidden="true">≈</span> {totalMinutes}<span class="stat-unit">min</span>
+              {estimatedArticles < articles.length && (
+                <span class="stat-coverage">Estimated from {estimatedArticles} of {articles.length} articles</span>
+              )}
+              </dd>
+            </div>
+          )}
+        </dl>
+
+        <div class="archive-filters" role="group" aria-labelledby="filter-label" aria-describedby="filter-help">
+          <div class="filter-caption">
+            <h2 id="filter-label">Tags</h2>
+            <span id="filter-help">Match all selected</span>
+          </div>
+          <div class="filter-tags">
+            <button class="filter-tag filter-all" type="button" data-filter-all aria-pressed="true" aria-controls="article-list" disabled>
+              All <span class="filter-tag-count">{articles.length}</span>
+            </button>
+            {tags.map((tag) => (
+              <button
+                class="filter-tag"
+                type="button"
+                data-filter-tag={tag.key}
+                data-tag-label={tag.label}
+                aria-pressed="false"
+                aria-controls="article-list"
+                disabled
+              >
+                <span>{tag.label}</span><span class="filter-tag-count">{tag.count}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <noscript><p class="filter-noscript">All articles are shown. Enable JavaScript to filter by tag.</p></noscript>
+        <p class="archive-sidebar-note" aria-hidden="true"><span></span> A COLLECTION OF THOUGHTS</p>
+      </aside>
+
+      <section class="archive-results" aria-labelledby="results-heading">
+        <header class="results-header">
+          <div>
+            <p class="archive-eyebrow">THE INDEX <span>/</span> NEWEST FIRST</p>
+            <h2 id="results-heading" data-results-heading>All articles</h2>
+          </div>
+          <p class="results-count" role="status" aria-live="polite" aria-atomic="true" data-results-count>
+            Showing {articles.length} of {articles.length}
+          </p>
+        </header>
+
+        <ol class="article-list" id="article-list" role="list">
+          {articles.map((article, index) => (
+            <li class="article-entry" data-article-tags={JSON.stringify([...article.tags.keys()])}>
+              <a class="article-link" href={article.url} aria-labelledby={`article-title-${index}`}>
+                <span class="article-index" aria-hidden="true">{formatIndex(index + 1)}</span>
+                <div class="article-copy">
+                  <h3 id={`article-title-${index}`}>{article.title}</h3>
+                  {article.tags.size > 0 && (
+                    <div class="article-tags">
+                      {[...article.tags.values()].map((tag) => <span>{tag}</span>)}
+                    </div>
+                  )}
+                  {article.description && <p class="article-description">{article.description}</p>}
+                </div>
+                <div class="article-meta">
+                  <time datetime={article.date}>{article.date.replaceAll('-', '.')}</time>
+                  {article.readingTime && <span>{article.readingTime}</span>}
+                </div>
+                <span class="article-arrow" aria-hidden="true">→</span>
+              </a>
+            </li>
+          ))}
+        </ol>
+
+        <div class="articles-empty" data-empty-state hidden={articles.length > 0}>
+          <span class="empty-orbit" aria-hidden="true"></span>
+          <h3>{articles.length ? 'No articles match these filters.' : 'No articles yet.'}</h3>
+          <p lang="zh-CN">{articles.length ? '没有同时符合这些标签的文章。试试减少标签，或清除筛选。' : '这里还没有文章。'}</p>
+          {articles.length > 0 && <button class="clear-filters" type="button" data-clear-filters disabled>Clear filters / 清除筛选</button>}
+        </div>
+        <div class="archive-end" aria-hidden="true"><span></span><p>END OF INDEX</p><span></span></div>
+      </section>
+    </div>
+  </main>
+</BaseLayout>
+
+<script>
+  function initializeArticleFilters() {
+    const page = document.querySelector<HTMLElement>('[data-articles-page]');
+    if (!page) return;
+
+    const tagButtons = Array.from(page.querySelectorAll<HTMLButtonElement>('[data-filter-tag]'));
+    const allButton = page.querySelector<HTMLButtonElement>('[data-filter-all]')!;
+    const clearButton = page.querySelector<HTMLButtonElement>('[data-clear-filters]');
+    const count = page.querySelector<HTMLElement>('[data-results-count]')!;
+    const heading = page.querySelector<HTMLElement>('[data-results-heading]')!;
+    const summary = page.querySelector<HTMLElement>('[data-filter-summary]')!;
+    const selection = page.querySelector<HTMLElement>('[data-selected-tags]')!;
+    const emptyState = page.querySelector<HTMLElement>('[data-empty-state]')!;
+    const orbit = page.querySelector<HTMLElement>('.filter-orbit')!;
+    const tagLabels = new Map<string, string>();
+    for (const button of tagButtons) {
+      tagLabels.set(button.dataset.filterTag!, button.dataset.tagLabel!);
+    }
+    const entries = Array.from(page.querySelectorAll<HTMLElement>('[data-article-tags]'), (element) => {
+      const tags: string[] = JSON.parse(element.dataset.articleTags!);
+      return { element, tags: new Set(tags) };
+    });
+    const selected = new Set<string>();
+
+    function updateResults() {
+      const keys = [...selected];
+      const labels = keys.map((key) => tagLabels.get(key)!);
+      let shown = 0;
+      for (const entry of entries) {
+        const matches = keys.every((key) => entry.tags.has(key));
+        entry.element.hidden = !matches;
+        if (matches) shown += 1;
+      }
+
+      for (const button of tagButtons) {
+        button.setAttribute('aria-pressed', String(selected.has(button.dataset.filterTag!)));
+      }
+      allButton.setAttribute('aria-pressed', String(selected.size === 0));
+      orbit.classList.toggle('has-filters', selected.size > 0);
+      count.textContent = `Showing ${shown} of ${entries.length}`;
+      heading.textContent = selected.size ? 'Filtered articles' : 'All articles';
+      summary.textContent = selected.size ? `${selected.size} ${selected.size === 1 ? 'filter' : 'filters'}` : 'All articles';
+      selection.textContent = selected.size ? labels.join(' · ') : 'Select tags to narrow the index.';
+      selection.title = selected.size ? labels.join(' · ') : '';
+      emptyState.hidden = shown > 0;
+
+      // Keep other query parameters, the hash and the current history entry intact.
+      const url = new URL(window.location.href);
+      url.searchParams.delete('tag');
+      for (const label of labels) url.searchParams.append('tag', label);
+      if (url.href !== window.location.href) history.replaceState(history.state, '', url);
+    }
+
+    function readSelection() {
+      selected.clear();
+      for (const value of new URL(window.location.href).searchParams.getAll('tag')) {
+        const key = value.trim().toLowerCase();
+        if (tagLabels.has(key)) selected.add(key);
+      }
+      updateResults();
+    }
+
+    page.addEventListener('click', (event) => {
+      if (!(event.target instanceof Element)) return;
+      const button = event.target.closest<HTMLButtonElement>('button');
+      if (!button || !page.contains(button)) return;
+
+      if (button.hasAttribute('data-filter-all') || button.hasAttribute('data-clear-filters')) {
+        selected.clear();
+        // Clearing the empty state hides its button; keep keyboard focus in the filter group.
+        if (button === clearButton) allButton.focus({ preventScroll: true });
+      } else {
+        const key = button.dataset.filterTag;
+        if (key === undefined || !tagLabels.has(key)) return;
+        if (selected.has(key)) selected.delete(key);
+        else selected.add(key);
+      }
+      updateResults();
+    });
+
+    readSelection();
+    for (const button of tagButtons) button.disabled = false;
+    allButton.disabled = false;
+    if (clearButton) clearButton.disabled = false;
+    window.addEventListener('popstate', readSelection);
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) readSelection();
+    });
+  }
+
+  initializeArticleFilters();
+</script>
+
+<style lang="scss">
+  @use '../../styles/Articles.scss';
+</style>
