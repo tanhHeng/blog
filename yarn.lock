@@ -10,14 +10,14 @@ __metadata:
   resolution: "21-blog2@workspace:."
   dependencies:
     "@astrojs/check": "npm:^0.9.10"
-    "@astrojs/react": "npm:^6.0.2"
-    "@types/react": "npm:^19.2.18"
-    "@types/react-dom": "npm:^19.2.4"
+    "@astrojs/react": "npm:^6.0.5"
+    "@types/react": "npm:^19.3.0"
+    "@types/react-dom": "npm:^19.3.0"
     animate.css: "npm:^4.1.1"
-    astro: "npm:^7.2.7"
-    react: "npm:^19.2.8"
-    react-dom: "npm:^19.2.8"
-    sass: "npm:^1.103.1"
+    astro: "npm:^7.3.2"
+    react: "npm:^19.3.0"
+    react-dom: "npm:^19.3.0"
+    sass: "npm:^1.104.0"
     typescript: "npm:6"
     vite-plus: "npm:^0.2.7"
   languageName: unknown
@@ -259,7 +259,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@astrojs/react@npm:^6.0.2":
+"@astrojs/react@npm:^6.0.5":
   version: 6.0.6
   resolution: "@astrojs/react@npm:6.0.6"
   dependencies:
@@ -1896,7 +1896,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react-dom@npm:^19.2.4":
+"@types/react-dom@npm:^19.3.0":
   version: 19.3.0
   resolution: "@types/react-dom@npm:19.3.0"
   peerDependencies:
@@ -1905,7 +1905,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react@npm:^19.2.18":
+"@types/react@npm:^19.3.0":
   version: 19.3.0
   resolution: "@types/react@npm:19.3.0"
   dependencies:
@@ -2635,7 +2635,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"astro@npm:^7.2.7":
+"astro@npm:^7.3.2":
   version: 7.4.1
   resolution: "astro@npm:7.4.1"
   dependencies:
@@ -4240,7 +4240,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-dom@npm:^19.2.8":
+"react-dom@npm:^19.3.0":
   version: 19.3.1
   resolution: "react-dom@npm:19.3.1"
   dependencies:
@@ -4265,7 +4265,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react@npm:^19.2.8":
+"react@npm:^19.3.0":
   version: 19.3.1
   resolution: "react@npm:19.3.1"
   checksum: 10c0/f0ed036d1223562c09c8347858ca712733ea6e27a30db709ee9c3f3f176d3e9e767afce735d59956addf3d030102e256bba82dea635fc1bdb0e01107e98fef10
@@ -4401,7 +4401,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"sass@npm:^1.103.1":
+"sass@npm:^1.104.0":
   version: 1.105.2
   resolution: "sass@npm:1.105.2"
   dependencies:
