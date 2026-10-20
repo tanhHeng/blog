@@ -55,17 +55,21 @@ const headings = typeof getHeadings === 'function' ? await getHeadings() : [];
 @use '../styles/global.scss' as *;
 @use '../styles/Navbar.scss' as navbar;
 
-:global(html) {
+// Listing pages eagerly import article modules, which bundles this stylesheet into them too.
+// Page-level rules are gated on `.reading-shell` so they cannot leak there (e.g. body overflow
+// would turn <body> into a scroll container and break the homepage's scroll snapping).
+// `:where()` keeps the original element-only specificity.
+:global(:where(html:has(.reading-shell))) {
   scroll-behavior: smooth;
 }
 
-:global(body) {
+:global(:where(body:has(.reading-shell))) {
   min-height: 100vh;
   overflow-x: hidden;
   background: #fff;
 }
 
-:global(p) {
+:global(:where(body:has(.reading-shell)) p) {
   margin: 0;
 }
 
