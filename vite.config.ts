@@ -20,6 +20,6 @@ export default defineConfig({
   },
   staged: {
     "*.{astro,js,mjs,cjs,ts,mts,cts,tsx,jsx,json,css,scss,md}": "vp check --fix",
-    "*.astro": "yarn astro check",
+    "*.astro": "yarn check:astro",
   },
 })

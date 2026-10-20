@@ -9,8 +9,9 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "21-blog2@workspace:."
   dependencies:
-    "@astrojs/check": "npm:^0.9.10"
     "@astrojs/react": "npm:^7.0.0"
+    "@astrojs/ts-content-mapper": "npm:^0.2.0"
+    "@emnapi/runtime": "npm:^1.11.3"
     "@types/react": "npm:^19.3.0"
     "@types/react-dom": "npm:^19.3.0"
     animate.css: "npm:^4.1.1"
@@ -18,34 +19,18 @@ __metadata:
     react: "npm:^19.3.0"
     react-dom: "npm:^19.3.0"
     sass: "npm:^1.105.0"
-    typescript: "npm:6"
+    typescript: "npm:7.1.0-beta"
     vite-plus: "npm:^0.2.7"
   languageName: unknown
   linkType: soft
 
-"@astrojs/astro2tsx@npm:^0.1.2":
+"@astrojs/astro2tsx@npm:^0.1.0":
   version: 0.1.3
   resolution: "@astrojs/astro2tsx@npm:0.1.3"
   dependencies:
     "@emnapi/core": "npm:1.11.3"
     "@napi-rs/wasm-runtime": "npm:1.2.4"
   checksum: 10c0/55a260fbc97d72b51070bd71de34dcb710fbd5a6b2d97e6f32dcf679516461aba2690c1d48e2a271140a99a36f4596bc14aae53c544362de8bafd74ede8f019a
-  languageName: node
-  linkType: hard
-
-"@astrojs/check@npm:^0.9.10":
-  version: 0.9.11
-  resolution: "@astrojs/check@npm:0.9.11"
-  dependencies:
-    "@astrojs/language-server": "npm:^2.17.2"
-    chokidar: "npm:^5.0.0"
-    kleur: "npm:^4.1.5"
-    yargs: "npm:^18.2.0"
-  peerDependencies:
-    typescript: ^5.0.0 || ^6.0.0
-  bin:
-    astro-check: ./bin/astro-check.js
-  checksum: 10c0/dd95021b7a15ee59055f7b5d994b300e6995f604472abf050eb370c0265a359bbed50cb2ccc6b676fa102be03da3388d8252f2ab4d960b34ab3ce81df17293f5
   languageName: node
   linkType: hard
 
@@ -187,41 +172,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@astrojs/language-server@npm:^2.17.2":
-  version: 2.17.2
-  resolution: "@astrojs/language-server@npm:2.17.2"
-  dependencies:
-    "@astrojs/astro2tsx": "npm:^0.1.2"
-    "@astrojs/yaml2ts": "npm:^0.2.4"
-    "@volar/kit": "npm:~2.4.28"
-    "@volar/language-core": "npm:~2.4.28"
-    "@volar/language-server": "npm:~2.4.28"
-    "@volar/language-service": "npm:~2.4.28"
-    muggle-string: "npm:^0.4.1"
-    tinyglobby: "npm:^0.2.17"
-    volar-service-css: "npm:0.0.71"
-    volar-service-emmet: "npm:0.0.71"
-    volar-service-html: "npm:0.0.71"
-    volar-service-prettier: "npm:0.0.71"
-    volar-service-typescript: "npm:0.0.71"
-    volar-service-typescript-twoslash-queries: "npm:0.0.71"
-    volar-service-yaml: "npm:0.0.71"
-    vscode-html-languageservice: "npm:^5.6.2"
-    vscode-uri: "npm:^3.2.0"
-  peerDependencies:
-    prettier: ^3.0.0
-    prettier-plugin-astro: ">=0.11.0"
-  peerDependenciesMeta:
-    prettier:
-      optional: true
-    prettier-plugin-astro:
-      optional: true
-  bin:
-    astro-ls: ./bin/nodeServer.js
-  checksum: 10c0/9e5f014b9d8abc316beccc4843eb15007d259805337fdbe2e437db72e2e26e7422aba450263bb92bd5101d3b4f54234b4529b3e340527e97fc5355527757f6e4
-  languageName: node
-  linkType: hard
-
 "@astrojs/markdown-satteri@npm:0.4.4":
   version: 0.4.4
   resolution: "@astrojs/markdown-satteri@npm:0.4.4"
@@ -277,12 +227,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@astrojs/yaml2ts@npm:^0.2.4":
-  version: 0.2.4
-  resolution: "@astrojs/yaml2ts@npm:0.2.4"
+"@astrojs/ts-content-mapper@npm:^0.2.0":
+  version: 0.2.0
+  resolution: "@astrojs/ts-content-mapper@npm:0.2.0"
   dependencies:
-    yaml: "npm:^2.8.3"
-  checksum: 10c0/bb0a25ae730ea2b8ba20da4626c9d023ba27898396c2ad71384e0aae10c4479bb5d6e9f4f27aad1f486f1d287200c4753ff949ab16af367788f085b078d4b4e6
+    "@astrojs/astro2tsx": "npm:^0.1.0"
+    vscode-jsonrpc: "npm:^9.0.1"
+  checksum: 10c0/e2321afc1a4242bdf49e59784239de9e9a2ae9a3a5a1834133b95611a7a02a5b1c3a54098eba35d78072c1771ea1d982052f94daf0e02596a35e7c6c82a38149
   languageName: node
   linkType: hard
 
@@ -441,64 +392,6 @@ __metadata:
     fast-wrap-ansi: "npm:^0.2.0"
     sisteransi: "npm:^1.0.5"
   checksum: 10c0/ed38748acde0cb1e7ebdac1242470c78bd90380cbdde1e5560e0828881e3c74e2676de666086cf8183c8d4d3f1fc6e489f15a004f0d9f8ee294a3aa744de2093
-  languageName: node
-  linkType: hard
-
-"@emmetio/abbreviation@npm:^2.3.3":
-  version: 2.3.3
-  resolution: "@emmetio/abbreviation@npm:2.3.3"
-  dependencies:
-    "@emmetio/scanner": "npm:^1.0.4"
-  checksum: 10c0/835b460706d5920a6f9a569a44b7d98e88d5530e3983af3678b44fa38b4cbdf68b5df933476d72e340779b16e7e7962ffa63142db8d2f59b1175a11c30c14635
-  languageName: node
-  linkType: hard
-
-"@emmetio/css-abbreviation@npm:^2.1.8":
-  version: 2.1.8
-  resolution: "@emmetio/css-abbreviation@npm:2.1.8"
-  dependencies:
-    "@emmetio/scanner": "npm:^1.0.4"
-  checksum: 10c0/b5b3b39e773185d848b634e48e1b520e6ebffd28bfd0ba34fbcf877ca77e0edb8c7bbf58230cb0621f80f579bd7fd0265f00ab5e09ac482a835897cbdb6182a6
-  languageName: node
-  linkType: hard
-
-"@emmetio/css-parser@npm:^0.4.1":
-  version: 0.4.1
-  resolution: "@emmetio/css-parser@npm:0.4.1"
-  dependencies:
-    "@emmetio/stream-reader": "npm:^2.2.0"
-    "@emmetio/stream-reader-utils": "npm:^0.1.0"
-  checksum: 10c0/d34bf6c8d431eaa2b8b9cdff14360755ca7e235392a23666fe89f2e2b14ac54657712c196bbb6cb016b5bbf3e19faf7f413f7de815d35a26fce82a507191950e
-  languageName: node
-  linkType: hard
-
-"@emmetio/html-matcher@npm:^1.3.0":
-  version: 1.3.0
-  resolution: "@emmetio/html-matcher@npm:1.3.0"
-  dependencies:
-    "@emmetio/scanner": "npm:^1.0.0"
-  checksum: 10c0/354f6d4d52ffb124883cc350d6a09942f2ec352b03dfb928ba8c3078b0f570041b6095367367094a307388c158e6b053565c09a9c1db699517801435a0eadb5c
-  languageName: node
-  linkType: hard
-
-"@emmetio/scanner@npm:^1.0.0, @emmetio/scanner@npm:^1.0.4":
-  version: 1.0.4
-  resolution: "@emmetio/scanner@npm:1.0.4"
-  checksum: 10c0/ae6244e563caaff0f88d7afefc33fd6cfb7cc767ce914b54d35b46002637948cfc65951dba6d6941328afa54c721c225836fafce2de40fb7643660ba09fe7372
-  languageName: node
-  linkType: hard
-
-"@emmetio/stream-reader-utils@npm:^0.1.0":
-  version: 0.1.0
-  resolution: "@emmetio/stream-reader-utils@npm:0.1.0"
-  checksum: 10c0/8630a066200976aa07ce25708484e5c2458182961280dc4637a7a6e98e1f3bb59fb7bf3bf26380f74c6ff1fd40d3dbf1143f21c721833199e45f669614a33b87
-  languageName: node
-  linkType: hard
-
-"@emmetio/stream-reader@npm:^2.2.0":
-  version: 2.2.0
-  resolution: "@emmetio/stream-reader@npm:2.2.0"
-  checksum: 10c0/d1a5c83b1ef062ce89b48e1fc170cd5f21b0dfa6132dc41421ef7eda455563227c047977cd4c7b70f072fa73b5af553b04cafe381c600df9bd17c58ca8238e8b
   languageName: node
   linkType: hard
 
@@ -1666,51 +1559,149 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@typescript-native-bridge/darwin-arm64@npm:6.0.3-bridge.7.tsgo.7.0.2":
-  version: 6.0.3-bridge.7.tsgo.7.0.2
-  resolution: "@typescript-native-bridge/darwin-arm64@npm:6.0.3-bridge.7.tsgo.7.0.2"
+"@typescript/typescript-aix-ppc64@npm:7.1.0-beta":
+  version: 7.1.0-beta
+  resolution: "@typescript/typescript-aix-ppc64@npm:7.1.0-beta"
+  conditions: os=aix & cpu=ppc64
+  languageName: node
+  linkType: hard
+
+"@typescript/typescript-android-arm64@npm:7.1.0-beta":
+  version: 7.1.0-beta
+  resolution: "@typescript/typescript-android-arm64@npm:7.1.0-beta"
+  conditions: os=android & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@typescript/typescript-darwin-arm64@npm:7.1.0-beta":
+  version: 7.1.0-beta
+  resolution: "@typescript/typescript-darwin-arm64@npm:7.1.0-beta"
   conditions: os=darwin & cpu=arm64
   languageName: node
   linkType: hard
 
-"@typescript-native-bridge/darwin-x64@npm:6.0.3-bridge.7.tsgo.7.0.2":
-  version: 6.0.3-bridge.7.tsgo.7.0.2
-  resolution: "@typescript-native-bridge/darwin-x64@npm:6.0.3-bridge.7.tsgo.7.0.2"
+"@typescript/typescript-darwin-x64@npm:7.1.0-beta":
+  version: 7.1.0-beta
+  resolution: "@typescript/typescript-darwin-x64@npm:7.1.0-beta"
   conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
 
-"@typescript-native-bridge/linux-arm64@npm:6.0.3-bridge.7.tsgo.7.0.2":
-  version: 6.0.3-bridge.7.tsgo.7.0.2
-  resolution: "@typescript-native-bridge/linux-arm64@npm:6.0.3-bridge.7.tsgo.7.0.2"
+"@typescript/typescript-freebsd-arm64@npm:7.1.0-beta":
+  version: 7.1.0-beta
+  resolution: "@typescript/typescript-freebsd-arm64@npm:7.1.0-beta"
+  conditions: os=freebsd & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@typescript/typescript-freebsd-x64@npm:7.1.0-beta":
+  version: 7.1.0-beta
+  resolution: "@typescript/typescript-freebsd-x64@npm:7.1.0-beta"
+  conditions: os=freebsd & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@typescript/typescript-linux-arm64@npm:7.1.0-beta":
+  version: 7.1.0-beta
+  resolution: "@typescript/typescript-linux-arm64@npm:7.1.0-beta"
   conditions: os=linux & cpu=arm64
   languageName: node
   linkType: hard
 
-"@typescript-native-bridge/linux-arm@npm:6.0.3-bridge.7.tsgo.7.0.2":
-  version: 6.0.3-bridge.7.tsgo.7.0.2
-  resolution: "@typescript-native-bridge/linux-arm@npm:6.0.3-bridge.7.tsgo.7.0.2"
+"@typescript/typescript-linux-arm@npm:7.1.0-beta":
+  version: 7.1.0-beta
+  resolution: "@typescript/typescript-linux-arm@npm:7.1.0-beta"
   conditions: os=linux & cpu=arm
   languageName: node
   linkType: hard
 
-"@typescript-native-bridge/linux-x64@npm:6.0.3-bridge.7.tsgo.7.0.2":
-  version: 6.0.3-bridge.7.tsgo.7.0.2
-  resolution: "@typescript-native-bridge/linux-x64@npm:6.0.3-bridge.7.tsgo.7.0.2"
+"@typescript/typescript-linux-loong64@npm:7.1.0-beta":
+  version: 7.1.0-beta
+  resolution: "@typescript/typescript-linux-loong64@npm:7.1.0-beta"
+  conditions: os=linux & cpu=loong64
+  languageName: node
+  linkType: hard
+
+"@typescript/typescript-linux-mips64el@npm:7.1.0-beta":
+  version: 7.1.0-beta
+  resolution: "@typescript/typescript-linux-mips64el@npm:7.1.0-beta"
+  conditions: os=linux & cpu=mips64el
+  languageName: node
+  linkType: hard
+
+"@typescript/typescript-linux-ppc64@npm:7.1.0-beta":
+  version: 7.1.0-beta
+  resolution: "@typescript/typescript-linux-ppc64@npm:7.1.0-beta"
+  conditions: os=linux & cpu=ppc64
+  languageName: node
+  linkType: hard
+
+"@typescript/typescript-linux-riscv64@npm:7.1.0-beta":
+  version: 7.1.0-beta
+  resolution: "@typescript/typescript-linux-riscv64@npm:7.1.0-beta"
+  conditions: os=linux & cpu=riscv64
+  languageName: node
+  linkType: hard
+
+"@typescript/typescript-linux-s390x@npm:7.1.0-beta":
+  version: 7.1.0-beta
+  resolution: "@typescript/typescript-linux-s390x@npm:7.1.0-beta"
+  conditions: os=linux & cpu=s390x
+  languageName: node
+  linkType: hard
+
+"@typescript/typescript-linux-x64@npm:7.1.0-beta":
+  version: 7.1.0-beta
+  resolution: "@typescript/typescript-linux-x64@npm:7.1.0-beta"
   conditions: os=linux & cpu=x64
   languageName: node
   linkType: hard
 
-"@typescript-native-bridge/win32-arm64@npm:6.0.3-bridge.7.tsgo.7.0.2":
-  version: 6.0.3-bridge.7.tsgo.7.0.2
-  resolution: "@typescript-native-bridge/win32-arm64@npm:6.0.3-bridge.7.tsgo.7.0.2"
+"@typescript/typescript-netbsd-arm64@npm:7.1.0-beta":
+  version: 7.1.0-beta
+  resolution: "@typescript/typescript-netbsd-arm64@npm:7.1.0-beta"
+  conditions: os=netbsd & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@typescript/typescript-netbsd-x64@npm:7.1.0-beta":
+  version: 7.1.0-beta
+  resolution: "@typescript/typescript-netbsd-x64@npm:7.1.0-beta"
+  conditions: os=netbsd & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@typescript/typescript-openbsd-arm64@npm:7.1.0-beta":
+  version: 7.1.0-beta
+  resolution: "@typescript/typescript-openbsd-arm64@npm:7.1.0-beta"
+  conditions: os=openbsd & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@typescript/typescript-openbsd-x64@npm:7.1.0-beta":
+  version: 7.1.0-beta
+  resolution: "@typescript/typescript-openbsd-x64@npm:7.1.0-beta"
+  conditions: os=openbsd & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@typescript/typescript-sunos-x64@npm:7.1.0-beta":
+  version: 7.1.0-beta
+  resolution: "@typescript/typescript-sunos-x64@npm:7.1.0-beta"
+  conditions: os=sunos & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@typescript/typescript-win32-arm64@npm:7.1.0-beta":
+  version: 7.1.0-beta
+  resolution: "@typescript/typescript-win32-arm64@npm:7.1.0-beta"
   conditions: os=win32 & cpu=arm64
   languageName: node
   linkType: hard
 
-"@typescript-native-bridge/win32-x64@npm:6.0.3-bridge.7.tsgo.7.0.2":
-  version: 6.0.3-bridge.7.tsgo.7.0.2
-  resolution: "@typescript-native-bridge/win32-x64@npm:6.0.3-bridge.7.tsgo.7.0.2"
+"@typescript/typescript-win32-x64@npm:7.1.0-beta":
+  version: 7.1.0-beta
+  resolution: "@typescript/typescript-win32-x64@npm:7.1.0-beta"
   conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
@@ -2007,97 +1998,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@volar/kit@npm:~2.4.28":
-  version: 2.4.28
-  resolution: "@volar/kit@npm:2.4.28"
-  dependencies:
-    "@volar/language-service": "npm:2.4.28"
-    "@volar/typescript": "npm:2.4.28"
-    typesafe-path: "npm:^0.2.2"
-    vscode-languageserver-textdocument: "npm:^1.0.11"
-    vscode-uri: "npm:^3.0.8"
-  peerDependencies:
-    typescript: "*"
-  checksum: 10c0/c097b930eeb94d432ba7d21e0286ec787931d9fbf1c07e47e0df2d01dfa5a8d9413bac5c2fb4e342edfe57bec29b916427e62d40792ba39b614a2ff1fe3907a1
-  languageName: node
-  linkType: hard
-
-"@volar/language-core@npm:2.4.28, @volar/language-core@npm:~2.4.28":
-  version: 2.4.28
-  resolution: "@volar/language-core@npm:2.4.28"
-  dependencies:
-    "@volar/source-map": "npm:2.4.28"
-  checksum: 10c0/d41f7327fed7fa5301fbf2d8f96753d645a976b21dbbeb869794a780aa6523d1e6bf258242bc3d8ccd37f8e8b98a04fea9574e6f63badc585a8a3c2e068c4a86
-  languageName: node
-  linkType: hard
-
-"@volar/language-server@npm:~2.4.28":
-  version: 2.4.28
-  resolution: "@volar/language-server@npm:2.4.28"
-  dependencies:
-    "@volar/language-core": "npm:2.4.28"
-    "@volar/language-service": "npm:2.4.28"
-    "@volar/typescript": "npm:2.4.28"
-    path-browserify: "npm:^1.0.1"
-    request-light: "npm:^0.7.0"
-    vscode-languageserver: "npm:^9.0.1"
-    vscode-languageserver-protocol: "npm:^3.17.5"
-    vscode-languageserver-textdocument: "npm:^1.0.11"
-    vscode-uri: "npm:^3.0.8"
-  checksum: 10c0/8266fdab264dbe449501e7d05e584069e6eb6cc5a06bf02968107c3fa32f8eb49b363d57d7abd76e5f637265469be8e13ebce1dd4b3e6ebdfae030691879d283
-  languageName: node
-  linkType: hard
-
-"@volar/language-service@npm:2.4.28, @volar/language-service@npm:~2.4.28":
-  version: 2.4.28
-  resolution: "@volar/language-service@npm:2.4.28"
-  dependencies:
-    "@volar/language-core": "npm:2.4.28"
-    vscode-languageserver-protocol: "npm:^3.17.5"
-    vscode-languageserver-textdocument: "npm:^1.0.11"
-    vscode-uri: "npm:^3.0.8"
-  checksum: 10c0/a150d34f0c1c92641ff978eb6045ac6f0717cf16a51cfd3d0798267ccdc91aca21e6746403bf0254c747fa510ea92e3eb064acfa42320c0ebae959fd4a88add8
-  languageName: node
-  linkType: hard
-
-"@volar/source-map@npm:2.4.28":
-  version: 2.4.28
-  resolution: "@volar/source-map@npm:2.4.28"
-  checksum: 10c0/24b0b02c7f66febe47f0bfda4a5ed4beaf949041eddc6325c7478b900faeb071795b696d97a4f326dde47217d06e40b67129300bc544f054772c5cb84c2f254e
-  languageName: node
-  linkType: hard
-
-"@volar/typescript@npm:2.4.28":
-  version: 2.4.28
-  resolution: "@volar/typescript@npm:2.4.28"
-  dependencies:
-    "@volar/language-core": "npm:2.4.28"
-    path-browserify: "npm:^1.0.1"
-    vscode-uri: "npm:^3.0.8"
-  checksum: 10c0/075c890b9ec1cb17f17e38aaed035f8ee7d507439e87270d8e3c394356fc9387fd0bda9ec1069b36ea4c378d9375a08f5bc64c063a83427010ddd86d472124fc
-  languageName: node
-  linkType: hard
-
-"@vscode/emmet-helper@npm:^2.9.3":
-  version: 2.11.0
-  resolution: "@vscode/emmet-helper@npm:2.11.0"
-  dependencies:
-    emmet: "npm:^2.4.3"
-    jsonc-parser: "npm:^2.3.0"
-    vscode-languageserver-textdocument: "npm:^1.0.1"
-    vscode-languageserver-types: "npm:^3.15.1"
-    vscode-uri: "npm:^3.0.8"
-  checksum: 10c0/41c743258f958ff143f5152a7c8e8e1c6f96336f4147d537ace7c81337d5f9d7f93efd6df16c80e6d9506c51df9c8deb6440765a1deae219e31cdbead3cfd841
-  languageName: node
-  linkType: hard
-
-"@vscode/l10n@npm:^0.0.18":
-  version: 0.0.18
-  resolution: "@vscode/l10n@npm:0.0.18"
-  checksum: 10c0/d1fc797001f7d508ab3fa91175f7a50ea98516c4e47830ff2be79163cde9279279514a167a3bad15b7ab7fc243e7808d8f32d3eb41f4a7d6721d9dfdbb38d89e
-  languageName: node
-  linkType: hard
-
 "@yuku-codegen/binding-darwin-arm64@npm:0.5.48":
   version: 0.5.48
   resolution: "@yuku-codegen/binding-darwin-arm64@npm:0.5.48"
@@ -2266,39 +2166,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ajv-draft-04@npm:^1.0.0":
-  version: 1.0.0
-  resolution: "ajv-draft-04@npm:1.0.0"
-  peerDependencies:
-    ajv: ^8.5.0
-  peerDependenciesMeta:
-    ajv:
-      optional: true
-  checksum: 10c0/6044310bd38c17d77549fd326bd40ce1506fa10b0794540aa130180808bf94117fac8c9b448c621512bea60e4a947278f6a978e87f10d342950c15b33ddd9271
-  languageName: node
-  linkType: hard
-
-"ajv-i18n@npm:^4.2.0":
-  version: 4.2.0
-  resolution: "ajv-i18n@npm:4.2.0"
-  peerDependencies:
-    ajv: ^8.0.0-beta.0
-  checksum: 10c0/8c27882f2d46147600538aa8f48a633c72cd65baa37e0fae7159e832122b4ee504f4076f81ea3f78c15d7236a2d499d42a34d1a27b202066edc620f23963f6db
-  languageName: node
-  linkType: hard
-
-"ajv@npm:^8.17.1":
-  version: 8.20.0
-  resolution: "ajv@npm:8.20.0"
-  dependencies:
-    fast-deep-equal: "npm:^3.1.3"
-    fast-uri: "npm:^3.0.1"
-    json-schema-traverse: "npm:^1.0.0"
-    require-from-string: "npm:^2.0.2"
-  checksum: 10c0/5df9a1c8f83863cde1bd3a9ddb426f599718f88e3dc9153616c79fb28e0be455335830d7f21d745576519f057b371352daa31047b6a33d7036fe08777d60cf2a
-  languageName: node
-  linkType: hard
-
 "am-i-vibing@npm:^0.5.0":
   version: 0.5.0
   resolution: "am-i-vibing@npm:0.5.0"
@@ -2324,24 +2191,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ansi-regex@npm:^6.2.2":
-  version: 6.4.0
-  resolution: "ansi-regex@npm:6.4.0"
-  checksum: 10c0/e42f68ffa21aac4c4de27aad601bb5ea415b5a07b127681ef44728195f22231b77bc39230ce0c976420d84650b7bf5a5b60eb4e7500c1f74e9a3f3cd4a68f3f6
-  languageName: node
-  linkType: hard
-
 "ansi-styles@npm:^5.0.0":
   version: 5.2.0
   resolution: "ansi-styles@npm:5.2.0"
   checksum: 10c0/9c4ca80eb3c2fb7b33841c210d2f20807f40865d27008d7c3f707b7f95cab7d67462a565e2388ac3285b71cb3d9bb2173de8da37c57692a362885ec34d6e27df
-  languageName: node
-  linkType: hard
-
-"ansi-styles@npm:^6.2.1":
-  version: 6.2.3
-  resolution: "ansi-styles@npm:6.2.3"
-  checksum: 10c0/23b8a4ce14e18fb854693b95351e286b771d23d8844057ed2e7d083cd3e708376c3323707ec6a24365f7d7eda3ca00327fe04092e29e551499ec4c8b7bfac868
   languageName: node
   linkType: hard
 
@@ -2518,17 +2371,6 @@ __metadata:
   version: 4.4.0
   resolution: "ci-info@npm:4.4.0"
   checksum: 10c0/44156201545b8dde01aa8a09ee2fe9fc7a73b1bef9adbd4606c9f61c8caeeb73fb7a575c88b0443f7b4edb5ee45debaa59ed54ba5f99698339393ca01349eb3a
-  languageName: node
-  linkType: hard
-
-"cliui@npm:^9.0.1":
-  version: 9.0.1
-  resolution: "cliui@npm:9.0.1"
-  dependencies:
-    string-width: "npm:^7.2.0"
-    strip-ansi: "npm:^7.1.0"
-    wrap-ansi: "npm:^9.0.0"
-  checksum: 10c0/13441832e9efe7c7a76bd2b8e683555c478d461a9f249dc5db9b17fe8d4b47fa9277b503914b90bd00e4a151abb6b9b02b2288972ffe2e5e3ca40bcb1c2330d3
   languageName: node
   linkType: hard
 
@@ -2749,23 +2591,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"emmet@npm:^2.4.3":
-  version: 2.4.11
-  resolution: "emmet@npm:2.4.11"
-  dependencies:
-    "@emmetio/abbreviation": "npm:^2.3.3"
-    "@emmetio/css-abbreviation": "npm:^2.1.8"
-  checksum: 10c0/4099d9d0d5dee766603c4ea03e1b87296bd397a0e8c6d8d5d6dcfdaad3e4581df5d48939a00eb4437dc08c83e857e231222ee037cb34ad63b1f2cce4041c6fc2
-  languageName: node
-  linkType: hard
-
-"emoji-regex@npm:^10.3.0":
-  version: 10.6.0
-  resolution: "emoji-regex@npm:10.6.0"
-  checksum: 10c0/1e4aa097bb007301c3b4b1913879ae27327fdc48e93eeefefe3b87e495eb33c5af155300be951b4349ff6ac084f4403dc9eff970acba7c1c572d89396a9a32d7
-  languageName: node
-  linkType: hard
-
 "entities@npm:^4.2.0":
   version: 4.5.0
   resolution: "entities@npm:4.5.0"
@@ -2791,13 +2616,6 @@ __metadata:
   version: 3.0.4
   resolution: "es-module-lexer@npm:3.0.4"
   checksum: 10c0/6e89027c3ce2e78c577bee234d3cf9e41035b6622cc2d399bffda322556f09735a864b3c7729da8528c96ec8cf00d93d7d418cdedb6765e9e4d228954fbfde3d
-  languageName: node
-  linkType: hard
-
-"escalade@npm:^3.1.1":
-  version: 3.2.0
-  resolution: "escalade@npm:3.2.0"
-  checksum: 10c0/ced4dd3a78e15897ed3be74e635110bbf3b08877b0a41be50dcb325ee0e0b5f65fc2d50e9845194d7c4633f327e2e1c6cce00a71b617c5673df0374201d67f65
   languageName: node
   linkType: hard
 
@@ -2838,13 +2656,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fast-deep-equal@npm:^3.1.3":
-  version: 3.1.3
-  resolution: "fast-deep-equal@npm:3.1.3"
-  checksum: 10c0/40dedc862eb8992c54579c66d914635afbec43350afbbe991235fdcb4e3a8d5af1b23ae7e79bef7d4882d0ecee06c3197488026998fb19f72dc95acff1d1b1d0
-  languageName: node
-  linkType: hard
-
 "fast-string-truncated-width@npm:^3.0.2":
   version: 3.0.3
   resolution: "fast-string-truncated-width@npm:3.0.3"
@@ -2858,13 +2669,6 @@ __metadata:
   dependencies:
     fast-string-truncated-width: "npm:^3.0.2"
   checksum: 10c0/c8822d175315bb353ebe782b65214ac53b13e3bf704e03b132ea7bdfa8de6a636375b3ab7a4097545393d109381c37c4f387c72a462c90b61412dbc4632f39a7
-  languageName: node
-  linkType: hard
-
-"fast-uri@npm:^3.0.1":
-  version: 3.1.8
-  resolution: "fast-uri@npm:3.1.8"
-  checksum: 10c0/c9c47860a7f9110176d94bb30a02942182f0bfc8d6780e9702f320336dc2dadb83b1d9879cceaf8d4b439642d1ec6d78c317cb808ab155455551bd5d9d7c22d8
   languageName: node
   linkType: hard
 
@@ -2937,20 +2741,6 @@ __metadata:
   dependencies:
     node-gyp: "npm:latest"
   conditions: os=darwin
-  languageName: node
-  linkType: hard
-
-"get-caller-file@npm:^2.0.5":
-  version: 2.0.5
-  resolution: "get-caller-file@npm:2.0.5"
-  checksum: 10c0/c6c7b60271931fa752aeb92f2b47e355eac1af3a2673f47c9589e8f8a41adc74d45551c1bc57b5e66a80609f10ffb72b6f575e4370d61cc3f7f3aaff01757cde
-  languageName: node
-  linkType: hard
-
-"get-east-asian-width@npm:^1.0.0, get-east-asian-width@npm:^1.5.0":
-  version: 1.7.0
-  resolution: "get-east-asian-width@npm:1.7.0"
-  checksum: 10c0/680a5f611a186e4a065291f31821f7e4ad7742625be814e05b8ab5535c6fa53562bc0333a83138fca5f2e1030ed960a561b2fd4629e0cff0dc68b19cf46d7c53
   languageName: node
   linkType: hard
 
@@ -3103,31 +2893,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"json-schema-traverse@npm:^1.0.0":
-  version: 1.0.0
-  resolution: "json-schema-traverse@npm:1.0.0"
-  checksum: 10c0/71e30015d7f3d6dc1c316d6298047c8ef98a06d31ad064919976583eb61e1018a60a0067338f0f79cabc00d84af3fcc489bd48ce8a46ea165d9541ba17fb30c6
-  languageName: node
-  linkType: hard
-
-"jsonc-parser@npm:^2.3.0":
-  version: 2.3.1
-  resolution: "jsonc-parser@npm:2.3.1"
-  checksum: 10c0/b5e823612f6518a4d35e65d3c642e87b994c52a71b6d83d306d59f9b57003a1f6c64659808f0f1c3448991c28916d56faca45222f31ddb1a32effecdef0f0485
-  languageName: node
-  linkType: hard
-
-"jsonc-parser@npm:^3.0.0, jsonc-parser@npm:^3.3.1":
+"jsonc-parser@npm:^3.3.1":
   version: 3.3.1
   resolution: "jsonc-parser@npm:3.3.1"
   checksum: 10c0/269c3ae0a0e4f907a914bf334306c384aabb9929bd8c99f909275ebd5c2d3bc70b9bcd119ad794f339dec9f24b6a4ee9cd5a8ab2e6435e730ad4075388fc2ab6
-  languageName: node
-  linkType: hard
-
-"kleur@npm:^4.1.5":
-  version: 4.1.5
-  resolution: "kleur@npm:4.1.5"
-  checksum: 10c0/e9de6cb49657b6fa70ba2d1448fd3d691a5c4370d8f7bbf1c2f64c24d461270f2117e1b0afe8cb3114f13bbd8e51de158c2a224953960331904e636a5e4c0f2a
   languageName: node
   linkType: hard
 
@@ -3389,13 +3158,6 @@ __metadata:
   version: 2.0.1
   resolution: "mrmime@npm:2.0.1"
   checksum: 10c0/af05afd95af202fdd620422f976ad67dc18e6ee29beb03dd1ce950ea6ef664de378e44197246df4c7cdd73d47f2e7143a6e26e473084b9e4aa2095c0ad1e1761
-  languageName: node
-  linkType: hard
-
-"muggle-string@npm:^0.4.1":
-  version: 0.4.1
-  resolution: "muggle-string@npm:0.4.1"
-  checksum: 10c0/e914b63e24cd23f97e18376ec47e4ba3aa24365e4776212b666add2e47bb158003212980d732c49abf3719568900af7861873844a6e2d3a7ca7e86952c0e99e9
   languageName: node
   linkType: hard
 
@@ -3752,13 +3514,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"path-browserify@npm:^1.0.1":
-  version: 1.0.1
-  resolution: "path-browserify@npm:1.0.1"
-  checksum: 10c0/8b8c3fd5c66bd340272180590ae4ff139769e9ab79522e2eb82e3d571a89b8117c04147f65ad066dccfb42fcad902e5b7d794b3d35e0fd840491a8ddbedf8c66
-  languageName: node
-  linkType: hard
-
 "pathe@npm:^2.0.3":
   version: 2.0.3
   resolution: "pathe@npm:2.0.3"
@@ -3809,15 +3564,6 @@ __metadata:
     picocolors: "npm:^1.1.1"
     source-map-js: "npm:^1.2.2"
   checksum: 10c0/52f94c6655f86f568a803ce9c8eb3c749e109cc711d26644c4cde953b30c1b947a2f25af3b9453de68584ac655572f46ed8e830b8ab2f21dd226b3f640992e00
-  languageName: node
-  linkType: hard
-
-"prettier@npm:^3.8.1":
-  version: 3.9.10
-  resolution: "prettier@npm:3.9.10"
-  bin:
-    prettier: bin/prettier.cjs
-  checksum: 10c0/0b3531593aa6fb36ac6baf629cb058bda472c59a6938774f931fe55283a07c62e6f56e621b043a82d8a3e21fc284c08c34f9e539fc70072635f79b7bae1a1067
   languageName: node
   linkType: hard
 
@@ -3921,27 +3667,6 @@ __metadata:
   dependencies:
     regex-utilities: "npm:^2.3.0"
   checksum: 10c0/6e0ee2a1c17d5a66dc1120dfc51899dedf6677857e83a0df4d5a822ebb8645a54a079772efc1ade382b67aad35e4e22b5bd2d33c05ed28b0e000f8f57eb0aec1
-  languageName: node
-  linkType: hard
-
-"request-light@npm:^0.5.7":
-  version: 0.5.8
-  resolution: "request-light@npm:0.5.8"
-  checksum: 10c0/65d47f79cbe13c46c10eecb9264ad06ea5f76ea64855766448937c0fe888a70b9c854bf9dc4c2dc1949ea5400030b55bea7d4ba0807fae0202004cee796ea819
-  languageName: node
-  linkType: hard
-
-"request-light@npm:^0.7.0":
-  version: 0.7.0
-  resolution: "request-light@npm:0.7.0"
-  checksum: 10c0/1c98f0d74b8a28a6fecb96d4b30c255a27b402f5e10b2696b67ede7257389a7533fba9e8ea122ccec9a7c6f06db36eab5d0b563bd5ff27b15aaa9d3910e31894
-  languageName: node
-  linkType: hard
-
-"require-from-string@npm:^2.0.2":
-  version: 2.0.2
-  resolution: "require-from-string@npm:2.0.2"
-  checksum: 10c0/aaa267e0c5b022fc5fd4eef49d8285086b15f2a1c54b28240fdf03599cbd9c26049fee3eab894f2e1f6ca65e513b030a7c264201e3f005601e80c49fb2937ce2
   languageName: node
   linkType: hard
 
@@ -4092,7 +3817,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"semver@npm:^7.3.5, semver@npm:^7.3.8, semver@npm:^7.6.2, semver@npm:^7.8.5":
+"semver@npm:^7.3.5, semver@npm:^7.8.5":
   version: 7.8.5
   resolution: "semver@npm:7.8.5"
   bin:
@@ -4267,27 +3992,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"string-width@npm:^7.0.0, string-width@npm:^7.2.0":
-  version: 7.2.0
-  resolution: "string-width@npm:7.2.0"
-  dependencies:
-    emoji-regex: "npm:^10.3.0"
-    get-east-asian-width: "npm:^1.0.0"
-    strip-ansi: "npm:^7.1.0"
-  checksum: 10c0/eb0430dd43f3199c7a46dcbf7a0b34539c76fe3aa62763d0b0655acdcbdf360b3f66f3d58ca25ba0205f42ea3491fa00f09426d3b7d3040e506878fc7664c9b9
-  languageName: node
-  linkType: hard
-
-"string-width@npm:^8.2.1":
-  version: 8.3.0
-  resolution: "string-width@npm:8.3.0"
-  dependencies:
-    get-east-asian-width: "npm:^1.5.0"
-    strip-ansi: "npm:^7.1.2"
-  checksum: 10c0/bc354b27772777c314e6792106f01586e959f36abb3d4b8ad46c4d4ee92d5e906acb10c1f3be97a85ae0ba1b11389094bc5672999fc5f03f12d22a4725fa30fe
-  languageName: node
-  linkType: hard
-
 "stringify-entities@npm:^4.0.0":
   version: 4.0.4
   resolution: "stringify-entities@npm:4.0.4"
@@ -4295,15 +3999,6 @@ __metadata:
     character-entities-html4: "npm:^2.0.0"
     character-entities-legacy: "npm:^3.0.0"
   checksum: 10c0/537c7e656354192406bdd08157d759cd615724e9d0873602d2c9b2f6a5c0a8d0b1d73a0a08677848105c5eebac6db037b57c0b3a4ec86331117fa7319ed50448
-  languageName: node
-  linkType: hard
-
-"strip-ansi@npm:^7.1.0, strip-ansi@npm:^7.1.2":
-  version: 7.2.0
-  resolution: "strip-ansi@npm:7.2.0"
-  dependencies:
-    ansi-regex: "npm:^6.2.2"
-  checksum: 10c0/544d13b7582f8254811ea97db202f519e189e59d35740c46095897e254e4f1aa9fe1524a83ad6bc5ad67d4dd6c0281d2e0219ed62b880a6238a16a17d375f221
   languageName: node
   linkType: hard
 
@@ -4424,85 +4119,151 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typesafe-path@npm:^0.2.2":
-  version: 0.2.2
-  resolution: "typesafe-path@npm:0.2.2"
-  checksum: 10c0/05027ea6a52a1e879da39c53fae7f5059e50cf578d586cc6c7741c3eca0b37ee2da4ef16d35ecf9f60cd0e8ca5aca98ea47902672907a19470f2260e8769b933
-  languageName: node
-  linkType: hard
-
-"typescript-auto-import-cache@npm:^0.3.5":
-  version: 0.3.6
-  resolution: "typescript-auto-import-cache@npm:0.3.6"
+"typescript@npm:7.1.0-beta":
+  version: 7.1.0-beta
+  resolution: "typescript@npm:7.1.0-beta"
   dependencies:
-    semver: "npm:^7.3.8"
-  checksum: 10c0/aad48d6aa9985f9a056c5c89ab91b6781c5430c0b80652586c2a997f2cc394f3ed70ec18c0c818a8423991a1cfe7e64d010cc2fded9ea192067a3188476c2b51
-  languageName: node
-  linkType: hard
-
-"typescript@npm:typescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2":
-  version: 6.0.3-bridge.7.tsgo.7.0.2
-  resolution: "typescript-native-bridge@npm:6.0.3-bridge.7.tsgo.7.0.2"
-  dependencies:
-    "@typescript-native-bridge/darwin-arm64": "npm:6.0.3-bridge.7.tsgo.7.0.2"
-    "@typescript-native-bridge/darwin-x64": "npm:6.0.3-bridge.7.tsgo.7.0.2"
-    "@typescript-native-bridge/linux-arm": "npm:6.0.3-bridge.7.tsgo.7.0.2"
-    "@typescript-native-bridge/linux-arm64": "npm:6.0.3-bridge.7.tsgo.7.0.2"
-    "@typescript-native-bridge/linux-x64": "npm:6.0.3-bridge.7.tsgo.7.0.2"
-    "@typescript-native-bridge/win32-arm64": "npm:6.0.3-bridge.7.tsgo.7.0.2"
-    "@typescript-native-bridge/win32-x64": "npm:6.0.3-bridge.7.tsgo.7.0.2"
+    "@typescript/typescript-aix-ppc64": "npm:7.1.0-beta"
+    "@typescript/typescript-android-arm64": "npm:7.1.0-beta"
+    "@typescript/typescript-darwin-arm64": "npm:7.1.0-beta"
+    "@typescript/typescript-darwin-x64": "npm:7.1.0-beta"
+    "@typescript/typescript-freebsd-arm64": "npm:7.1.0-beta"
+    "@typescript/typescript-freebsd-x64": "npm:7.1.0-beta"
+    "@typescript/typescript-linux-arm": "npm:7.1.0-beta"
+    "@typescript/typescript-linux-arm64": "npm:7.1.0-beta"
+    "@typescript/typescript-linux-loong64": "npm:7.1.0-beta"
+    "@typescript/typescript-linux-mips64el": "npm:7.1.0-beta"
+    "@typescript/typescript-linux-ppc64": "npm:7.1.0-beta"
+    "@typescript/typescript-linux-riscv64": "npm:7.1.0-beta"
+    "@typescript/typescript-linux-s390x": "npm:7.1.0-beta"
+    "@typescript/typescript-linux-x64": "npm:7.1.0-beta"
+    "@typescript/typescript-netbsd-arm64": "npm:7.1.0-beta"
+    "@typescript/typescript-netbsd-x64": "npm:7.1.0-beta"
+    "@typescript/typescript-openbsd-arm64": "npm:7.1.0-beta"
+    "@typescript/typescript-openbsd-x64": "npm:7.1.0-beta"
+    "@typescript/typescript-sunos-x64": "npm:7.1.0-beta"
+    "@typescript/typescript-win32-arm64": "npm:7.1.0-beta"
+    "@typescript/typescript-win32-x64": "npm:7.1.0-beta"
   dependenciesMeta:
-    "@typescript-native-bridge/darwin-arm64":
+    "@typescript/typescript-aix-ppc64":
       optional: true
-    "@typescript-native-bridge/darwin-x64":
+    "@typescript/typescript-android-arm64":
       optional: true
-    "@typescript-native-bridge/linux-arm":
+    "@typescript/typescript-darwin-arm64":
       optional: true
-    "@typescript-native-bridge/linux-arm64":
+    "@typescript/typescript-darwin-x64":
       optional: true
-    "@typescript-native-bridge/linux-x64":
+    "@typescript/typescript-freebsd-arm64":
       optional: true
-    "@typescript-native-bridge/win32-arm64":
+    "@typescript/typescript-freebsd-x64":
       optional: true
-    "@typescript-native-bridge/win32-x64":
+    "@typescript/typescript-linux-arm":
+      optional: true
+    "@typescript/typescript-linux-arm64":
+      optional: true
+    "@typescript/typescript-linux-loong64":
+      optional: true
+    "@typescript/typescript-linux-mips64el":
+      optional: true
+    "@typescript/typescript-linux-ppc64":
+      optional: true
+    "@typescript/typescript-linux-riscv64":
+      optional: true
+    "@typescript/typescript-linux-s390x":
+      optional: true
+    "@typescript/typescript-linux-x64":
+      optional: true
+    "@typescript/typescript-netbsd-arm64":
+      optional: true
+    "@typescript/typescript-netbsd-x64":
+      optional: true
+    "@typescript/typescript-openbsd-arm64":
+      optional: true
+    "@typescript/typescript-openbsd-x64":
+      optional: true
+    "@typescript/typescript-sunos-x64":
+      optional: true
+    "@typescript/typescript-win32-arm64":
+      optional: true
+    "@typescript/typescript-win32-x64":
       optional: true
   bin:
     tsc: bin/tsc
-    tsserver: bin/tsserver
-  checksum: 10c0/40a134e33b0277ca8c2ec062197ca411607b9dd756b559366d99d2b533a5a9b29ff2fd28a7f5e4b7c7c413f7a61706cbb340bac1ad9be70a751942c06b70af91
+  checksum: 10c0/4ae43c8a57944a5ecb30093aa93ea94c9726e013e20e97e31ffd976018f507aeadb3d515136429dd894871419dca532b5b8c259f3aae1d0eaef112d197ac3b2c
   languageName: node
   linkType: hard
 
-"typescript@patch:typescript@npm%3Atypescript-native-bridge@6.0.3-bridge.7.tsgo.7.0.2#optional!builtin<compat/typescript>":
-  version: 6.0.3-bridge.7.tsgo.7.0.2
-  resolution: "typescript@patch:typescript-native-bridge@npm%3A6.0.3-bridge.7.tsgo.7.0.2#optional!builtin<compat/typescript>::version=6.0.3-bridge.7.tsgo.7.0.2&hash=5786d5"
+"typescript@patch:typescript@npm%3A7.1.0-beta#optional!builtin<compat/typescript>":
+  version: 7.1.0-beta
+  resolution: "typescript@patch:typescript@npm%3A7.1.0-beta#optional!builtin<compat/typescript>::version=7.1.0-beta&hash=3bafbf"
   dependencies:
-    "@typescript-native-bridge/darwin-arm64": "npm:6.0.3-bridge.7.tsgo.7.0.2"
-    "@typescript-native-bridge/darwin-x64": "npm:6.0.3-bridge.7.tsgo.7.0.2"
-    "@typescript-native-bridge/linux-arm": "npm:6.0.3-bridge.7.tsgo.7.0.2"
-    "@typescript-native-bridge/linux-arm64": "npm:6.0.3-bridge.7.tsgo.7.0.2"
-    "@typescript-native-bridge/linux-x64": "npm:6.0.3-bridge.7.tsgo.7.0.2"
-    "@typescript-native-bridge/win32-arm64": "npm:6.0.3-bridge.7.tsgo.7.0.2"
-    "@typescript-native-bridge/win32-x64": "npm:6.0.3-bridge.7.tsgo.7.0.2"
+    "@typescript/typescript-aix-ppc64": "npm:7.1.0-beta"
+    "@typescript/typescript-android-arm64": "npm:7.1.0-beta"
+    "@typescript/typescript-darwin-arm64": "npm:7.1.0-beta"
+    "@typescript/typescript-darwin-x64": "npm:7.1.0-beta"
+    "@typescript/typescript-freebsd-arm64": "npm:7.1.0-beta"
+    "@typescript/typescript-freebsd-x64": "npm:7.1.0-beta"
+    "@typescript/typescript-linux-arm": "npm:7.1.0-beta"
+    "@typescript/typescript-linux-arm64": "npm:7.1.0-beta"
+    "@typescript/typescript-linux-loong64": "npm:7.1.0-beta"
+    "@typescript/typescript-linux-mips64el": "npm:7.1.0-beta"
+    "@typescript/typescript-linux-ppc64": "npm:7.1.0-beta"
+    "@typescript/typescript-linux-riscv64": "npm:7.1.0-beta"
+    "@typescript/typescript-linux-s390x": "npm:7.1.0-beta"
+    "@typescript/typescript-linux-x64": "npm:7.1.0-beta"
+    "@typescript/typescript-netbsd-arm64": "npm:7.1.0-beta"
+    "@typescript/typescript-netbsd-x64": "npm:7.1.0-beta"
+    "@typescript/typescript-openbsd-arm64": "npm:7.1.0-beta"
+    "@typescript/typescript-openbsd-x64": "npm:7.1.0-beta"
+    "@typescript/typescript-sunos-x64": "npm:7.1.0-beta"
+    "@typescript/typescript-win32-arm64": "npm:7.1.0-beta"
+    "@typescript/typescript-win32-x64": "npm:7.1.0-beta"
   dependenciesMeta:
-    "@typescript-native-bridge/darwin-arm64":
+    "@typescript/typescript-aix-ppc64":
       optional: true
-    "@typescript-native-bridge/darwin-x64":
+    "@typescript/typescript-android-arm64":
       optional: true
-    "@typescript-native-bridge/linux-arm":
+    "@typescript/typescript-darwin-arm64":
       optional: true
-    "@typescript-native-bridge/linux-arm64":
+    "@typescript/typescript-darwin-x64":
       optional: true
-    "@typescript-native-bridge/linux-x64":
+    "@typescript/typescript-freebsd-arm64":
       optional: true
-    "@typescript-native-bridge/win32-arm64":
+    "@typescript/typescript-freebsd-x64":
       optional: true
-    "@typescript-native-bridge/win32-x64":
+    "@typescript/typescript-linux-arm":
+      optional: true
+    "@typescript/typescript-linux-arm64":
+      optional: true
+    "@typescript/typescript-linux-loong64":
+      optional: true
+    "@typescript/typescript-linux-mips64el":
+      optional: true
+    "@typescript/typescript-linux-ppc64":
+      optional: true
+    "@typescript/typescript-linux-riscv64":
+      optional: true
+    "@typescript/typescript-linux-s390x":
+      optional: true
+    "@typescript/typescript-linux-x64":
+      optional: true
+    "@typescript/typescript-netbsd-arm64":
+      optional: true
+    "@typescript/typescript-netbsd-x64":
+      optional: true
+    "@typescript/typescript-openbsd-arm64":
+      optional: true
+    "@typescript/typescript-openbsd-x64":
+      optional: true
+    "@typescript/typescript-sunos-x64":
+      optional: true
+    "@typescript/typescript-win32-arm64":
+      optional: true
+    "@typescript/typescript-win32-x64":
       optional: true
   bin:
     tsc: bin/tsc
-    tsserver: bin/tsserver
-  checksum: 10c0/47c8b661947ecf9e03a9311525ab116a01a42d9b0c006f8dc4c08133af1fbfb8a054dea4fce147eeba91bea986e14f58bbb35b67b885923d5dc53e8ed68ae2d9
+  checksum: 10c0/cc25674a19340d98d900efd7b02ae50b281aa92fecb772b19508e87314fa5b2a0ea0b7f1b3e75e5b4c12b18478091370e9b21ff60e25932f67ca67525acb3364
   languageName: node
   linkType: hard
 
@@ -4924,234 +4685,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"volar-service-css@npm:0.0.71":
-  version: 0.0.71
-  resolution: "volar-service-css@npm:0.0.71"
-  dependencies:
-    vscode-css-languageservice: "npm:^6.3.0"
-    vscode-languageserver-textdocument: "npm:^1.0.11"
-    vscode-uri: "npm:^3.0.8"
-  peerDependencies:
-    "@volar/language-service": ~2.4.0
-  peerDependenciesMeta:
-    "@volar/language-service":
-      optional: true
-  checksum: 10c0/fd07e55786a18db2f671eea087e2d43116d8c0f504aac699a3b47fc9d6f53d66c0b3652062ca6ae08d8e59905564f72c63af9727d956165061849ab488462e2e
-  languageName: node
-  linkType: hard
-
-"volar-service-emmet@npm:0.0.71":
-  version: 0.0.71
-  resolution: "volar-service-emmet@npm:0.0.71"
-  dependencies:
-    "@emmetio/css-parser": "npm:^0.4.1"
-    "@emmetio/html-matcher": "npm:^1.3.0"
-    "@vscode/emmet-helper": "npm:^2.9.3"
-    vscode-uri: "npm:^3.0.8"
-  peerDependencies:
-    "@volar/language-service": ~2.4.0
-  peerDependenciesMeta:
-    "@volar/language-service":
-      optional: true
-  checksum: 10c0/a3c95991859d0e7e06a23d1201fcbdddbb7be0c525a553881f14ab941efe331adbb27431caf67962ec43a077e424f7e30bada6a52254272572b93b01f55bcf73
-  languageName: node
-  linkType: hard
-
-"volar-service-html@npm:0.0.71":
-  version: 0.0.71
-  resolution: "volar-service-html@npm:0.0.71"
-  dependencies:
-    vscode-html-languageservice: "npm:^5.3.0"
-    vscode-languageserver-textdocument: "npm:^1.0.11"
-    vscode-uri: "npm:^3.0.8"
-  peerDependencies:
-    "@volar/language-service": ~2.4.0
-  peerDependenciesMeta:
-    "@volar/language-service":
-      optional: true
-  checksum: 10c0/b1ff293413945cf7357aadc9484080863e7a855a919ccc4f379123ebabe16f9905f5bd19db60e08028a7282c2926762a006daddabd0e373d5040d32afe2ab364
-  languageName: node
-  linkType: hard
-
-"volar-service-prettier@npm:0.0.71":
-  version: 0.0.71
-  resolution: "volar-service-prettier@npm:0.0.71"
-  dependencies:
-    vscode-uri: "npm:^3.0.8"
-  peerDependencies:
-    "@volar/language-service": ~2.4.0
-    prettier: ^2.2 || ^3.0
-  peerDependenciesMeta:
-    "@volar/language-service":
-      optional: true
-    prettier:
-      optional: true
-  checksum: 10c0/f3498260e51a5ee6d762fac0f332e745a5705db9ccd9aca9d154985cff733d22e8be6a41239bdce4cd5dcdaa05f8bd6e1baf27c5585f9b968e93155eb74e2118
-  languageName: node
-  linkType: hard
-
-"volar-service-typescript-twoslash-queries@npm:0.0.71":
-  version: 0.0.71
-  resolution: "volar-service-typescript-twoslash-queries@npm:0.0.71"
-  dependencies:
-    vscode-uri: "npm:^3.0.8"
-  peerDependencies:
-    "@volar/language-service": ~2.4.0
-  peerDependenciesMeta:
-    "@volar/language-service":
-      optional: true
-  checksum: 10c0/deaea07b08c6dc54763c98217b1b206c885e4434a07018f058e22602f8445ee29ceac70217b1271b6182c979e8ccfe2fbdaa464e327ab8ae8a0eb87517d0adba
-  languageName: node
-  linkType: hard
-
-"volar-service-typescript@npm:0.0.71":
-  version: 0.0.71
-  resolution: "volar-service-typescript@npm:0.0.71"
-  dependencies:
-    path-browserify: "npm:^1.0.1"
-    semver: "npm:^7.6.2"
-    typescript-auto-import-cache: "npm:^0.3.5"
-    vscode-languageserver-textdocument: "npm:^1.0.11"
-    vscode-nls: "npm:^5.2.0"
-    vscode-uri: "npm:^3.0.8"
-  peerDependencies:
-    "@volar/language-service": ~2.4.0
-  peerDependenciesMeta:
-    "@volar/language-service":
-      optional: true
-  checksum: 10c0/c197666fca9810e72e9db81d15c527b21dbebd493966199b5e8d690204ba17cbc6cfaeed6be7d72b285bb795ff7fbb45a939463db0cb804360c4966e5811bbc0
-  languageName: node
-  linkType: hard
-
-"volar-service-yaml@npm:0.0.71":
-  version: 0.0.71
-  resolution: "volar-service-yaml@npm:0.0.71"
-  dependencies:
-    vscode-uri: "npm:^3.0.8"
-    yaml-language-server: "npm:~1.23.0"
-  peerDependencies:
-    "@volar/language-service": ~2.4.0
-  peerDependenciesMeta:
-    "@volar/language-service":
-      optional: true
-  checksum: 10c0/6d56a6c77a100208e1ae0c5cbc80f547a066012a21574f476b37b59dfb212129efaf1a98fdc4cde8bcc71c61e9d26e0ac326d6c8ea300dffd681bf2c55b50f35
-  languageName: node
-  linkType: hard
-
-"vscode-css-languageservice@npm:^6.3.0":
-  version: 6.3.10
-  resolution: "vscode-css-languageservice@npm:6.3.10"
-  dependencies:
-    "@vscode/l10n": "npm:^0.0.18"
-    vscode-languageserver-textdocument: "npm:^1.0.12"
-    vscode-languageserver-types: "npm:3.17.5"
-    vscode-uri: "npm:^3.1.0"
-  checksum: 10c0/3f6228d85579c0306343c734716c17128757f3a6e44625deac06622fe248f05fe15da1901581aa50cb8d9539137a49d19f05dca6d13feb2e6bc9f3d9784236bd
-  languageName: node
-  linkType: hard
-
-"vscode-html-languageservice@npm:^5.3.0, vscode-html-languageservice@npm:^5.6.2":
-  version: 5.6.2
-  resolution: "vscode-html-languageservice@npm:5.6.2"
-  dependencies:
-    "@vscode/l10n": "npm:^0.0.18"
-    vscode-languageserver-textdocument: "npm:^1.0.12"
-    vscode-languageserver-types: "npm:^3.17.5"
-    vscode-uri: "npm:^3.1.0"
-  checksum: 10c0/5ef5f3cb959435a3f29d9b5844fb223140b8b5b616c3f54d0c627427853e8c8806d5d93f3a4e3354a3c9d2e9acdf6cb8043479837d20d9dd30ad6d07bf22286d
-  languageName: node
-  linkType: hard
-
-"vscode-json-languageservice@npm:4.1.8":
-  version: 4.1.8
-  resolution: "vscode-json-languageservice@npm:4.1.8"
-  dependencies:
-    jsonc-parser: "npm:^3.0.0"
-    vscode-languageserver-textdocument: "npm:^1.0.1"
-    vscode-languageserver-types: "npm:^3.16.0"
-    vscode-nls: "npm:^5.0.0"
-    vscode-uri: "npm:^3.0.2"
-  checksum: 10c0/9165703884e5eef52d4bf52294051df6623461cc7a3d458ef1f4fa3f98ac93c3a79efc8c4a15fda6ddf6e43d155c207c3c13534dcac3fe7982ddf1926dbf22a7
-  languageName: node
-  linkType: hard
-
-"vscode-jsonrpc@npm:8.2.0":
-  version: 8.2.0
-  resolution: "vscode-jsonrpc@npm:8.2.0"
-  checksum: 10c0/0789c227057a844f5ead55c84679206227a639b9fb76e881185053abc4e9848aa487245966cc2393fcb342c4541241b015a1a2559fddd20ac1e68945c95344e6
-  languageName: node
-  linkType: hard
-
-"vscode-jsonrpc@npm:9.0.3":
+"vscode-jsonrpc@npm:^9.0.1":
   version: 9.0.3
   resolution: "vscode-jsonrpc@npm:9.0.3"
   checksum: 10c0/b6fa49fb33fc781c9b05b4e09a1aa0bc641f5791d6644ee0a0eb2e366d0cf05afbfdf4b6f6010faf0a3b7f185a703963adae110c66ef54c30032ab3e2f0759b2
-  languageName: node
-  linkType: hard
-
-"vscode-languageserver-protocol@npm:3.17.5":
-  version: 3.17.5
-  resolution: "vscode-languageserver-protocol@npm:3.17.5"
-  dependencies:
-    vscode-jsonrpc: "npm:8.2.0"
-    vscode-languageserver-types: "npm:3.17.5"
-  checksum: 10c0/5f38fd80da9868d706eaa4a025f4aff9c3faad34646bcde1426f915cbd8d7e8b6c3755ce3fef6eebd256ba3145426af1085305f8a76e34276d2e95aaf339a90b
-  languageName: node
-  linkType: hard
-
-"vscode-languageserver-protocol@npm:^3.17.5":
-  version: 3.18.4
-  resolution: "vscode-languageserver-protocol@npm:3.18.4"
-  dependencies:
-    vscode-jsonrpc: "npm:9.0.3"
-    vscode-languageserver-types: "npm:3.18.4"
-  checksum: 10c0/6323fba7c6cdbcf4aca6cf63f0a9c4c1b171e1dc4390c10971fbc0ef8bd3015c847edeb2bf9896c6acf78431c62e94e7ef127376da80902f7a747aa381e81b5b
-  languageName: node
-  linkType: hard
-
-"vscode-languageserver-textdocument@npm:^1.0.1, vscode-languageserver-textdocument@npm:^1.0.11, vscode-languageserver-textdocument@npm:^1.0.12":
-  version: 1.0.15
-  resolution: "vscode-languageserver-textdocument@npm:1.0.15"
-  checksum: 10c0/b2e5c47fe9b0c3278855aa9ef99a3de7306fe5d45399bf0f6d59f5fb4daebff6dcbadf041e991296560b0c9367627f0014f1d7e40136d2b459f21c19b671df10
-  languageName: node
-  linkType: hard
-
-"vscode-languageserver-types@npm:3.17.5":
-  version: 3.17.5
-  resolution: "vscode-languageserver-types@npm:3.17.5"
-  checksum: 10c0/1e1260de79a2cc8de3e46f2e0182cdc94a7eddab487db5a3bd4ee716f67728e685852707d72c059721ce500447be9a46764a04f0611e94e4321ffa088eef36f8
-  languageName: node
-  linkType: hard
-
-"vscode-languageserver-types@npm:3.18.4, vscode-languageserver-types@npm:^3.15.1, vscode-languageserver-types@npm:^3.16.0, vscode-languageserver-types@npm:^3.17.5":
-  version: 3.18.4
-  resolution: "vscode-languageserver-types@npm:3.18.4"
-  checksum: 10c0/95a58eba94900bd9e685b44b840497c40709a8f643a4fa0945daa40affa45246ee843d786aa5ce9d64fe573cec1ef9530d3519ae01e8b4aa0ff2c83ba7608ccc
-  languageName: node
-  linkType: hard
-
-"vscode-languageserver@npm:^9.0.0, vscode-languageserver@npm:^9.0.1":
-  version: 9.0.1
-  resolution: "vscode-languageserver@npm:9.0.1"
-  dependencies:
-    vscode-languageserver-protocol: "npm:3.17.5"
-  bin:
-    installServerIntoExtension: bin/installServerIntoExtension
-  checksum: 10c0/8a0838d77c98a211c76e54bd3a6249fc877e4e1a73322673fb0e921168d8e91de4f170f1d4ff7e8b6289d0698207afc6aba6662d4c1cd8e4bd7cae96afd6b0c2
-  languageName: node
-  linkType: hard
-
-"vscode-nls@npm:^5.0.0, vscode-nls@npm:^5.2.0":
-  version: 5.2.0
-  resolution: "vscode-nls@npm:5.2.0"
-  checksum: 10c0/dc9e48f58ebbc807f435d351008813a2ea0c9432d51e778bcac9163c0642f929ddb518411ad654e775ce31e24d6acfa8fb7db8893c05b42c2019894e08b050f9
-  languageName: node
-  linkType: hard
-
-"vscode-uri@npm:^3.0.2, vscode-uri@npm:^3.0.8, vscode-uri@npm:^3.1.0, vscode-uri@npm:^3.2.0":
-  version: 3.2.0
-  resolution: "vscode-uri@npm:3.2.0"
-  checksum: 10c0/65b4d78f2d014ee359ba36a81605bbd8a420d4c13d3fdba61b44b301ea416bf4b12637253ee72c0f30c1cd774c3649d667674c2fbf00c931667b869158f8519f
   languageName: node
   linkType: hard
 
@@ -5178,17 +4715,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"wrap-ansi@npm:^9.0.0":
-  version: 9.0.2
-  resolution: "wrap-ansi@npm:9.0.2"
-  dependencies:
-    ansi-styles: "npm:^6.2.1"
-    string-width: "npm:^7.0.0"
-    strip-ansi: "npm:^7.1.0"
-  checksum: 10c0/3305839b9a0d6fb930cb63a52f34d3936013d8b0682ff3ec133c9826512620f213800ffa19ea22904876d5b7e9a3c1f40682f03597d986a4ca881fa7b033688c
-  languageName: node
-  linkType: hard
-
 "ws@npm:^8.19.0":
   version: 8.22.0
   resolution: "ws@npm:8.22.0"
@@ -5211,13 +4737,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"y18n@npm:^5.0.5":
-  version: 5.0.8
-  resolution: "y18n@npm:5.0.8"
-  checksum: 10c0/4df2842c36e468590c3691c894bc9cdbac41f520566e76e24f59401ba7d8b4811eb1e34524d57e54bc6d864bcb66baab7ffd9ca42bf1eda596618f9162b91249
-  languageName: node
-  linkType: hard
-
 "yallist@npm:^5.0.0":
   version: 5.0.0
   resolution: "yallist@npm:5.0.0"
@@ -5225,38 +4744,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"yaml-language-server@npm:~1.23.0":
-  version: 1.23.0
-  resolution: "yaml-language-server@npm:1.23.0"
-  dependencies:
-    "@vscode/l10n": "npm:^0.0.18"
-    ajv: "npm:^8.17.1"
-    ajv-draft-04: "npm:^1.0.0"
-    ajv-i18n: "npm:^4.2.0"
-    prettier: "npm:^3.8.1"
-    request-light: "npm:^0.5.7"
-    vscode-json-languageservice: "npm:4.1.8"
-    vscode-languageserver: "npm:^9.0.0"
-    vscode-languageserver-textdocument: "npm:^1.0.1"
-    vscode-languageserver-types: "npm:^3.16.0"
-    vscode-uri: "npm:^3.0.2"
-    yaml: "npm:2.8.3"
-  bin:
-    yaml-language-server: bin/yaml-language-server
-  checksum: 10c0/d5ed44bb542ad9b9a38171983257f47c391120fb703e043395f3490c22d99f0807d90a0cdb7b4b7955f39557162936f41bd0d6f121c95b473bc1deac597c41a1
-  languageName: node
-  linkType: hard
-
-"yaml@npm:2.8.3":
-  version: 2.8.3
-  resolution: "yaml@npm:2.8.3"
-  bin:
-    yaml: bin.mjs
-  checksum: 10c0/ddff0e11c1b467728d7eb4633db61c5f5de3d8e9373cf84d08fb0cdee03e1f58f02b9f1c51a4a8a865751695addbd465a77f73f1079be91fe5493b29c305fd77
-  languageName: node
-  linkType: hard
-
-"yaml@npm:^2.8.3, yaml@npm:^2.9.1":
+"yaml@npm:^2.9.1":
   version: 2.9.1
   resolution: "yaml@npm:2.9.1"
   bin:
@@ -5269,20 +4757,6 @@ __metadata:
   version: 22.0.0
   resolution: "yargs-parser@npm:22.0.0"
   checksum: 10c0/cb7ef81759c4271cb1d96b9351dbbc9a9ce35d3e1122d2b739bf6c432603824fa02c67cc12dcef6ea80283379d63495686e8f41cc7b06c6576e792aba4d33e1c
-  languageName: node
-  linkType: hard
-
-"yargs@npm:^18.2.0":
-  version: 18.2.0
-  resolution: "yargs@npm:18.2.0"
-  dependencies:
-    cliui: "npm:^9.0.1"
-    escalade: "npm:^3.1.1"
-    get-caller-file: "npm:^2.0.5"
-    string-width: "npm:^8.2.1"
-    y18n: "npm:^5.0.5"
-    yargs-parser: "npm:^22.0.0"
-  checksum: 10c0/7419338c3c00f9143ec6b6ab168335061c6f5342d161642aec23ff119e28cac1c417e0eca1d7dc82fd084f07207cc5d34c7d8315f605c0e3dbf12c350e405f3f
   languageName: node
   linkType: hard
 
