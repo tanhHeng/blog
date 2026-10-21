@@ -84,9 +84,11 @@ The novel text lives in `src/novel/flowe-orld.md` (not a route). `src/lib/novel.
 
 The shared layout stack is:
 
-1. `BaseLayout.astro` owns the HTML document, metadata, favicon, language attribute, global styles, navbar, animated background circles, and desktop mouse-following circle.
-2. `DefaultLayout.astro` wraps general pages with optional text decorations and the homepage hero artwork.
+1. `BaseLayout.astro` owns the HTML document, metadata, favicon, language attribute, global styles, navbar, animated background circles, desktop mouse-following circle, and the page transition (`transition` prop).
+2. `PageLayout.astro` wraps general pages (homepage, 404) with optional text decorations and the homepage hero artwork.
 3. `ArticleLayout.astro` wraps Markdown articles with article metadata, reading content, a generated table of contents, article-specific decorations, and `lang="zh-CN"` metadata.
+
+Page transitions are browser-native cross-document view transitions (`@view-transition` in `global.scss`), not Astro's `<ClientRouter />`, so every page keeps full-page navigation and its scripts run normally. Browsers without support simply navigate. The page being entered styles the whole transition: `BaseLayout.astro` applies `transition:name="root"` plus `transition:animate` from `src/lib/pageTransitions.ts` (`home`, `article`, `novel`; pages without a `transition` prop, such as 404 and the missing `/about`, get a plain fade), and renders `PageTransitionVeil.astro`, an overlay that only displays while an inline `pagereveal` script marks `html.vt-arriving`. Only `forwards` animations apply without the router. Veil timings are tuned to the root durations; change them together.
 
 `src/pages/index.astro` is the homepage. It renders the brand introduction, About Me content, recent-article area, and footer as sections inside a scroll-driven composition. Its inline browser script controls section activation, navigation/scroll transitions, and responsive behavior; change that script cautiously and verify both desktop and narrow viewport behavior.
 
@@ -101,6 +103,7 @@ The shared layout stack is:
 - `RotatingCircles.astro`: decorative rotating circle treatment used by the homepage and article layout.
 - `TextDecorations.astro`: peripheral editorial text ornaments used by the default layout.
 - `ArticleContents.astro`: collapsible/generated article table of contents with responsive behavior and heading links.
+- `PageTransitionVeil.astro`: per-variant transition overlay (home: brand dots and rings riding a circular iris; article: kicker, rising numerals, and a rule riding a bottom-up wipe; novel: white mist with the novel's tagline, thinning into the novel's opening mist). Holds the root `vt-*` keyframes.
 
 ### Styling and visual conventions
 

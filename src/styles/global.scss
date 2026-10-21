@@ -6,6 +6,9 @@ $primary-blue: #8992bd;
 $content-color: #505b82;
 $home-title-color: #7b85b4;
 
+// The novel's opening mist; shared with the page transition veil.
+$mist: #f6f8ff;
+
 $font-family-default: "Playfair Display", "Noto Serif SC", serif;
 $font-family-heading: "Playfair Display SC", serif;
 $font-family-special: "Italianno", serif;
@@ -20,6 +23,17 @@ html {
   margin: 0;
   padding: 0;
   font-family: $font-family-default;
+}
+
+// Browser-native cross-document view transitions; each page styles its own arrival in `PageTransitionVeil.astro`.
+@view-transition {
+  navigation: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @view-transition {
+    navigation: none;
+  }
 }
 
 .link-underline {

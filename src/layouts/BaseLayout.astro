@@ -2,6 +2,8 @@
 import Navbar from '../components/Navbar.astro';
 import DynamicCircles from '../components/DynamicCircles.astro';
 import MouseCircle from '../components/MouseCircle.astro';
+import PageTransitionVeil from '../components/PageTransitionVeil.astro';
+import { rootTransitions, type PageTransition } from '../lib/pageTransitions';
 import '../styles/global.scss';
 import 'animate.css';
 
@@ -11,6 +13,8 @@ interface Props {
   description?: string;
   lang?: string;
   showFootnote?: boolean;
+  /** How this page arrives during a cross-document view transition; pages without one use a plain fade. */
+  transition?: PageTransition;
 }
 
 const {
@@ -19,10 +23,12 @@ const {
   description,
   lang = 'en',
   showFootnote = true,
+  transition,
 } = Astro.props;
+const rootAnimation = transition ? rootTransitions[transition.variant] : 'fade';
 ---
 
-<html lang={lang}>
+<html lang={lang} transition:name="root" transition:animate={rootAnimation}>
   <head>
     <meta charset="utf-8" />
     <link rel="icon" href="/favicon.svg" />
@@ -30,11 +36,21 @@ const {
     <meta name="generator" content={Astro.generator} />
     {title && <title>{title}</title>}
     {description && <meta name="description" content={description} />}
+    <!-- Runs before first render: `pagereveal` must flag an arriving transition before the new snapshot is taken. -->
+    <script is:inline>
+      addEventListener('pagereveal', (event) => {
+        if (!event.viewTransition) return;
+        const root = document.documentElement;
+        root.classList.add('vt-arriving');
+        event.viewTransition.finished.finally(() => root.classList.remove('vt-arriving'));
+      });
+    </script>
   </head>
   <body>
     <DynamicCircles />
     <MouseCircle />
     <Navbar activePage={activePage} />
+    {transition && <PageTransitionVeil {...transition} />}
     <div class="page-content">
       <slot />
     </div>
