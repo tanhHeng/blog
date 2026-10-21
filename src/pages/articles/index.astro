@@ -23,6 +23,14 @@ const sectorCount = Math.max(5, ringTags.length);
 const sectorAngle = 180 / sectorCount;
 const description = '记录设计、数学与游戏之间的思考，在结构与诗意之间寻找可感知的秩序。';
 const formatIndex = (index: number) => String(index).padStart(2, '0');
+const years: { year: string; entries: { article: (typeof articles)[number]; index: number }[] }[] = [];
+articles.forEach((article, index) => {
+  const year = article.date.slice(0, 4);
+  const group = years.at(-1);
+  if (group?.year === year) group.entries.push({ article, index });
+  else years.push({ year, entries: [{ article, index }] });
+});
+const pluralArticles = (count: number) => `${count} ${count === 1 ? 'article' : 'articles'}`;
 ---
 
 <BaseLayout activePage="Article" title="Articles | TANH.MOE" description={description}>
@@ -41,6 +49,7 @@ const formatIndex = (index: number) => String(index).padStart(2, '0');
           <p class="archive-intro" lang="zh-CN">{description}</p>
         </header>
 
+        <div class="filter-panel">
         <div class="filter-orbit" role="group" aria-label="Popular tag shortcuts">
           <div class="orbit-guide" aria-hidden="true"></div>
           <div class="orbit-sectors">
@@ -48,7 +57,7 @@ const formatIndex = (index: number) => String(index).padStart(2, '0');
             const tag = ringTags[index];
             const radians = ((index + 0.5) * sectorAngle - 90) * Math.PI / 180;
             return (
-              <div class="orbit-option">
+              <div class:list={['orbit-option', { 'is-empty': !tag }]}>
               {tag && (
               <button
                 class="orbit-tag"
@@ -57,7 +66,7 @@ const formatIndex = (index: number) => String(index).padStart(2, '0');
                 data-tag-label={tag.label}
                 style={`--node-x: ${50 + 43 * Math.cos(radians)}%; --node-y: ${50 + 43 * Math.sin(radians)}%;`}
                 aria-pressed="false"
-                aria-controls="article-list"
+                aria-controls="article-index"
                 aria-label={`Filter by ${tag.label}`}
                 title={tag.label}
                 disabled
@@ -85,31 +94,13 @@ const formatIndex = (index: number) => String(index).padStart(2, '0');
           </div>
         </div>
 
-        <dl class="archive-stats">
-          <div class="stat-articles">
-            <dt>Total Articles</dt>
-            <dd>{formatIndex(articles.length)}</dd>
-          </div>
-          {estimatedArticles > 0 && (
-            <div class="stat-reading">
-              <dt>Total Reading Time <span class="stat-estimate">/ est.</span></dt>
-              <dd>
-                <span class="stat-approx" aria-hidden="true">≈</span> {totalMinutes}<span class="stat-unit">min</span>
-              {estimatedArticles < articles.length && (
-                <span class="stat-coverage">Estimated from {estimatedArticles} of {articles.length} articles</span>
-              )}
-              </dd>
-            </div>
-          )}
-        </dl>
-
         <div class="archive-filters" role="group" aria-labelledby="filter-label" aria-describedby="filter-help">
           <div class="filter-caption">
             <h2 id="filter-label">Tags</h2>
             <span id="filter-help">Match all selected</span>
           </div>
           <div class="filter-tags">
-            <button class="filter-tag filter-all" type="button" data-filter-all aria-pressed="true" aria-controls="article-list" disabled>
+            <button class="filter-tag filter-all" type="button" data-filter-all aria-pressed="true" aria-controls="article-index" disabled>
               All <span class="filter-tag-count">{articles.length}</span>
             </button>
             {tags.map((tag) => (
@@ -119,7 +110,7 @@ const formatIndex = (index: number) => String(index).padStart(2, '0');
                 data-filter-tag={tag.key}
                 data-tag-label={tag.label}
                 aria-pressed="false"
-                aria-controls="article-list"
+                aria-controls="article-index"
                 disabled
               >
                 <span>{tag.label}</span><span class="filter-tag-count">{tag.count}</span>
@@ -127,44 +118,73 @@ const formatIndex = (index: number) => String(index).padStart(2, '0');
             ))}
           </div>
         </div>
+        </div>
         <noscript><p class="filter-noscript">All articles are shown. Enable JavaScript to filter by tag.</p></noscript>
-        <p class="archive-sidebar-note" aria-hidden="true"><span></span> A COLLECTION OF THOUGHTS</p>
       </aside>
 
       <section class="archive-results" aria-labelledby="results-heading">
         <header class="results-header">
-          <div>
-            <p class="archive-eyebrow">THE INDEX <span>/</span> NEWEST FIRST</p>
-            <h2 id="results-heading" data-results-heading>All articles</h2>
+          <p class="archive-eyebrow">THE INDEX <span>/</span> NEWEST FIRST</p>
+          <div class="results-title-row">
+            <div>
+              <h2 id="results-heading" data-results-heading>All articles</h2>
+              <p class="results-count" role="status" aria-live="polite" aria-atomic="true" data-results-count>
+                Showing {articles.length} of {articles.length}
+              </p>
+            </div>
+            <dl class="archive-stats">
+              <div>
+                <dt>Articles</dt>
+                <dd>{formatIndex(articles.length)}</dd>
+              </div>
+              {estimatedArticles > 0 && (
+                <div>
+                  <dt>Reading <span class="stat-estimate">/ est.</span></dt>
+                  <dd>
+                    <span class="stat-approx" aria-hidden="true">≈</span>{totalMinutes}<span class="stat-unit">min</span>
+                    {estimatedArticles < articles.length && (
+                      <span class="stat-coverage">from {estimatedArticles} of {articles.length}</span>
+                    )}
+                  </dd>
+                </div>
+              )}
+            </dl>
           </div>
-          <p class="results-count" role="status" aria-live="polite" aria-atomic="true" data-results-count>
-            Showing {articles.length} of {articles.length}
-          </p>
         </header>
 
-        <ol class="article-list" id="article-list" role="list">
-          {articles.map((article, index) => (
-            <li class="article-entry" data-article-tags={JSON.stringify([...article.tags.keys()])}>
-              <a class="article-link" href={article.url} aria-labelledby={`article-title-${index}`}>
-                <span class="article-index" aria-hidden="true">{formatIndex(index + 1)}</span>
-                <div class="article-copy">
-                  <h3 id={`article-title-${index}`}>{article.title}</h3>
-                  {article.tags.size > 0 && (
-                    <div class="article-tags">
-                      {[...article.tags.values()].map((tag) => <span>{tag}</span>)}
-                    </div>
-                  )}
-                  {article.description && <p class="article-description">{article.description}</p>}
-                </div>
-                <div class="article-meta">
-                  <time datetime={article.date}>{article.date.replaceAll('-', '.')}</time>
-                  {article.readingTime && <span>{article.readingTime}</span>}
-                </div>
-                <span class="article-arrow" aria-hidden="true">→</span>
-              </a>
-            </li>
+        <div class="article-index" id="article-index">
+          {years.map(({ year, entries }) => (
+            <section class="article-year" aria-labelledby={`year-${year}`} data-year-group>
+              <header class="year-heading">
+                <h3 class="year-label" id={`year-${year}`}>{year}</h3>
+                <span class="year-count" data-year-count>{pluralArticles(entries.length)}</span>
+              </header>
+              <ol class="article-list" role="list">
+                {entries.map(({ article, index }) => (
+                  <li class="article-entry" data-article-tags={JSON.stringify([...article.tags.keys()])}>
+                    <a class="article-link" href={article.url} aria-labelledby={`article-title-${index}`}>
+                      <span class="article-number" aria-hidden="true">{formatIndex(index + 1)}</span>
+                      <div class="article-copy">
+                        <h4 id={`article-title-${index}`}>{article.title}</h4>
+                        {article.description && <p class="article-description">{article.description}</p>}
+                        {article.tags.size > 0 && (
+                          <p class="article-tags">
+                            {[...article.tags.values()].map((tag) => <span>{tag}</span>)}
+                          </p>
+                        )}
+                      </div>
+                      <div class="article-meta">
+                        <time datetime={article.date}>{article.date.slice(5).replace('-', '.')}</time>
+                        {article.readingTime && <span>{article.readingTime}</span>}
+                      </div>
+                      <span class="article-arrow" aria-hidden="true">→</span>
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </section>
           ))}
-        </ol>
+        </div>
 
         <div class="articles-empty" data-empty-state hidden={articles.length > 0}>
           <span class="empty-orbit" aria-hidden="true"></span>
@@ -200,6 +220,11 @@ const formatIndex = (index: number) => String(index).padStart(2, '0');
       const tags: string[] = JSON.parse(element.dataset.articleTags!);
       return { element, tags: new Set(tags) };
     });
+    const yearGroups = Array.from(page.querySelectorAll<HTMLElement>('[data-year-group]'), (element) => ({
+      element,
+      count: element.querySelector<HTMLElement>('[data-year-count]')!,
+      entries: Array.from(element.querySelectorAll<HTMLElement>('[data-article-tags]')),
+    }));
     const selected = new Set<string>();
 
     function updateResults() {
@@ -223,6 +248,11 @@ const formatIndex = (index: number) => String(index).padStart(2, '0');
       selection.textContent = selected.size ? labels.join(' · ') : 'Select tags to narrow the index.';
       selection.title = selected.size ? labels.join(' · ') : '';
       emptyState.hidden = shown > 0;
+      for (const group of yearGroups) {
+        const visible = group.entries.filter((entry) => !entry.hidden).length;
+        group.element.hidden = visible === 0;
+        group.count.textContent = `${visible} ${visible === 1 ? 'article' : 'articles'}`;
+      }
 
       // Keep other query parameters, the hash and the current history entry intact.
       const url = new URL(window.location.href);
