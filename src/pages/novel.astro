@@ -109,7 +109,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
           </div>
         ))}
         <div class="hotspot" data-hotspot="outro" data-x={restartCue.x} data-y={restartCue.y}>
-          <button class="hotspot-trigger" type="button" data-restart aria-label={`${restartCue.label} · ${restartCue.hover}`}>
+          <button class="hotspot-trigger" type="button" data-glide-to="0" aria-label={`${restartCue.label} · ${restartCue.hover}`}>
             <span class="hotspot-ring" aria-hidden="true"></span>
             <span class="hotspot-label swap" aria-hidden="true">
               <span class="swap-default">{restartCue.label}</span>
@@ -129,7 +129,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
             <p class="intro-tagline">{tagline}</p>
             <div class="intro-rule" aria-hidden="true"><span></span><span></span><span></span></div>
           </div>
-          <a class="scroll-cue" href={`#scene-${scenes[0].id}`}>
+          <a class="scroll-cue" href={`#scene-${scenes[0].id}`} data-glide-to="1">
             <span>Scroll to enter</span>
           </a>
         </div>
@@ -165,7 +165,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
             <p class="outro-signature">Life is Piano.</p>
             <div class="outro-cues">
               {[...scenes.map((scene) => ({ ...scene.hotspot, panel: scene.panel })), restartCue].map((cue) => (
-                <button class="hotspot-trigger" type="button" data-open-panel={cue.panel} data-restart={cue.panel ? undefined : ''} aria-haspopup={cue.panel ? 'dialog' : undefined} aria-controls={cue.panel ? `panel-${cue.panel}` : undefined} aria-label={`${cue.label} · ${cue.hover}`}>
+                <button class="hotspot-trigger" type="button" data-open-panel={cue.panel} data-glide-to={cue.panel ? undefined : 0} aria-haspopup={cue.panel ? 'dialog' : undefined} aria-controls={cue.panel ? `panel-${cue.panel}` : undefined} aria-label={`${cue.label} · ${cue.hover}`}>
                   <span class="hotspot-ring" aria-hidden="true"></span>
                   <span class="hotspot-label swap" aria-hidden="true">
                     <span class="swap-default">{cue.label}</span>
@@ -183,7 +183,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
       <ol>
         {scenes.map((scene, index) => (
           <li>
-            <a href={`#scene-${scene.id}`} data-rail-link={index}>
+            <a href={`#scene-${scene.id}`} data-rail-link={index} data-glide-to={index + 1}>
               <span class="rail-numeral">{scene.numeral}</span>
               <span class="rail-title">{scene.title}</span>
             </a>
@@ -373,8 +373,9 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
 
     // Places the frame so `focus` lands on the composition target, clamped so the frame always covers the viewport.
     const placeCamera = () => {
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
+      // Client size excludes the reserved scrollbar gutter, matching what fixed layers actually cover.
+      const vw = document.documentElement.clientWidth;
+      const vh = document.documentElement.clientHeight;
       const width = Math.max(vw, vh * frameRatio);
       const height = width / frameRatio;
       const chapter = activeScene?.dataset.focusX !== undefined ? activeScene : undefined;
@@ -443,8 +444,111 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     window.addEventListener('scroll', () => {
       if (!frame) frame = requestAnimationFrame(updateScroll);
     }, { passive: true });
-    window.addEventListener('resize', placeCamera);
     narrow.addEventListener('change', placeCamera);
+
+    // Scene navigation --------------------------------------------------------
+    // Native snapping runs at a browser-fixed speed, so whole-scene moves are glided here instead:
+    // one gesture moves exactly one scene, and input arriving mid-glide is absorbed.
+    const stops = Array.from(root.querySelectorAll<HTMLElement>('.scene'));
+    const glideDuration = 1600;
+    let glideFrame = 0;
+    let currentStop = 0;
+    let lockedUntil = 0;
+    let settleTimer = 0;
+
+    const measureStops = () => {
+      const max = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      return stops.map((stop) => Math.min(Math.round(stop.getBoundingClientRect().top + window.scrollY), max));
+    };
+
+    const nearestStop = () => {
+      const tops = measureStops();
+      return tops.reduce((best, top, index) => (Math.abs(top - window.scrollY) < Math.abs(tops[best] - window.scrollY) ? index : best), 0);
+    };
+
+    const goTo = (index: number) => {
+      currentStop = Math.min(Math.max(index, 0), stops.length - 1);
+      const from = window.scrollY;
+      const to = measureStops()[currentStop];
+      cancelAnimationFrame(glideFrame);
+      glideFrame = 0;
+      if (reducedMotion.matches || Math.abs(to - from) < 1) {
+        window.scrollTo({ top: to, behavior: 'instant' });
+        return;
+      }
+      const start = performance.now();
+      const step = (now: number) => {
+        const t = Math.min((now - start) / glideDuration, 1);
+        // easeInOutCubic: a slow lift-off and a long, soft landing.
+        const eased = t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2;
+        window.scrollTo({ top: from + (to - from) * eased, behavior: 'instant' });
+        if (t < 1) {
+          glideFrame = requestAnimationFrame(step);
+        } else {
+          glideFrame = 0;
+          lockedUntil = Math.max(lockedUntil, now + 300);
+        }
+      };
+      glideFrame = requestAnimationFrame(step);
+    };
+
+    const panelOpen = () => root.querySelector('.novel-panel[open]') !== null;
+
+    // Trackpad inertia keeps firing after a glide; each absorbed event extends the lock until input goes quiet.
+    window.addEventListener('wheel', (event) => {
+      if (panelOpen() || event.ctrlKey) return;
+      event.preventDefault();
+      const now = performance.now();
+      if (glideFrame || now < lockedUntil) {
+        lockedUntil = Math.max(lockedUntil, now + 300);
+        return;
+      }
+      if (Math.abs(event.deltaY) < 4) return;
+      goTo(currentStop + Math.sign(event.deltaY));
+    }, { passive: false });
+
+    const keySteps: Record<string, number> = { ArrowDown: 1, PageDown: 1, ArrowUp: -1, PageUp: -1 };
+    window.addEventListener('keydown', (event) => {
+      if (panelOpen() || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+      const onPage = event.target === document.body || event.target === document.documentElement;
+      let next: number | undefined;
+      if (event.key in keySteps) next = currentStop + keySteps[event.key];
+      else if (event.key === ' ' && onPage) next = currentStop + (event.shiftKey ? -1 : 1);
+      else if (event.key === 'Home') next = 0;
+      else if (event.key === 'End') next = stops.length - 1;
+      if (next === undefined) return;
+      event.preventDefault();
+      if (!glideFrame) goTo(next);
+    });
+
+    let touchStartY: number | undefined;
+    window.addEventListener('touchstart', (event) => {
+      touchStartY = event.touches.length === 1 ? event.touches[0].clientY : undefined;
+    }, { passive: true });
+    window.addEventListener('touchmove', (event) => {
+      if (!panelOpen() && event.touches.length === 1) event.preventDefault();
+    }, { passive: false });
+    window.addEventListener('touchend', (event) => {
+      if (touchStartY === undefined || panelOpen() || glideFrame) return;
+      const distance = touchStartY - event.changedTouches[0].clientY;
+      touchStartY = undefined;
+      if (Math.abs(distance) > 40) goTo(currentStop + Math.sign(distance));
+    });
+
+    // Scrollbar drags, find-in-page and focus moves can still leave the page between scenes; settle onto the nearest.
+    window.addEventListener('scroll', () => {
+      if (glideFrame) return;
+      window.clearTimeout(settleTimer);
+      settleTimer = window.setTimeout(() => {
+        if (!glideFrame && !panelOpen()) goTo(nearestStop());
+      }, 180);
+    }, { passive: true });
+
+    window.addEventListener('resize', () => {
+      placeCamera();
+      if (!glideFrame) window.scrollTo({ top: measureStops()[currentStop], behavior: 'instant' });
+    });
+    currentStop = nearestStop();
 
     // Pointer parallax moves inner layers so it never fights the camera transition; hotspots share it to stay pinned.
     let driftFrame = 0;
@@ -531,6 +635,12 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     root.addEventListener('click', (event) => {
       if (!(event.target instanceof Element)) return;
       const target = event.target;
+      const glideLink = target.closest<HTMLElement>('[data-glide-to]');
+      if (glideLink) {
+        event.preventDefault();
+        goTo(Number(glideLink.dataset.glideTo));
+        return;
+      }
       const opener = target.closest<HTMLElement>('[data-open-panel]');
       if (opener?.dataset.openPanel) {
         openPanel(opener.dataset.openPanel);
@@ -578,10 +688,6 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     motionToggle.addEventListener('click', () => setPlaying(video.paused));
     if (reducedMotion.matches) setPlaying(false);
 
-    root.querySelectorAll('[data-restart]').forEach((cue) => cue.addEventListener('click', () => {
-      window.scrollTo({ top: 0, behavior: reducedMotion.matches ? 'auto' : 'smooth' });
-    }));
-
     updateScroll();
     setActiveScene(scenes[0]);
     // Enables transitions only after the first placement, so the page does not animate in from the origin.
@@ -602,7 +708,10 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
 
   // Page-level overrides are gated on `.novel`, so other routes keep the white canvas.
   :global(html:has(.novel)) {
-    scroll-behavior: smooth;
+    // Panels lock scrolling with `overflow: hidden`; the stable gutter keeps the layout from shifting right.
+    // Scene-to-scene movement is glided by the page script, so no CSS snapping or smooth scrolling here.
+    scrollbar-gutter: stable;
+    overscroll-behavior-y: none;
   }
 
   :global(body:has(.novel)) {
@@ -860,23 +969,18 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
 
   // Scroll flow -------------------------------------------------------------
 
+  // The navbar keeps an in-flow box above the page content (`Navbar.scss`); pulling the flow up by it
+  // makes the opening scene start at scroll 0 and fill exactly one viewport.
   .novel-flow {
     position: relative;
     z-index: 1;
+    margin-top: calc(-1 * #{navbar.$navbar-actual-height});
     pointer-events: none;
   }
 
   .scene {
     position: relative;
-    height: 170vh;
-  }
-
-  .scene-intro {
-    height: 150vh;
-  }
-
-  .scene-outro {
-    height: 130vh;
+    height: 100vh;
   }
 
   .scene-frame {
@@ -2088,11 +2192,14 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     }
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    :global(html:has(.novel)) {
-      scroll-behavior: auto;
+  // Mirrors the narrow navbar box in `Navbar.scss` (1.25rem top margin, fixed content, no height).
+  @media (max-width: 900px) {
+    .novel-flow {
+      margin-top: -1.25rem;
     }
+  }
 
+  @media (prefers-reduced-motion: reduce) {
     .is-ready .stage-camera,
     .is-ready .hotspot-layer,
     .stage-drift {
