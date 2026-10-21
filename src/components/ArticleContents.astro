@@ -13,34 +13,48 @@ const { headings = [] } = Astro.props;
 const visibleHeadings = headings.filter(({ depth }) => depth >= 2 && depth <= 4);
 ---
 
-<details class="article-contents" aria-label="文章目录" data-article-contents open>
+<details class="article-contents" data-article-contents open>
   <summary class="contents-heading">
     <span class="contents-marker" aria-hidden="true"></span>
-    <span>目录</span>
+    <span class="contents-label">目录</span>
+    <span class="contents-kicker" aria-hidden="true">Contents</span>
   </summary>
+  <div class="contents-scrim" data-contents-close aria-hidden="true"></div>
   <div class="contents-body">
     <div class="contents-body-inner">
-      <nav>
+      <header class="contents-sheet-header">
+        <div>
+          <p class="sheet-kicker" aria-hidden="true">Contents</p>
+          <p class="sheet-title">目录</p>
+        </div>
+        <button class="contents-close" type="button" data-contents-close aria-label="关闭目录"></button>
+      </header>
+      <nav aria-label="文章目录">
         <ol>
           {visibleHeadings.map((heading) => (
-            <li class:list={['toc-item', `level-${heading.depth}`, { nested: heading.depth > 2 }]}> 
+            <li class:list={['toc-item', `level-${heading.depth}`]}>
               <a href={`#${heading.slug}`}>{heading.text}</a>
             </li>
           ))}
         </ol>
       </nav>
+      <p class="contents-progress">
+        <span>Read</span>
+        <span data-contents-percent>0%</span>
+      </p>
     </div>
   </div>
 </details>
 
 <script>
-  function initializeArticleContents() {
-    const contents = document.querySelector('[data-article-contents]');
-    const article = document.querySelector('.article-body');
-    const list = contents?.querySelector('ol');
-    if (!contents || !article || !list) return;
+  const contents = document.querySelector<HTMLDetailsElement>('[data-article-contents]');
+  const article = document.querySelector<HTMLElement>('.article-body');
+  const list = contents?.querySelector('ol');
 
-    if (contents.children.length > 0 && list.children.length === 0) {
+  if (contents && article && list) initializeArticleContents(contents, article, list);
+
+  function initializeArticleContents(contents: HTMLDetailsElement, article: HTMLElement, list: HTMLOListElement) {
+    if (list.children.length === 0) {
       article.querySelectorAll('h2, h3, h4').forEach((heading) => {
         if (!heading.id) return;
         const item = document.createElement('li');
@@ -53,74 +67,139 @@ const visibleHeadings = headings.filter(({ depth }) => depth >= 2 && depth <= 4)
       });
     }
 
-    const links = Array.from(contents.querySelectorAll('a'));
-    const sections = links
-      .map((link) => document.getElementById(decodeURIComponent(link.hash.slice(1))))
-      .filter((heading) => heading instanceof HTMLElement);
-
-    if (sections.length > 0 && 'IntersectionObserver' in window) {
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          const link = links.find((candidate) => decodeURIComponent(candidate.hash.slice(1)) === entry.target.id);
-          link?.parentElement?.classList.toggle('is-current', entry.isIntersecting);
-        });
-      }, { rootMargin: '-18% 0px -72% 0px', threshold: 0 });
-
-      sections.forEach((heading) => observer.observe(heading));
+    if (list.children.length === 0) {
+      contents.hidden = true;
+      return;
     }
-  }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeArticleContents, { once: true });
-  } else {
-    initializeArticleContents();
-  }
-  const contents = document.querySelector('[data-article-contents]');
-  let closeTimer: number | undefined;
-  const mobileContentsQuery = window.matchMedia('(max-width: 850px)');
-  const collapseContents = () => {
-    if (!contents?.hasAttribute('data-expanded')) return;
-    window.clearTimeout(closeTimer);
-    contents.removeAttribute('data-expanded');
-    closeTimer = window.setTimeout(() => contents.removeAttribute('open'), 320);
-  };
+    const summary = contents.querySelector('summary');
+    const percent = contents.querySelector('[data-contents-percent]');
+    const entries = Array.from(list.querySelectorAll<HTMLAnchorElement>('a[href^="#"]')).flatMap((link) => {
+      const heading = document.getElementById(decodeURIComponent(link.hash.slice(1)));
+      const item = link.parentElement;
+      return heading && item ? [{ heading, item, link }] : [];
+    });
 
-  contents?.addEventListener('click', (event) => {
-    if (!(event.target instanceof Element) || !event.target.closest('summary')) return;
-    event.preventDefault();
-    if (contents.hasAttribute('data-expanded')) {
-      collapseContents();
-    } else {
+    let current: (typeof entries)[number] | undefined;
+    let frame = 0;
+
+    // The rail fill ends at the current entry, so it is measured from the list instead of the page.
+    const setCurrent = (next: typeof current) => {
+      if (next === current) return;
+      current?.item.classList.remove('is-current');
+      current?.link.removeAttribute('aria-current');
+      current = next;
+      current?.item.classList.add('is-current');
+      current?.link.setAttribute('aria-current', 'location');
+      const fill = current ? current.item.offsetTop + current.item.offsetHeight / 2 : 0;
+      list.style.setProperty('--contents-fill', `${fill}px`);
+    };
+
+    const update = () => {
+      frame = 0;
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = scrollable > 0 ? Math.min(Math.max(window.scrollY / scrollable, 0), 1) : 1;
+      if (percent) percent.textContent = `${Math.round(progress * 100)}%`;
+
+      const readingLine = window.innerHeight * 0.3;
+      let next: typeof current;
+      for (const entry of entries) {
+        if (entry.heading.getBoundingClientRect().top > readingLine) break;
+        next = entry;
+      }
+      // Short final sections never reach the reading line, so the page end owns the last entry.
+      if (progress >= 0.995 && entries.length > 0) next = entries[entries.length - 1];
+      setCurrent(next);
+    };
+
+    const requestUpdate = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+
+    window.addEventListener('scroll', requestUpdate, { passive: true });
+    window.addEventListener('resize', requestUpdate);
+    update();
+
+    const mobileQuery = window.matchMedia('(max-width: 850px)');
+    let closeTimer: number | undefined;
+
+    const expand = () => {
       window.clearTimeout(closeTimer);
-      contents.setAttribute('open', '');
+      contents.open = true;
       requestAnimationFrame(() => contents.setAttribute('data-expanded', ''));
-    }
-  });
+    };
 
-  document.addEventListener('pointerdown', (event) => {
-    if (!mobileContentsQuery.matches || !(event.target instanceof Node) || contents?.contains(event.target)) return;
-    collapseContents();
-  });
+    // `open` is removed after the exit transition; removing it immediately would hide the body mid-animation.
+    const collapse = () => {
+      if (!contents.hasAttribute('data-expanded')) return;
+      window.clearTimeout(closeTimer);
+      contents.removeAttribute('data-expanded');
+      closeTimer = window.setTimeout(() => {
+        contents.open = false;
+      }, 320);
+    };
 
-  document.addEventListener('focusin', (event) => {
-    if (!mobileContentsQuery.matches || !(event.target instanceof Node) || contents?.contains(event.target)) return;
-    collapseContents();
-  });
+    const syncMode = () => {
+      window.clearTimeout(closeTimer);
+      if (mobileQuery.matches) {
+        contents.removeAttribute('data-expanded');
+        contents.open = false;
+      } else {
+        contents.open = true;
+        contents.setAttribute('data-expanded', '');
+      }
+    };
 
-  if (mobileContentsQuery.matches) {
-    contents?.removeAttribute('open');
-    contents?.removeAttribute('data-expanded');
-  } else {
-    contents?.setAttribute('data-expanded', '');
+    contents.addEventListener('click', (event) => {
+      if (!(event.target instanceof Element)) return;
+      if (event.target.closest('summary')) {
+        event.preventDefault();
+        if (contents.hasAttribute('data-expanded')) collapse();
+        else expand();
+        return;
+      }
+      if (event.target.closest('[data-contents-close]')) {
+        collapse();
+        summary?.focus();
+        return;
+      }
+      if (mobileQuery.matches && event.target.closest('a')) collapse();
+    });
+
+    document.addEventListener('pointerdown', (event) => {
+      if (!mobileQuery.matches || !(event.target instanceof Node) || contents.contains(event.target)) return;
+      collapse();
+    });
+
+    document.addEventListener('focusin', (event) => {
+      if (!mobileQuery.matches || !(event.target instanceof Node) || contents.contains(event.target)) return;
+      collapse();
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape' || !mobileQuery.matches || !contents.hasAttribute('data-expanded')) return;
+      collapse();
+      summary?.focus();
+    });
+
+    mobileQuery.addEventListener('change', syncMode);
+    syncMode();
   }
 </script>
 
 <style scoped lang="scss">
 @use '../styles/global.scss' as *;
 
+$contents-top: 10.4rem;
+$ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+// Rail geometry: list items sit `$list-inset` from the list edge; the rail runs at `$rail-x`.
+$list-inset: 1.15rem;
+$rail-x: 0.35rem;
+$rail-offset: $rail-x - $list-inset;
+
 .article-contents {
   position: fixed;
-  top: 10.4rem;
+  top: $contents-top;
   z-index: 2;
   width: 11rem;
   box-sizing: border-box;
@@ -130,28 +209,39 @@ const visibleHeadings = headings.filter(({ depth }) => depth >= 2 && depth <= 4)
   overflow-wrap: anywhere;
 }
 
-.article-contents::before {
-  display: none;
-}
-
 .contents-heading {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.45rem;
   cursor: pointer;
   list-style: none;
   white-space: nowrap;
+  color: $primary-blue;
   font-size: 0.95rem;
+  letter-spacing: 0.12em;
+
+  &::marker {
+    content: '';
+  }
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &:focus-visible {
+    outline: 1px solid rgba($primary-blue, 0.6);
+    outline-offset: 0.3rem;
+  }
 }
 
-.contents-heading::marker {
-  content: '';
+.contents-kicker {
+  margin-left: auto;
+  color: $light-blue;
+  font-family: $font-family-heading;
+  font-size: 0.66rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
 }
-
-.contents-heading::-webkit-details-marker {
-  display: none;
-}
-
 
 .contents-marker {
   flex: 0 0 auto;
@@ -161,19 +251,21 @@ const visibleHeadings = headings.filter(({ depth }) => depth >= 2 && depth <= 4)
   border: 1px solid $primary-blue;
   background: #fff;
   transform: rotate(45deg);
-  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms ease-out;
+  transition: transform 240ms $ease-out, background-color 180ms ease-out;
 }
 
 .contents-heading:hover .contents-marker {
   background-color: $ex-light-blue;
 }
 
-.article-contents:not([data-expanded]) .contents-marker {
-  transform: rotate(45deg);
-}
-
 .article-contents[data-expanded] .contents-marker {
   transform: rotate(135deg);
+  background-color: $ex-light-blue;
+}
+
+.contents-scrim,
+.contents-sheet-header {
+  display: none;
 }
 
 .contents-body {
@@ -194,56 +286,106 @@ const visibleHeadings = headings.filter(({ depth }) => depth >= 2 && depth <= 4)
 }
 
 nav {
-  margin: 0.6rem 0 0 0.2rem;
-  padding-left: 0.7rem;
-  border-left: 1px solid rgba($primary-blue, 0.6);
+  max-height: calc(100dvh - #{$contents-top} - 6rem);
+  margin-top: 0.85rem;
+  overflow: hidden auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 ol {
+  --contents-fill: 0px;
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
+  gap: 0.5rem;
   margin: 0;
-  padding: 0;
+  padding: 0.1rem 0.45rem 0.1rem $list-inset;
   list-style: none;
+  counter-reset: toc-section;
+
+  &::before,
+  &::after {
+    position: absolute;
+    top: 0;
+    left: $rail-x;
+    width: 1px;
+    content: '';
+  }
+
+  &::before {
+    bottom: 0;
+    background: rgba($primary-blue, 0.32);
+  }
+
+  &::after {
+    height: var(--contents-fill);
+    background: $primary-blue;
+    transition: height 280ms $ease-out;
+  }
 }
 
-li {
+// Items are also created by the client fallback, so item rules must reach unscoped markup.
+.article-contents :global(.toc-item) {
   position: relative;
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
 .article-contents :global(.toc-item.level-2) {
-  margin-top: 0.25rem;
   color: $primary-blue;
-  font-family: $font-family-heading;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   letter-spacing: 0.04em;
-  overflow: visible;
+  counter-increment: toc-section;
+
+  &:not(:first-child) {
+    margin-top: 0.4rem;
+  }
+
+  &::before {
+    position: absolute;
+    top: 0.725em;
+    left: $rail-offset;
+    width: 0.55rem;
+    height: 1px;
+    background: rgba($primary-blue, 0.6);
+    content: '';
+  }
 }
 
-
 .article-contents :global(.toc-item.level-3) {
-  padding-left: 0.7rem;
-  color: $light-blue;
-  font-family: $font-family-default;
-  font-size: 0.75rem;
+  padding-left: 1.55rem;
+  font-size: 0.74rem;
 }
 
 .article-contents :global(.toc-item.level-4) {
-  padding-left: 1.35rem;
-  color: rgba($light-blue, 0.8);
-  font-family: $font-family-default;
+  padding-left: 2.2rem;
+  color: rgba($light-blue, 0.85);
   font-size: 0.68rem;
-  letter-spacing: 0;
 }
 
-.article-contents :global(a),
-.article-contents :global(a:link),
-.article-contents :global(a:visited) {
-  position: relative;
-  display: inline-block;
-  max-width: 100%;
+.article-contents :global(.toc-item.is-current)::after {
+  position: absolute;
+  top: 0.725em;
+  left: calc(#{$rail-offset} + 0.5px);
+  z-index: 1;
+  width: 0.42rem;
+  height: 0.42rem;
+  box-sizing: border-box;
+  border: 1px solid $primary-blue;
+  background: #fff;
+  content: '';
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.article-contents :global(.toc-item a),
+.article-contents :global(.toc-item a:link),
+.article-contents :global(.toc-item a:visited) {
+  display: grid;
+  align-items: baseline;
   color: inherit;
   font: inherit;
   text-decoration: none;
@@ -251,132 +393,252 @@ li {
   transition: color 180ms ease-out, transform 180ms ease-out;
 }
 
-.article-contents :global(a)::after {
-  position: absolute;
-  top: 50%;
-  right: -0.8rem;
-  width: 0.32rem;
-  height: 0.32rem;
-  border: 1px solid currentColor;
-  content: '';
-  opacity: 0;
-  transform: translate(0.3rem, -50%) rotate(45deg) scale(0.45);
-  transition: opacity 180ms ease-out, transform 220ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms ease-out;
+.article-contents :global(.toc-item.level-2 a) {
+  grid-template-columns: 1.55rem minmax(0, 1fr);
 }
 
+.article-contents :global(.toc-item.level-2 a)::before {
+  color: $light-blue;
+  font-family: $font-family-heading;
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  content: counter(toc-section, decimal-leading-zero);
+}
 
-
-.article-contents :global(a:hover),
-.article-contents :global(a:focus-visible),
-.article-contents :global(a:active),
-.article-contents :global(.is-current a) {
+.article-contents :global(.toc-item a:hover),
+.article-contents :global(.toc-item a:focus-visible) {
   color: $primary-blue;
-  text-decoration: none;
   outline: none;
   transform: translateX(0.2rem);
 }
 
-.article-contents :global(a:hover)::after,
-.article-contents :global(a:focus-visible)::after,
-.article-contents :global(.is-current a)::after {
-  background: rgba($ex-light-blue, 0.55);
-  opacity: 1;
-  transform: translate(0, -50%) rotate(45deg) scale(1);
+.article-contents :global(.toc-item.is-current a) {
+  color: $content-color;
+  transform: translateX(0.2rem);
 }
 
+.article-contents :global(.toc-item.is-current a)::before {
+  color: $primary-blue;
+}
 
+.contents-progress {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 0.95rem 0 0;
+  padding-top: 0.55rem;
+  border-top: 1px solid rgba($primary-blue, 0.25);
+  color: $light-blue;
+  font-family: $font-family-heading;
+  font-size: 0.66rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
 
+  [data-contents-percent] {
+    color: $primary-blue;
+    letter-spacing: 0.08em;
+    font-variant-numeric: tabular-nums;
+  }
+}
 
 @media (max-width: 850px) {
   .article-contents {
-    position: fixed;
-    top: calc(10.4rem + 1.85rem - 2.25rem);
-    right: calc(var(--reading-shell-gutter, 2rem) - 1rem);
+    top: 10rem;
+    right: calc(var(--reading-shell-gutter, 1rem) - 1rem);
     width: 2rem;
-    max-height: calc(100dvh - 12rem);
-    margin: 0;
-    padding: 0;
-    background: #fff;
-    border: 0;
-    overflow: hidden;
-    transform-origin: right top;
-    transition: width 320ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms ease, box-shadow 180ms ease;
+    font-size: 0.85rem;
   }
 
-  .article-contents[data-expanded] {
-    right: var(--reading-shell-gutter, 2rem);
-    width: calc(100vw - (2 * var(--reading-shell-gutter, 2rem)));
-    padding: 1rem;
-    background: rgba(#fff, 0.98);
-    border: 1px solid rgba($primary-blue, 0.55);
-    box-shadow: 0 1rem 2.5rem rgba($primary-blue, 0.14);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
-
+  // Collapsed tab sits on the article card's right border, matching `.design/clipping-edge-contents.png`.
   .contents-heading {
     position: relative;
-    display: flex;
-    align-items: center;
+    z-index: 2;
     justify-content: center;
     width: 2rem;
-    min-height: 4.5rem;
-    gap: 0.25rem;
-    padding: 0;
+    min-height: 4.75rem;
+    gap: 0.4rem;
+    padding: 0.55rem 0;
     box-sizing: border-box;
+    background: #fff;
     color: $light-blue;
-    writing-mode: vertical-rl;
-    transform: translateY(0.035rem);
     letter-spacing: 0.18em;
+    writing-mode: vertical-rl;
   }
 
-
-  .article-contents[data-expanded] .contents-heading {
-    position: absolute;
-    top: 0.85rem;
-    right: 0.85rem;
-    width: 1.5rem;
-    min-height: 1.5rem;
-    padding: 0;
-    writing-mode: horizontal-tb;
-  }
-
-
-  .article-contents::before {
+  .contents-kicker {
     display: none;
   }
 
+  .contents-marker {
+    width: 0.38rem;
+    height: 0.38rem;
+  }
+
+  .contents-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    display: block;
+    background: rgba(#fff, 0.55);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    transition: opacity 240ms ease;
+  }
+
+  .article-contents[data-expanded] .contents-scrim {
+    opacity: 1;
+  }
+
   .contents-body {
-    min-width: calc(100vw - 4rem);
-    transform: translateX(1.5rem);
-    transition: grid-template-rows 240ms ease, opacity 180ms ease, transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+    position: fixed;
+    right: var(--reading-shell-gutter, 1rem);
+    bottom: calc(1rem + env(safe-area-inset-bottom));
+    left: var(--reading-shell-gutter, 1rem);
+    z-index: 1;
+    display: flex;
+    max-height: min(72dvh, 36rem);
+    padding: 1.15rem 1.25rem 1rem;
+    box-sizing: border-box;
+    border: 1px solid rgba($primary-blue, 0.78);
+    background: rgba(#fff, 0.98);
+    box-shadow: 0 1rem 2.5rem rgba($primary-blue, 0.14);
+    opacity: 1;
+    transform: translateY(calc(100% + 2rem));
+    transition: transform 320ms $ease-out;
   }
 
   .article-contents[data-expanded] .contents-body {
-    transform: translateX(0);
+    transform: translateY(0);
+  }
 
-    nav {
-      margin-bottom: 0.25rem;
+  .contents-body-inner {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+  }
+
+  .contents-sheet-header {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px solid rgba($primary-blue, 0.35);
+  }
+
+  .sheet-kicker {
+    margin: 0;
+    color: $light-blue;
+    font-family: $font-family-heading;
+    font-size: 0.72rem;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+  }
+
+  .sheet-title {
+    position: relative;
+    margin: 0.35rem 0 0;
+    padding-left: 0.85rem;
+    color: $content-color;
+    font-size: 1.35rem;
+    letter-spacing: 0.12em;
+    line-height: 1.2;
+
+    &::before {
+      position: absolute;
+      top: 0.08em;
+      left: 0;
+      width: 0.4rem;
+      height: 1.1em;
+      background: $ex-light-blue;
+      content: '';
+    }
+  }
+
+  .contents-close {
+    position: relative;
+    flex: 0 0 auto;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: 1px solid rgba($primary-blue, 0.55);
+    background: #fff;
+    cursor: pointer;
+    transition: background-color 180ms ease-out;
+
+    &::before,
+    &::after {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0.85rem;
+      height: 1px;
+      background: $primary-blue;
+      content: '';
+    }
+
+    &::before {
+      transform: translate(-50%, -50%) rotate(45deg);
+    }
+
+    &::after {
+      transform: translate(-50%, -50%) rotate(-45deg);
+    }
+
+    &:hover,
+    &:focus-visible {
+      background: $ex-light-blue;
+      outline: none;
     }
   }
 
   nav {
-    margin-top: 0;
-    padding-left: 0;
-    border-left: 0;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    margin-top: 0.9rem;
   }
 
+  ol {
+    gap: 0.7rem;
+  }
 
-  .contents-marker {
-    width: 0.35rem;
-    height: 0.35rem;
+  .article-contents :global(.toc-item.level-2) {
+    font-size: 0.95rem;
+  }
+
+  .article-contents :global(.toc-item.level-3) {
+    padding-left: 1.85rem;
+    font-size: 0.85rem;
+  }
+
+  .article-contents :global(.toc-item.level-4) {
+    padding-left: 2.6rem;
+    font-size: 0.78rem;
+  }
+
+  .article-contents :global(.toc-item.level-2 a) {
+    grid-template-columns: 1.85rem minmax(0, 1fr);
+  }
+
+  .article-contents :global(.toc-item.level-2 a)::before {
+    font-size: 0.72rem;
+  }
+
+  .contents-progress {
+    flex: 0 0 auto;
+    margin-top: 0.85rem;
+    font-size: 0.72rem;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .article-contents,
+  .contents-marker,
+  .contents-scrim,
   .contents-body,
-  .contents-marker {
+  ol::after,
+  .article-contents :global(.toc-item a) {
     transition: none;
   }
 }
