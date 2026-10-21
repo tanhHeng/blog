@@ -3,14 +3,27 @@ import BaseLayout from './BaseLayout.astro';
 import ArticleContents from '../components/ArticleContents.astro';
 import RotatingCircles from '../components/RotatingCircles.astro';
 
-const { frontmatter = {}, getHeadings } = Astro.props;
+const { frontmatter = {}, getHeadings, url } = Astro.props;
 const title = frontmatter.title ?? 'Untitled article';
 const date = frontmatter.date instanceof Date
   ? frontmatter.date.toISOString().slice(0, 10)
   : String(frontmatter.date ?? '').slice(0, 10);
+const year = date.slice(0, 4);
 const tags = frontmatter.tags ?? [];
 const readingTime = frontmatter.readingTime ?? '3 min';
 const headings = typeof getHeadings === 'function' ? await getHeadings() : [];
+
+// Article modules import this layout, and `lib/articles` eagerly imports every article module.
+// A static import would evaluate the list while this article is still mid-evaluation.
+const { articles } = await import('../lib/articles');
+const position = articles.findIndex((article) => article.url === url);
+const archiveLink = { label: 'Archive', title: '返回全部文章', url: '/articles' };
+const newer = position > 0 ? articles[position - 1] : undefined;
+const older = position >= 0 ? articles[position + 1] : undefined;
+const pagerLinks = [
+  newer ? { label: 'Newer', title: newer.title, url: newer.url } : archiveLink,
+  older ? { label: 'Older', title: older.title, url: older.url } : archiveLink,
+].filter((link, index, links) => links.indexOf(link) === index);
 ---
 
 <BaseLayout
@@ -23,9 +36,12 @@ const headings = typeof getHeadings === 'function' ? await getHeadings() : [];
     <p class="left-decoration">scroll to<br />read more</p>
 
     <main class="reading-shell">
+      <aside class="reading-folio" aria-hidden="true">
+        <span class="folio-sketch"></span>
+      </aside>
       <article class="article-card">
         <header class="article-header">
-          <p class="article-kicker">ARTICLE <span>/</span> ARTICLE</p>
+          <p class="article-kicker"><a href="/articles">Archive</a> <span>/</span> {year}</p>
           <h1>{title}</h1>
           <div class="article-meta">
             <time datetime={date}>{date}</time>
@@ -41,6 +57,28 @@ const headings = typeof getHeadings === 'function' ? await getHeadings() : [];
         <div class="article-body">
           <slot />
         </div>
+        <footer class="article-end">
+          <div class="end-mark" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+          <div class="colophon">
+            <div class="colophon-copy">
+              <p class="colophon-kicker">Fin.</p>
+              <p class="colophon-thanks">感谢阅读</p>
+              <p class="colophon-date">Written on <time datetime={date}>{date}</time></p>
+              <span class="colophon-signature" role="img" aria-label="tanh_Heng"></span>
+            </div>
+            <span class="colophon-sketch" aria-hidden="true"></span>
+          </div>
+          <nav class="article-pager" aria-label="更多文章">
+            {pagerLinks.map((link) => (
+              <a class="pager-link" href={link.url}>
+                <span class="pager-label">{link.label}</span>
+                <span class="pager-title">{link.title}</span>
+              </a>
+            ))}
+          </nav>
+        </footer>
       </article>
       <aside class="contents-column">
         <ArticleContents headings={headings} />
@@ -96,19 +134,47 @@ const headings = typeof getHeadings === 'function' ? await getHeadings() : [];
   text-align: right;
 }
 .reading-shell {
+  --shell-gap: clamp(1.5rem, 2.5vw, 3rem);
+  // Resolved width of the middle track; `.reading-folio` derives the card's left edge from it.
+  --article-width: clamp(40rem, min(100vw - 4rem, 92rem) - 22rem - 2 * var(--shell-gap), 56rem);
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: 11rem minmax(40rem, 56rem) 11rem;
+  grid-template-columns: 11rem var(--article-width) 11rem;
   grid-template-areas: '. article contents';
   justify-content: center;
-  gap: clamp(1.5rem, 2.5vw, 3rem);
+  gap: var(--shell-gap);
   width: min(calc(100vw - 4rem), 92rem);
   margin: 3.2rem auto 5rem;
 }
 
+// Line-art assets are alpha masks, so one rule tints both placements with the site palette.
+.folio-sketch,
+.colophon-sketch {
+  aspect-ratio: 560 / 762;
+  background: $primary-blue;
+  mask: url('/img/sketcher.webp') center / contain no-repeat;
+}
 
+// Fills the viewport strip left of the card: the tracks are symmetric and centred, so the card
+// starts at `(100vw - article width) / 2`. Sits below `.left-decoration`, over the rotating circles.
+.reading-folio {
+  position: fixed;
+  top: calc(navbar.$navbar-actual-height + 5rem);
+  bottom: 1.5rem;
+  left: 1.5rem;
+  width: calc(50vw - var(--article-width) / 2 - 3rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  container-type: size;
+  pointer-events: none;
+}
 
+.folio-sketch {
+  width: min(80cqw, 100cqh * 560 / 762);
+  opacity: 0.72;
+}
 
 .contents-column {
   grid-area: contents;
@@ -122,7 +188,7 @@ const headings = typeof getHeadings === 'function' ? await getHeadings() : [];
   isolation: isolate;
   width: 100%;
   box-sizing: border-box;
-  padding: 2.45rem 3.25rem 5.5rem;
+  padding: 2.45rem 3.25rem 3.5rem;
   border: 1px solid rgba($primary-blue, 0.78);
   background: rgba(#fff, 0.84);
   clip-path: inset(0);
@@ -142,10 +208,26 @@ const headings = typeof getHeadings === 'function' ? await getHeadings() : [];
 
 .article-header {
   .article-kicker {
-    color: $ex-light-blue;
+    color: $primary-blue;
     font-family: $font-family-heading;
     font-size: 1rem;
     letter-spacing: 0.22em;
+    text-transform: uppercase;
+
+    a {
+      color: $light-blue;
+      text-decoration: none;
+      transition: color 180ms ease-out;
+
+      &:hover,
+      &:focus-visible {
+        color: $primary-blue;
+      }
+    }
+
+    span {
+      color: $ex-light-blue;
+    }
   }
 
   h1 {
@@ -202,33 +284,104 @@ const headings = typeof getHeadings === 'function' ? await getHeadings() : [];
   font-family: $font-family-default;
   font-size: 1rem;
   line-height: 2.05;
+  counter-reset: article-section;
 
   :global(p) {
     margin: 0 0 1.35rem;
   }
 
+  > :global(p:first-child) {
+    color: $primary-blue;
+    font-size: 0.95rem;
+  }
+
   :global(hr) {
     position: relative;
     height: 1px;
-    margin: 1.75rem 0 1.6rem;
+    margin: 1.75rem -1rem 1.6rem;
     border: 0;
     background: rgba($primary-blue, 0.65);
+    overflow: visible;
+
+    &::before,
+    &::after {
+      position: absolute;
+      top: 50%;
+      width: 0.4rem;
+      height: 0.4rem;
+      box-sizing: border-box;
+      border: 1px solid $primary-blue;
+      background: #fff;
+      content: '';
+      transform: translateY(-50%);
+    }
+
+    &::before {
+      left: 0;
+    }
+
+    &::after {
+      right: 0;
+    }
   }
 
   :global(h2),
-  :global(h3) {
+  :global(h3),
+  :global(h4) {
     margin: 2.2rem 0 0.8rem;
     color: $content-color;
     font-weight: 400;
     line-height: 1.4;
+    // Keeps anchored headings clear of the fixed navbar and its fade.
+    scroll-margin-top: calc(navbar.$navbar-actual-height + 2rem);
   }
 
+  // Numbering mirrors the level-2 counter in `ArticleContents.astro`.
   :global(h2) {
+    display: flex;
+    align-items: baseline;
+    gap: 0.8rem;
+    margin-top: 2.6rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba($primary-blue, 0.28);
     font-size: 1.35rem;
+    counter-increment: article-section;
+
+    &::before {
+      flex: 0 0 auto;
+      color: $light-blue;
+      font-family: $font-family-heading;
+      font-size: 0.85rem;
+      letter-spacing: 0.12em;
+      content: counter(article-section, decimal-leading-zero);
+    }
   }
 
   :global(h3) {
+    position: relative;
+    padding-left: 1.1rem;
     font-size: 1.1rem;
+
+    &::before {
+      position: absolute;
+      top: 0.7em;
+      left: 0.1rem;
+      width: 0.42rem;
+      height: 0.42rem;
+      box-sizing: border-box;
+      border: 1px solid $primary-blue;
+      background: rgba($ex-light-blue, 0.6);
+      content: '';
+      transform: translateY(-50%) rotate(45deg);
+    }
+  }
+
+  :global(h4) {
+    margin: 1.8rem 0 0.4rem;
+    color: $primary-blue;
+    font-size: 1rem;
+    letter-spacing: 0.06em;
+    line-height: 1.5;
   }
 
   :global(blockquote) {
@@ -260,6 +413,167 @@ const headings = typeof getHeadings === 'function' ? await getHeadings() : [];
   }
 }
 
+.article-end {
+  margin-top: 3rem;
+}
+
+.end-mark {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+
+  &::before,
+  &::after {
+    flex: 1 1 auto;
+    height: 1px;
+    background: rgba($primary-blue, 0.35);
+    content: '';
+  }
+
+  span {
+    flex: 0 0 auto;
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 50%;
+
+    &:nth-child(1) {
+      background: $ex-light-blue;
+    }
+
+    &:nth-child(2) {
+      background: $light-blue;
+    }
+
+    &:nth-child(3) {
+      background: $primary-blue;
+    }
+  }
+}
+
+.colophon {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 2rem;
+  margin-top: 2.25rem;
+}
+
+.colophon-kicker {
+  color: $light-blue;
+  font-family: $font-family-heading;
+  font-size: 0.85rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+.colophon-thanks {
+  position: relative;
+  margin-top: 0.55rem;
+  padding-left: 1rem;
+  color: $content-color;
+  font-size: 1.5rem;
+  letter-spacing: 0.12em;
+  line-height: 1.3;
+
+  &::before {
+    position: absolute;
+    top: 0.1em;
+    left: 0;
+    width: 0.45rem;
+    height: 1.1em;
+    background: $ex-light-blue;
+    content: '';
+  }
+}
+
+.colophon-date {
+  margin-top: 0.65rem;
+  color: $light-blue;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+
+  time {
+    color: $primary-blue;
+  }
+}
+
+.colophon-signature {
+  display: block;
+  width: 8.5rem;
+  aspect-ratio: 366 / 164;
+  margin-top: 0.85rem;
+  background: $light-blue;
+  mask: url('/svg/signature.svg') left center / contain no-repeat;
+}
+
+.colophon-sketch {
+  display: none;
+  width: 9rem;
+}
+
+.article-pager {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 1rem;
+  margin-top: 2.5rem;
+}
+
+.pager-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.9rem 1.1rem;
+  border: 1px solid rgba($primary-blue, 0.55);
+  color: $content-color;
+  text-decoration: none;
+  transition: background-color 180ms ease-out, border-color 180ms ease-out;
+
+  &:hover,
+  &:focus-visible {
+    border-color: $primary-blue;
+    background: rgba($ex-light-blue, 0.35);
+    outline: none;
+  }
+
+  &:last-child:not(:first-child) {
+    align-items: flex-end;
+    text-align: right;
+  }
+}
+
+.pager-label {
+  color: $light-blue;
+  font-family: $font-family-heading;
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.pager-link:first-child .pager-label::before {
+  content: '← ';
+}
+
+.pager-link:last-child:not(:first-child) .pager-label::after {
+  content: ' →';
+}
+
+.pager-title {
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+// The margin sketch needs a wide, tall viewport; otherwise it moves into the colophon.
+@media (max-width: 1120px), (max-height: 700px) {
+  .reading-folio {
+    display: none;
+  }
+
+  .colophon-sketch {
+    display: block;
+  }
+}
+
 @media (max-width: 1120px) {
   .reading-shell {
     grid-template-columns: minmax(0, 1fr) 11rem;
@@ -282,12 +596,20 @@ const headings = typeof getHeadings === 'function' ? await getHeadings() : [];
   .right-decoration {
     display: none;
   }
+
+  .article-body {
+    :global(h2),
+    :global(h3),
+    :global(h4) {
+      scroll-margin-top: 8rem;
+    }
+  }
 }
 
 @media (max-width: 720px) {
 
   .article-card {
-    padding: 1.65rem 1.15rem 3rem;
+    padding: 1.65rem 1.15rem 2rem;
     background: rgba(#fff, 0.96);
   }
 
@@ -322,6 +644,34 @@ const headings = typeof getHeadings === 'function' ? await getHeadings() : [];
     font-size: 0.95rem;
     line-height: 1.85;
     overflow-wrap: anywhere;
+  }
+
+  .article-end {
+    margin-top: 2.25rem;
+  }
+
+  .colophon {
+    grid-template-columns: minmax(0, 1fr) 6.5rem;
+    gap: 1rem;
+    margin-top: 1.75rem;
+  }
+
+  .colophon-thanks {
+    font-size: 1.25rem;
+  }
+
+  .colophon-signature {
+    width: 7rem;
+  }
+
+  .colophon-sketch {
+    width: 6.5rem;
+  }
+
+  .article-pager {
+    grid-auto-flow: row;
+    gap: 0.75rem;
+    margin-top: 1.75rem;
   }
 }
 </style>
