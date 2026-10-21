@@ -1,0 +1,2127 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { chapters, codex, prologue, tagline, world } from '../lib/novel';
+
+type PanelId = 'prologue' | 'chapters' | 'codex' | 'world';
+
+// Focus and hotspot coordinates are percentages of the video frame (`public/novel/meadow-poster.webp`).
+// `zoom` is the desktop camera scale for the scene; narrow viewports soften it in the client script.
+// Verse lines are excerpts of `src/novel/flowe-orld.md`. `hotspot.label` names the thing in the image and
+// `hotspot.hover` replaces it on hover/focus; `reveal` replaces the scene `title` while its hotspot is hovered.
+interface Scene {
+  id: string;
+  numeral: string;
+  title: string;
+  reveal?: string;
+  lines: string[];
+  source: string;
+  focus: { x: number; y: number; zoom: number };
+  hotspot: { label: string; hover: string };
+  panel: PanelId;
+}
+
+const scenes: Scene[] = [
+  {
+    id: 'her',
+    numeral: '01',
+    title: '她',
+    reveal: '菈芙洛特',
+    lines: ['她在世界留下她的痕迹，', '给予世界她的爱。', '她在世界寻找她的痕迹，', '锚定她的命运。', '她在世界镌刻她的痕迹，', '以求解脱莫比乌斯之环。'],
+    source: '序章',
+    focus: { x: 41, y: 20, zoom: 1.35 },
+    hotspot: { label: '她', hover: '菈芙洛特' },
+    panel: 'prologue',
+  },
+  {
+    id: 'chronicle',
+    numeral: '02',
+    title: chapters[0].volume,
+    lines: ['诞生与消散的三十年，循环往复。', '当最后一颗星星闭上了眼，', '谁又还能窥见她命运的轨迹？', '是她自己。'],
+    source: '序章',
+    focus: { x: 15, y: 21, zoom: 1.3 },
+    hotspot: { label: '跟随蝴蝶', hover: '翻开篇章' },
+    panel: 'chapters',
+  },
+  {
+    id: 'codex',
+    numeral: '03',
+    title: '图鉴',
+    lines: ['菈芙洛特。', '音节在空气中漾开，', '如同星辰的低语。'],
+    source: codex.title,
+    focus: { x: 16, y: 64, zoom: 1.3 },
+    hotspot: { label: '谐相之灯', hover: codex.title },
+    panel: 'codex',
+  },
+  {
+    id: 'world',
+    numeral: '04',
+    title: world.label,
+    lines: ['“月明星稀”，', '满月时，星星总是最少、最暗的。', '月相达到高峰时，', '星相就达到低谷。'],
+    source: world.title,
+    focus: { x: 86, y: 66, zoom: 1.25 },
+    hotspot: { label: '仰望夜相', hover: world.label },
+    panel: 'world',
+  },
+];
+
+// The outro gathers every hotspot in place, then closes the loop back to the opening mist from the pale
+// butterfly drifting off the lower left, the one figure in the frame no scene has claimed.
+const restartCue = { label: '回到最初', hover: '又一个30年', x: 29, y: 79, panel: undefined };
+
+const title = 'Flowe_orld';
+const formatCount = new Intl.NumberFormat('zh-CN');
+
+// World diagram: the draft's 60-year night-phase cycle, moon peaking at years 0/60 and stars at year 30.
+const cycle = { left: 56, right: 524, middle: 96, amplitude: 52 };
+const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_, year) => {
+  const x = cycle.left + (year / 60) * (cycle.right - cycle.left);
+  const y = cycle.middle - sign * cycle.amplitude * Math.cos((year / 60) * 2 * Math.PI);
+  return `${year === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`;
+}).join(' '));
+---
+
+<BaseLayout activePage="Novel" lang="zh-CN" title={`${title} | TANH.MOE`} description={tagline} showFootnote={false}>
+  <div class="novel" data-novel>
+    <div class="stage" aria-hidden="true">
+      <div class="stage-camera" data-stage-camera>
+        <div class="stage-drift" data-stage-drift>
+          <video class="stage-video" data-stage-video poster="/novel/meadow-poster.webp" autoplay muted loop playsinline preload="auto">
+            <source src="/novel/meadow.webm" type="video/webm" />
+            <source src="/novel/meadow.mp4" type="video/mp4" />
+          </video>
+        </div>
+      </div>
+      <div class="stage-shade"></div>
+      <div class="stage-mist"></div>
+    </div>
+
+    <div class="hotspot-layer" data-hotspot-layer>
+      <div class="stage-drift" data-stage-drift>
+        {scenes.map((scene, index) => (
+          <div class:list={['hotspot', { 'is-flipped': scene.focus.x > 70 }]} data-hotspot={index} data-x={scene.focus.x} data-y={scene.focus.y}>
+            <button class="hotspot-trigger" type="button" data-open-panel={scene.panel} data-reveal-scene={scene.reveal ? index : undefined} aria-haspopup="dialog" aria-controls={`panel-${scene.panel}`} aria-label={`${scene.hotspot.label} · ${scene.hotspot.hover}`}>
+              <span class="hotspot-ring" aria-hidden="true"></span>
+              <span class="hotspot-label swap" aria-hidden="true">
+                <span class="swap-default">{scene.hotspot.label}</span>
+                <span class="swap-reveal">{scene.hotspot.hover}</span>
+              </span>
+            </button>
+          </div>
+        ))}
+        <div class="hotspot" data-hotspot="outro" data-x={restartCue.x} data-y={restartCue.y}>
+          <button class="hotspot-trigger" type="button" data-restart aria-label={`${restartCue.label} · ${restartCue.hover}`}>
+            <span class="hotspot-ring" aria-hidden="true"></span>
+            <span class="hotspot-label swap" aria-hidden="true">
+              <span class="swap-default">{restartCue.label}</span>
+              <span class="swap-reveal">{restartCue.hover}</span>
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <main class="novel-flow">
+      <section class="scene scene-intro" data-scene="intro" aria-labelledby="novel-title">
+        <div class="scene-frame">
+          <div class="intro-copy">
+            <p class="intro-kicker">Novel <span>/</span> {chapters[0].volume}</p>
+            <h1 id="novel-title">{title}</h1>
+            <p class="intro-tagline">{tagline}</p>
+            <div class="intro-rule" aria-hidden="true"><span></span><span></span><span></span></div>
+          </div>
+          <a class="scroll-cue" href={`#scene-${scenes[0].id}`}>
+            <span>Scroll to enter</span>
+          </a>
+        </div>
+      </section>
+
+      {scenes.map((scene, index) => (
+        <section class="scene scene-chapter" id={`scene-${scene.id}`} data-scene={index} data-focus-x={scene.focus.x} data-focus-y={scene.focus.y} data-focus-zoom={scene.focus.zoom} aria-labelledby={`scene-title-${scene.id}`}>
+          <div class="scene-frame">
+            <div class="verse">
+              <h2 class="verse-heading" id={`scene-title-${scene.id}`}>
+                <span class="verse-numeral">{scene.numeral}</span>
+                <span class="verse-title swap">
+                  <span class="swap-default">{scene.title}</span>
+                  {scene.reveal && <span class="swap-reveal" aria-hidden="true">{scene.reveal}</span>}
+                </span>
+              </h2>
+              <p class="verse-lines">
+                {scene.lines.map((line, lineIndex) => (
+                  <span class="verse-line" style={`--line: ${lineIndex}`}>{line}</span>
+                ))}
+              </p>
+              <p class="verse-source" style={`--line: ${scene.lines.length}`}>({scene.source})</p>
+            </div>
+          </div>
+        </section>
+      ))}
+
+      <section class="scene scene-outro" data-scene="outro" aria-labelledby="outro-title">
+        <div class="scene-frame">
+          <div class="outro-copy">
+            <p class="outro-kicker">To be continued</p>
+            <h2 id="outro-title">未完待续</h2>
+            <p class="outro-signature">Life is Piano.</p>
+            <div class="outro-cues">
+              {[...scenes.map((scene) => ({ ...scene.hotspot, panel: scene.panel })), restartCue].map((cue) => (
+                <button class="hotspot-trigger" type="button" data-open-panel={cue.panel} data-restart={cue.panel ? undefined : ''} aria-haspopup={cue.panel ? 'dialog' : undefined} aria-controls={cue.panel ? `panel-${cue.panel}` : undefined} aria-label={`${cue.label} · ${cue.hover}`}>
+                  <span class="hotspot-ring" aria-hidden="true"></span>
+                  <span class="hotspot-label swap" aria-hidden="true">
+                    <span class="swap-default">{cue.label}</span>
+                    <span class="swap-reveal">{cue.hover}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <nav class="chapter-rail" aria-label="章节">
+      <ol>
+        {scenes.map((scene, index) => (
+          <li>
+            <a href={`#scene-${scene.id}`} data-rail-link={index}>
+              <span class="rail-numeral">{scene.numeral}</span>
+              <span class="rail-title">{scene.title}</span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    </nav>
+
+    <button class="motion-toggle" type="button" data-motion-toggle aria-pressed="false">
+      <span class="motion-icon" aria-hidden="true"></span>
+      <span class="motion-label">Pause</span>
+    </button>
+
+    <dialog class="novel-panel" id="panel-prologue" aria-labelledby="panel-prologue-title">
+      <header class="panel-header">
+        <p class="panel-kicker">01 <span>/</span> Prologue</p>
+        <h2 class="panel-title" id="panel-prologue-title">序章</h2>
+        <button class="panel-close" type="button" data-panel-close aria-label="关闭"></button>
+      </header>
+      <div class="panel-body" data-panel-body>
+        <p class="panel-epigraph">{tagline}</p>
+        <div class="prose prologue-prose" set:html={prologue} />
+        <button class="panel-next" type="button" data-open-panel="chapters">继续阅读 · {chapters[0].volume}</button>
+      </div>
+    </dialog>
+
+    <dialog class="novel-panel" id="panel-chapters" aria-labelledby="panel-chapters-title">
+      <header class="panel-header">
+        <p class="panel-kicker">02 <span>/</span> Chapters</p>
+        <h2 class="panel-title" id="panel-chapters-title">{chapters[0].volume}</h2>
+        <button class="panel-close" type="button" data-panel-close aria-label="关闭"></button>
+      </header>
+      <div class="panel-body" data-panel-body>
+        <ol class="chapter-list" data-chapter-list>
+          {chapters.map((chapter, index) => (
+            <li>
+              <button class="chapter-entry" type="button" data-chapter-open={chapter.id}>
+                <span class="chapter-index">{String(index + 1).padStart(2, '0')}</span>
+                <span class="chapter-copy">
+                  <span class="chapter-number">{chapter.volume} · {chapter.number}</span>
+                  <span class="chapter-name">{chapter.name}</span>
+                  <span class="chapter-meta">{chapter.sections.length} 节 · 约 {formatCount.format(chapter.characterCount)} 字</span>
+                </span>
+                <span class="chapter-arrow" aria-hidden="true"></span>
+              </button>
+            </li>
+          ))}
+        </ol>
+        {chapters.map((chapter, index) => (
+          <article class="chapter-reader" data-chapter={chapter.id} aria-labelledby={`${chapter.id}-title`} hidden>
+            <button class="reader-back" type="button" data-chapter-back>篇章目录</button>
+            <header class="reader-header">
+              <p class="reader-number">{chapter.volume} · {chapter.number}</p>
+              <h3 class="reader-title" id={`${chapter.id}-title`} tabindex="-1">{chapter.name}</h3>
+            </header>
+            <div class="prose" set:html={chapter.html} />
+            {chapter.sections.map((section) => (
+              <section class="reader-section">
+                <h4 class="reader-section-title">{section.title}</h4>
+                <div class="prose" set:html={section.html} />
+              </section>
+            ))}
+            <nav class="reader-pager" aria-label="章节翻页">
+              {index > 0 ? (
+                <button type="button" data-chapter-open={chapters[index - 1].id}>
+                  <span>Previous</span>{chapters[index - 1].name}
+                </button>
+              ) : (
+                <button type="button" data-open-panel="prologue">
+                  <span>Previous</span>序章
+                </button>
+              )}
+              {index < chapters.length - 1 ? (
+                <button type="button" data-chapter-open={chapters[index + 1].id}>
+                  <span>Next</span>{chapters[index + 1].name}
+                </button>
+              ) : (
+                <button type="button" data-chapter-back>
+                  <span>Fin.</span>未完待续 · 返回目录
+                </button>
+              )}
+            </nav>
+          </article>
+        ))}
+      </div>
+    </dialog>
+
+    <dialog class="novel-panel" id="panel-codex" aria-labelledby="panel-codex-title">
+      <header class="panel-header">
+        <p class="panel-kicker">03 <span>/</span> Codex</p>
+        <h2 class="panel-title" id="panel-codex-title">{codex.title}</h2>
+        <button class="panel-close" type="button" data-panel-close aria-label="关闭"></button>
+      </header>
+      <div class="panel-body" data-panel-body>
+        <div class="codex-note" set:html={codex.note} />
+        <div class="codex-tabs" role="tablist" aria-label="人物">
+          {codex.characters.map((character, index) => (
+            <button class="codex-tab" type="button" role="tab" id={`${character.id}-tab`} aria-controls={character.id} aria-selected={index === 0 ? 'true' : 'false'} tabindex={index === 0 ? 0 : -1} data-codex-tab>
+              <span class="codex-tab-latin">{character.latinName}</span>
+              <span class="codex-tab-name">{character.name}</span>
+            </button>
+          ))}
+        </div>
+        {codex.characters.map((character, index) => (
+          <section class="character-card" id={character.id} role="tabpanel" aria-labelledby={`${character.id}-tab`} hidden={index !== 0}>
+            <header class="character-header">
+              <p class="character-affinity">{character.affinity}</p>
+              <h3 class="character-name">{character.name}</h3>
+              {character.latinName && <p class="character-latin">{character.latinName}</p>}
+              {character.epithet && <p class="character-epithet" set:html={character.epithet} />}
+            </header>
+            <dl class="character-fields">
+              {character.fields.map((field) => (
+                <div class:list={['character-field', { 'is-long': !field.short }]}>
+                  <dt>{field.label}</dt>
+                  <dd set:html={field.html} />
+                </div>
+              ))}
+            </dl>
+            {character.remarks.map((remark) => <blockquote class="character-remark" set:html={remark} />)}
+          </section>
+        ))}
+      </div>
+    </dialog>
+
+    <dialog class="novel-panel" id="panel-world" aria-labelledby="panel-world-title">
+      <header class="panel-header">
+        <p class="panel-kicker">04 <span>/</span> {world.label}</p>
+        <h2 class="panel-title" id="panel-world-title">{world.title}</h2>
+        <button class="panel-close" type="button" data-panel-close aria-label="关闭"></button>
+      </header>
+      <div class="panel-body" data-panel-body>
+        <figure class="cycle-figure">
+          <svg class="cycle-chart" viewBox="0 0 580 200" role="img" aria-labelledby="cycle-caption">
+            <line class="cycle-axis" x1={cycle.left} x2={cycle.right} y1={cycle.middle} y2={cycle.middle} />
+            {[0, 30, 60].map((year) => {
+              const x = cycle.left + (year / 60) * (cycle.right - cycle.left);
+              return (
+                <g class="cycle-tick">
+                  <line x1={x} x2={x} y1={cycle.middle - cycle.amplitude - 10} y2={cycle.middle + cycle.amplitude + 10} />
+                  <text x={x} y={cycle.middle + cycle.amplitude + 30}>{year} 年</text>
+                </g>
+              );
+            })}
+            <path class="cycle-moon" d={moonPath} />
+            <path class="cycle-star" d={starPath} />
+            <g class="cycle-label">
+              <text x={cycle.left + 8} y={cycle.middle - cycle.amplitude - 16}>满月 · 星稀</text>
+              <text x={(cycle.left + cycle.right) / 2} y={cycle.middle - cycle.amplitude - 16} text-anchor="middle">朔月 · 星盛</text>
+            </g>
+            <g class="cycle-legend">
+              <line class="cycle-moon" x1={cycle.right - 112} x2={cycle.right - 88} y1="18" y2="18" />
+              <text x={cycle.right - 82} y="22">月相</text>
+              <line class="cycle-star" x1={cycle.right - 50} x2={cycle.right - 26} y1="18" y2="18" />
+              <text x={cycle.right - 20} y="22">星相</text>
+            </g>
+          </svg>
+          <figcaption id="cycle-caption">夜相周期：月相与星相各以 60 年为一周期，此消彼长。</figcaption>
+        </figure>
+        <div class="prose" set:html={world.html} />
+      </div>
+    </dialog>
+  </div>
+</BaseLayout>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-novel]');
+  if (root) initializeNovel(root);
+
+  function initializeNovel(root: HTMLElement) {
+    const camera = root.querySelector<HTMLElement>('[data-stage-camera]')!;
+    const drifts = Array.from(root.querySelectorAll<HTMLElement>('[data-stage-drift]'));
+    const video = root.querySelector<HTMLVideoElement>('[data-stage-video]')!;
+    const hotspotLayer = root.querySelector<HTMLElement>('[data-hotspot-layer]')!;
+    const hotspots = Array.from(root.querySelectorAll<HTMLElement>('[data-hotspot]'));
+    const scenes = Array.from(root.querySelectorAll<HTMLElement>('[data-scene]'));
+    const railLinks = Array.from(root.querySelectorAll<HTMLAnchorElement>('[data-rail-link]'));
+    const motionToggle = root.querySelector<HTMLButtonElement>('[data-motion-toggle]')!;
+
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const narrow = window.matchMedia('(max-width: 850px)');
+    // Matches the encoded video frame; the camera is sized to cover the viewport at this ratio.
+    const frameRatio = 2560 / 1450;
+
+    let activeScene: HTMLElement | undefined;
+    let frame = 0;
+
+    // Places the frame so `focus` lands on the composition target, clamped so the frame always covers the viewport.
+    const placeCamera = () => {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const width = Math.max(vw, vh * frameRatio);
+      const height = width / frameRatio;
+      const chapter = activeScene?.dataset.focusX !== undefined ? activeScene : undefined;
+      const fx = chapter ? Number(chapter.dataset.focusX) / 100 : 0.5;
+      const fy = chapter ? Number(chapter.dataset.focusY) / 100 : 0.5;
+      const zoom = chapter ? Number(chapter.dataset.focusZoom) : 1;
+      const scale = narrow.matches ? 1 + (zoom - 1) * 0.5 : zoom;
+      const targetX = chapter ? vw * (narrow.matches ? 0.5 : 0.64) : vw / 2;
+      const targetY = chapter ? vh * (narrow.matches ? 0.36 : 0.5) : vh / 2;
+      const x = Math.min(Math.max(targetX - fx * width * scale, vw - width * scale), 0);
+      const y = Math.min(Math.max(targetY - fy * height * scale, vh - height * scale), 0);
+
+      for (const layer of [camera, hotspotLayer]) {
+        layer.style.width = `${width}px`;
+        layer.style.height = `${height}px`;
+        layer.style.setProperty('--camera-scale', String(scale));
+        layer.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
+      }
+
+      // At the outro every hotspot returns to its place on the image. When the crop would cut one off
+      // (portrait screens), the outro lists them under the closing text instead.
+      const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+      const fits = hotspots.every((hotspot) => {
+        const left = x + (Number(hotspot.dataset.x) / 100) * width * scale;
+        const top = y + (Number(hotspot.dataset.y) / 100) * height * scale;
+        // Labels run ~11rem from the ring; the ring itself needs ~2rem on its other side.
+        const [before, after] = hotspot.classList.contains('is-flipped') ? [11 * rem, 2 * rem] : [2 * rem, 11 * rem];
+        return left - before >= 0 && left + after <= vw && top >= 7 * rem && top <= vh - 4 * rem;
+      });
+      const index = activeScene?.dataset.scene ?? '';
+      root.dataset.outroLayout = fits ? 'image' : 'list';
+      hotspots.forEach((hotspot) => hotspot.classList.toggle('is-visible', index === 'outro' ? fits : hotspot.dataset.hotspot === index));
+    };
+
+    const setActiveScene = (scene: HTMLElement) => {
+      if (scene === activeScene) return;
+      activeScene?.classList.remove('is-active');
+      activeScene = scene;
+      scene.classList.add('is-active');
+      const index = scene.dataset.scene ?? '';
+      root.dataset.activeScene = index;
+      // Hotspot visibility follows the camera, so `placeCamera` below owns it.
+      railLinks.forEach((link) => {
+        const current = link.dataset.railLink === index;
+        link.classList.toggle('is-current', current);
+        if (current) link.setAttribute('aria-current', 'step');
+        else link.removeAttribute('aria-current');
+      });
+      placeCamera();
+    };
+
+    // The scene crossing the viewport's middle line owns the camera.
+    const sceneObserver = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) setActiveScene(entry.target as HTMLElement);
+      }
+    }, { rootMargin: '-50% 0px -50% 0px' });
+    scenes.forEach((scene) => sceneObserver.observe(scene));
+
+    // `--intro` runs 0 → 1 across the first viewport of scroll and dissolves the white mist.
+    const updateScroll = () => {
+      frame = 0;
+      const intro = Math.min(Math.max(window.scrollY / (window.innerHeight * 0.85), 0), 1);
+      root.style.setProperty('--intro', intro.toFixed(3));
+    };
+    window.addEventListener('scroll', () => {
+      if (!frame) frame = requestAnimationFrame(updateScroll);
+    }, { passive: true });
+    window.addEventListener('resize', placeCamera);
+    narrow.addEventListener('change', placeCamera);
+
+    // Pointer parallax moves inner layers so it never fights the camera transition; hotspots share it to stay pinned.
+    let driftFrame = 0;
+    window.addEventListener('pointermove', (event) => {
+      if (event.pointerType !== 'mouse' || reducedMotion.matches || driftFrame) return;
+      driftFrame = requestAnimationFrame(() => {
+        driftFrame = 0;
+        const dx = (event.clientX / window.innerWidth - 0.5) * -18;
+        const dy = (event.clientY / window.innerHeight - 0.5) * -12;
+        drifts.forEach((layer) => {
+          layer.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(1.03)`;
+        });
+      });
+    }, { passive: true });
+
+    for (const hotspot of hotspots) {
+      hotspot.style.left = `${hotspot.dataset.x}%`;
+      hotspot.style.top = `${hotspot.dataset.y}%`;
+    }
+
+    // Hovering or focusing her hotspot also names her in the scene heading; hotspot labels swap via CSS.
+    for (const trigger of root.querySelectorAll<HTMLElement>('[data-reveal-scene]')) {
+      const scene = root.querySelector(`[data-scene="${trigger.dataset.revealScene}"]`);
+      for (const [type, revealed] of [['pointerenter', true], ['pointerleave', false], ['focus', true], ['blur', false]] as const) {
+        trigger.addEventListener(type, () => scene?.classList.toggle('is-revealed', revealed));
+      }
+    }
+
+    // Panels ----------------------------------------------------------------
+
+    const panels = Array.from(root.querySelectorAll<HTMLDialogElement>('.novel-panel'));
+
+    // Plays the exit animation before `close()`, which would otherwise drop the sheet instantly.
+    const closePanel = (panel: HTMLDialogElement) => {
+      if (!panel.open || panel.classList.contains('is-closing')) return;
+      if (reducedMotion.matches) {
+        panel.close();
+        return;
+      }
+      panel.classList.add('is-closing');
+      panel.addEventListener('animationend', function finish(event) {
+        if (event.target !== panel) return;
+        panel.removeEventListener('animationend', finish);
+        panel.close();
+      });
+    };
+
+    // Switching panels closes the current one without animation so only one sheet ever slides.
+    const openPanel = (id: string) => {
+      const panel = document.getElementById(`panel-${id}`);
+      if (!(panel instanceof HTMLDialogElement)) return;
+      for (const other of panels) {
+        if (other !== panel && other.open) other.close();
+      }
+      if (!panel.open) panel.showModal();
+    };
+
+    // `id` undefined returns to the chapter list and restores focus to the chapter just read.
+    const showChapter = (panel: HTMLDialogElement, id?: string) => {
+      const list = panel.querySelector<HTMLElement>('[data-chapter-list]');
+      const body = panel.querySelector<HTMLElement>('[data-panel-body]');
+      if (!list || !body) return;
+      const previous = panel.querySelector<HTMLElement>('[data-chapter]:not([hidden])')?.dataset.chapter;
+      list.hidden = id !== undefined;
+      panel.querySelectorAll<HTMLElement>('[data-chapter]').forEach((reader) => {
+        reader.hidden = reader.dataset.chapter !== id;
+      });
+      body.scrollTop = 0;
+      if (id) panel.querySelector<HTMLElement>(`[data-chapter="${id}"] .reader-title`)?.focus();
+      else if (previous) panel.querySelector<HTMLElement>(`[data-chapter-open="${previous}"]`)?.focus();
+    };
+
+    const selectTab = (tab: HTMLElement) => {
+      for (const candidate of tab.parentElement?.querySelectorAll<HTMLElement>('[data-codex-tab]') ?? []) {
+        const selected = candidate === tab;
+        candidate.setAttribute('aria-selected', String(selected));
+        candidate.tabIndex = selected ? 0 : -1;
+        const tabPanel = document.getElementById(candidate.getAttribute('aria-controls') ?? '');
+        if (tabPanel) tabPanel.hidden = !selected;
+      }
+      tab.focus();
+    };
+
+    root.addEventListener('click', (event) => {
+      if (!(event.target instanceof Element)) return;
+      const target = event.target;
+      const opener = target.closest<HTMLElement>('[data-open-panel]');
+      if (opener?.dataset.openPanel) {
+        openPanel(opener.dataset.openPanel);
+        return;
+      }
+      const panel = target.closest<HTMLDialogElement>('.novel-panel');
+      if (!panel) return;
+      // Backdrop clicks target the dialog itself; its content always sits in child elements.
+      if (target === panel || target.closest('[data-panel-close]')) {
+        closePanel(panel);
+        return;
+      }
+      const chapterButton = target.closest<HTMLElement>('[data-chapter-open]');
+      if (chapterButton) showChapter(panel, chapterButton.dataset.chapterOpen);
+      else if (target.closest('[data-chapter-back]')) showChapter(panel);
+      const tab = target.closest<HTMLElement>('[data-codex-tab]');
+      if (tab) selectTab(tab);
+    });
+
+    root.addEventListener('keydown', (event) => {
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+      const tab = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-codex-tab]') : null;
+      const tabs = Array.from(tab?.parentElement?.querySelectorAll<HTMLElement>('[data-codex-tab]') ?? []);
+      if (!tab || tabs.length === 0) return;
+      event.preventDefault();
+      const step = event.key === 'ArrowRight' ? 1 : -1;
+      selectTab(tabs[(tabs.indexOf(tab) + step + tabs.length) % tabs.length]);
+    });
+
+    for (const panel of panels) {
+      panel.addEventListener('cancel', (event) => {
+        event.preventDefault();
+        closePanel(panel);
+      });
+      panel.addEventListener('close', () => panel.classList.remove('is-closing'));
+    }
+
+    const setPlaying = (playing: boolean) => {
+      if (playing) void video.play().catch(() => setPlaying(false));
+      else video.pause();
+      motionToggle.setAttribute('aria-pressed', String(!playing));
+      motionToggle.querySelector('.motion-label')!.textContent = playing ? 'Pause' : 'Play';
+      root.classList.toggle('is-paused', !playing);
+    };
+    motionToggle.addEventListener('click', () => setPlaying(video.paused));
+    if (reducedMotion.matches) setPlaying(false);
+
+    root.querySelectorAll('[data-restart]').forEach((cue) => cue.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: reducedMotion.matches ? 'auto' : 'smooth' });
+    }));
+
+    updateScroll();
+    setActiveScene(scenes[0]);
+    // Enables transitions only after the first placement, so the page does not animate in from the origin.
+    requestAnimationFrame(() => root.classList.add('is-ready'));
+  }
+</script>
+
+<style lang="scss">
+  @use '../styles/global.scss' as *;
+  @use '../styles/Navbar.scss' as navbar;
+
+  $night: #0c1131;
+  $moon: #eef1ff;
+  $mist: #f6f8ff;
+  $glow: #9fe9f2;
+  $ease-camera: cubic-bezier(0.65, 0, 0.35, 1);
+  $ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  // Page-level overrides are gated on `.novel`, so other routes keep the white canvas.
+  :global(html:has(.novel)) {
+    scroll-behavior: smooth;
+  }
+
+  :global(body:has(.novel)) {
+    background: $night;
+  }
+
+  // The fixed stage covers the site-wide circle textures; they would only add noise behind the video.
+  :global(body:has(.novel) .dynamic-circles-container) {
+    display: none;
+  }
+
+  .novel {
+    --intro: 0;
+    color: $moon;
+    font-family: $font-family-default;
+  }
+
+  // Stage -----------------------------------------------------------------
+
+  .stage {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    background: $night;
+    pointer-events: none;
+  }
+
+  .stage-camera,
+  .hotspot-layer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    transform-origin: 0 0;
+    will-change: transform;
+  }
+
+  .is-ready .stage-camera,
+  .is-ready .hotspot-layer {
+    transition: transform 2.2s $ease-camera;
+  }
+
+  .stage-drift {
+    width: 100%;
+    height: 100%;
+    transform: scale(1.03);
+    transition: transform 1.4s $ease-out;
+  }
+
+  .stage-video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    // The mist lifts while the scene sharpens.
+    filter: saturate(calc(0.75 + var(--intro) * 0.25)) blur(calc((1 - var(--intro)) * 6px));
+  }
+
+  .stage-shade {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(90deg, rgba($night, 0.72) 0%, rgba($night, 0.38) 34%, rgba($night, 0) 58%),
+      linear-gradient(180deg, rgba($night, 0.45) 0%, rgba($night, 0) 22%, rgba($night, 0) 70%, rgba($night, 0.55) 100%);
+    opacity: var(--intro);
+  }
+
+  // Opening mist: the site's white editorial canvas, dissolving into the night meadow.
+  .stage-mist {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 55% at 62% 48%, rgba($mist, 0.55) 0%, rgba($mist, 0.92) 62%, $mist 100%);
+    opacity: calc(1 - var(--intro));
+  }
+
+  // Hotspots --------------------------------------------------------------
+
+  .hotspot-layer {
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .hotspot {
+    position: absolute;
+    // Counter-scales so markers keep their size while the camera zooms.
+    transform: scale(calc(1 / var(--camera-scale, 1)));
+    transform-origin: 0 0;
+    opacity: 0;
+    visibility: hidden;
+
+    &.is-visible {
+      opacity: 1;
+      visibility: visible;
+    }
+  }
+
+  // Markers fade out at once, then reappear after the camera has mostly settled on the next scene.
+  .is-ready .hotspot {
+    transition-property: opacity, visibility, transform;
+    transition-duration: 700ms, 0s, 2.2s;
+    transition-timing-function: ease, linear, $ease-camera;
+    transition-delay: 0s, 700ms, 0s;
+
+    &.is-visible {
+      transition-duration: 900ms, 0s, 2.2s;
+      transition-delay: 1.6s, 0s, 0s;
+    }
+  }
+
+  // Interaction text: a ring plus a label that swaps on hover. Used on the image and in the outro.
+  .hotspot-trigger {
+    --ring-size: 2.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: $moon;
+    font: inherit;
+    cursor: pointer;
+    pointer-events: auto;
+
+    &:focus-visible {
+      outline: none;
+
+      .hotspot-ring {
+        box-shadow: 0 0 0 3px rgba($moon, 0.35);
+      }
+    }
+  }
+
+  // Centres the ring on the hotspot point; flipped hotspots near the right edge put the label on the left.
+  .hotspot > .hotspot-trigger {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: translate(calc(var(--ring-size) / -2), -50%);
+  }
+
+  .hotspot.is-flipped > .hotspot-trigger {
+    flex-direction: row-reverse;
+    transform: translate(calc(-100% + var(--ring-size) / 2), -50%);
+
+    .hotspot-label {
+      padding: 0 0.85rem 0 0;
+
+      &::before {
+        right: 0;
+        left: auto;
+      }
+    }
+
+    .swap {
+      justify-items: end;
+    }
+  }
+
+  .hotspot-ring {
+    position: relative;
+    flex: 0 0 auto;
+    width: var(--ring-size);
+    height: var(--ring-size);
+    border: 1px solid rgba($moon, 0.85);
+    border-radius: 50%;
+    transition: transform 400ms $ease-out, background-color 300ms ease;
+
+    &::before {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0.4rem;
+      height: 0.4rem;
+      border-radius: 50%;
+      background: $moon;
+      box-shadow: 0 0 0.75rem $glow;
+      content: '';
+      transform: translate(-50%, -50%);
+    }
+
+    &::after {
+      position: absolute;
+      inset: -1px;
+      border: 1px solid rgba($moon, 0.6);
+      border-radius: 50%;
+      content: '';
+      animation: hotspot-pulse 2.8s ease-out infinite;
+    }
+  }
+
+  .hotspot-trigger:hover .hotspot-ring,
+  .hotspot-trigger:focus-visible .hotspot-ring {
+    background: rgba($moon, 0.12);
+    transform: scale(1.12);
+  }
+
+  .hotspot-label {
+    position: relative;
+    padding-left: 0.85rem;
+    font-size: 0.95rem;
+    letter-spacing: 0.18em;
+    white-space: nowrap;
+    text-shadow: 0 0 1rem rgba($night, 0.8);
+
+    &::before {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      width: 0.3rem;
+      height: 0.3rem;
+      border-radius: 50%;
+      background: rgba($moon, 0.75);
+      content: '';
+      transform: translateY(-50%);
+    }
+  }
+
+  // Stacks the default and revealed names in one cell, so the swap never shifts the surrounding layout.
+  .swap {
+    display: inline-grid;
+    justify-items: start;
+
+    > span {
+      grid-area: 1 / 1;
+      transition: opacity 600ms ease, filter 600ms ease;
+    }
+  }
+
+  .swap-reveal,
+  .is-revealed .swap-default,
+  .hotspot-trigger:is(:hover, :focus-visible) .swap-default {
+    opacity: 0;
+    filter: blur(6px);
+  }
+
+  .is-revealed .swap-reveal,
+  .hotspot-trigger:is(:hover, :focus-visible) .swap-reveal {
+    opacity: 1;
+    filter: blur(0);
+  }
+
+  @keyframes hotspot-pulse {
+    0% {
+      opacity: 0.8;
+      transform: scale(1);
+    }
+    80%,
+    100% {
+      opacity: 0;
+      transform: scale(1.9);
+    }
+  }
+
+  // Scroll flow -------------------------------------------------------------
+
+  .novel-flow {
+    position: relative;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .scene {
+    position: relative;
+    height: 170vh;
+  }
+
+  .scene-intro {
+    height: 150vh;
+  }
+
+  .scene-outro {
+    height: 130vh;
+  }
+
+  .scene-frame {
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    box-sizing: border-box;
+    height: 100vh;
+    padding: navbar.$navbar-actual-height 10vw 4rem;
+  }
+
+  // Intro ----------------------------------------------------------------
+
+  .intro-copy {
+    align-self: flex-start;
+    color: $primary-blue;
+    opacity: calc(1 - var(--intro) * 1.6);
+    filter: blur(calc(var(--intro) * 8px));
+    transform: translateY(calc(var(--intro) * -3rem));
+  }
+
+  .intro-kicker {
+    margin: 0;
+    color: $light-blue;
+    font-family: $font-family-heading;
+    font-size: 1rem;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+
+    span {
+      color: $ex-light-blue;
+      padding: 0 0.4rem;
+    }
+  }
+
+  .intro-copy h1 {
+    margin: 1.4rem 0 0;
+    color: $content-color;
+    font-size: clamp(3rem, 7vw, 6rem);
+    font-weight: 400;
+    letter-spacing: 0.22em;
+    line-height: 1.1;
+  }
+
+  .intro-tagline {
+    max-width: 32rem;
+    margin: 1.25rem 0 0;
+    color: $primary-blue;
+    font-size: clamp(1rem, 1.4vw, 1.2rem);
+    letter-spacing: 0.16em;
+    line-height: 1.9;
+  }
+
+  .intro-rule {
+    display: flex;
+    gap: 0.7rem;
+    margin-top: 2rem;
+
+    span {
+      width: 0.75rem;
+      height: 0.75rem;
+      border-radius: 50%;
+      background: $ex-light-blue;
+
+      &:nth-child(2) {
+        background: $light-blue;
+      }
+
+      &:nth-child(3) {
+        background: $primary-blue;
+      }
+    }
+  }
+
+  .scroll-cue {
+    position: absolute;
+    bottom: 3.5rem;
+    left: 10vw;
+    display: inline-flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    color: $content-color;
+    font-family: $font-family-heading;
+    font-size: 0.9rem;
+    letter-spacing: 0.18em;
+    text-decoration: none;
+    text-transform: uppercase;
+    opacity: calc(1 - var(--intro) * 3);
+    pointer-events: auto;
+
+    &::after {
+      align-self: flex-end;
+      width: 75%;
+      height: 1px;
+      background: currentColor;
+      content: '';
+      transform-origin: right;
+      animation: cue-line 2.4s $ease-out infinite;
+    }
+  }
+
+  @keyframes cue-line {
+    0% {
+      transform: scaleX(0);
+      transform-origin: left;
+    }
+    45% {
+      transform: scaleX(1);
+      transform-origin: left;
+    }
+    55% {
+      transform: scaleX(1);
+      transform-origin: right;
+    }
+    100% {
+      transform: scaleX(0);
+      transform-origin: right;
+    }
+  }
+
+  // Verses ----------------------------------------------------------------
+
+  .verse {
+    max-width: min(26rem, 80vw);
+  }
+
+  .verse-heading {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin: 0 0 1.75rem;
+    font-weight: 400;
+  }
+
+  .verse-numeral {
+    color: rgba($moon, 0.6);
+    font-family: $font-family-heading;
+    font-size: 0.95rem;
+    letter-spacing: 0.24em;
+  }
+
+  .verse-title {
+    position: relative;
+    padding-left: 1rem;
+    font-size: 1.1rem;
+    letter-spacing: 0.4em;
+
+    &::before {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      width: 0.4rem;
+      height: 0.4rem;
+      border: 1px solid rgba($moon, 0.8);
+      content: '';
+      transform: translateY(-50%) rotate(45deg);
+    }
+  }
+
+  .verse-lines {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    font-size: clamp(1.35rem, 2.1vw, 1.85rem);
+    letter-spacing: 0.08em;
+    line-height: 1.85;
+    text-shadow: 0 0 1.5rem rgba($night, 0.65);
+  }
+
+  // Lines surface one by one out of a blur, and sink back when the scene leaves.
+  .verse-line,
+  .verse-source,
+  .verse-heading {
+    opacity: 0;
+    filter: blur(8px);
+    transform: translateY(0.6rem);
+    transition:
+      opacity 700ms ease,
+      filter 700ms ease,
+      transform 900ms $ease-out;
+  }
+
+  .verse-heading {
+    --line: -1;
+  }
+
+  .scene.is-active {
+    .verse-line,
+    .verse-source,
+    .verse-heading {
+      opacity: 1;
+      filter: blur(0);
+      transform: translateY(0);
+      transition-duration: 1.2s, 1.2s, 1.4s;
+      transition-delay: calc(0.9s + var(--line) * 0.32s);
+    }
+
+    .verse-source {
+      opacity: 0.6;
+    }
+  }
+
+  .verse-source {
+    margin: 1.5rem 0 0;
+    font-size: 0.95rem;
+    letter-spacing: 0.16em;
+  }
+
+  // Outro ----------------------------------------------------------------
+
+  .scene-outro .scene-frame {
+    align-items: center;
+    text-align: center;
+  }
+
+  .outro-copy {
+    opacity: 0;
+    filter: blur(8px);
+    transition: opacity 1.2s ease 0.6s, filter 1.2s ease 0.6s;
+    pointer-events: auto;
+  }
+
+  .scene-outro.is-active .outro-copy {
+    opacity: 1;
+    filter: blur(0);
+  }
+
+  .outro-kicker {
+    margin: 0;
+    color: rgba($moon, 0.65);
+    font-family: $font-family-heading;
+    font-size: 0.9rem;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+  }
+
+  .outro-copy h2 {
+    margin: 1rem 0 0;
+    font-size: clamp(2.25rem, 4.5vw, 3.5rem);
+    font-weight: 400;
+    letter-spacing: 0.3em;
+    text-shadow: 0 0 2rem rgba($night, 0.8);
+  }
+
+  .outro-signature {
+    margin: 0.75rem 0 0;
+    color: $ex-light-blue;
+    font-family: $font-family-special;
+    font-size: 2.5rem;
+  }
+
+  // Fallback for crops that cannot show every hotspot on the image; see `placeCamera`.
+  .outro-cues {
+    display: none;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1.5rem 2.75rem;
+    max-width: 46rem;
+    margin: 2.75rem auto 0;
+  }
+
+  .novel[data-outro-layout='list'] .outro-cues {
+    display: flex;
+  }
+
+  // Chapter rail ----------------------------------------------------------
+
+  .chapter-rail {
+    position: fixed;
+    top: 50%;
+    right: 2.5rem;
+    z-index: 3;
+    opacity: var(--intro);
+    transform: translateY(-50%);
+    transition: opacity 400ms ease;
+
+    ol {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 1.4rem;
+      margin: 0;
+      padding: 0 0 0 1.1rem;
+      list-style: none;
+
+      &::before {
+        position: absolute;
+        top: 0.3rem;
+        bottom: 0.3rem;
+        left: 0.25rem;
+        width: 1px;
+        background: rgba($moon, 0.3);
+        content: '';
+      }
+    }
+
+    a {
+      position: relative;
+      display: flex;
+      align-items: baseline;
+      gap: 0.65rem;
+      color: rgba($moon, 0.55);
+      text-decoration: none;
+      transition: color 300ms ease;
+
+      &::before {
+        position: absolute;
+        top: 50%;
+        left: calc(-0.85rem - 0.5px);
+        width: 0.42rem;
+        height: 0.42rem;
+        box-sizing: border-box;
+        border: 1px solid rgba($moon, 0.55);
+        background: $night;
+        content: '';
+        transform: translate(-50%, -50%) rotate(45deg);
+        transition: background-color 300ms ease, border-color 300ms ease;
+      }
+
+      &:hover,
+      &:focus-visible,
+      &.is-current {
+        color: $moon;
+        outline: none;
+      }
+
+      &.is-current::before {
+        border-color: $moon;
+        background: $moon;
+        box-shadow: 0 0 0.6rem $glow;
+      }
+    }
+  }
+
+  .rail-numeral {
+    font-family: $font-family-heading;
+    font-size: 0.75rem;
+    letter-spacing: 0.18em;
+  }
+
+  .rail-title {
+    font-size: 0.95rem;
+    letter-spacing: 0.2em;
+  }
+
+  // Motion toggle ---------------------------------------------------------
+
+  .motion-toggle {
+    position: fixed;
+    right: 2.5rem;
+    bottom: 2.25rem;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.4rem 0;
+    border: 0;
+    background: none;
+    color: $content-color;
+    font-family: $font-family-heading;
+    font-size: 0.8rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 1px solid currentColor;
+      outline-offset: 0.3rem;
+    }
+  }
+
+  // Dark ink on the opening mist, moonlight once a chapter takes the stage.
+  .novel:not([data-active-scene='intro']) .motion-toggle {
+    color: rgba($moon, 0.8);
+  }
+
+  .motion-icon {
+    position: relative;
+    width: 0.7rem;
+    height: 0.8rem;
+
+    &::before,
+    &::after {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: currentColor;
+      content: '';
+    }
+
+    &::before {
+      left: 0.1rem;
+    }
+
+    &::after {
+      right: 0.1rem;
+    }
+  }
+
+  .is-paused .motion-icon {
+    &::before {
+      left: 0.1rem;
+      width: 0;
+      height: 0;
+      border-top: 0.4rem solid transparent;
+      border-bottom: 0.4rem solid transparent;
+      border-left: 0.6rem solid currentColor;
+      background: none;
+    }
+
+    &::after {
+      display: none;
+    }
+  }
+
+  // Panels ---------------------------------------------------------------------
+
+  // Long-form reading returns to the site's white editorial paper, laid over the night meadow.
+  :global(html:has(.novel-panel[open])) {
+    overflow: hidden;
+  }
+
+  .novel-panel {
+    position: fixed;
+    inset: 0 0 0 auto;
+    width: min(44rem, 100vw);
+    max-width: none;
+    height: 100dvh;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    border: 0;
+    border-left: 1px solid rgba($primary-blue, 0.78);
+    background: rgba(#fff, 0.95);
+    backdrop-filter: blur(18px);
+    color: $content-color;
+    font-family: $font-family-default;
+    overflow: hidden;
+
+    &[open] {
+      display: flex;
+      flex-direction: column;
+      animation: panel-in 700ms $ease-out;
+    }
+
+    &.is-closing {
+      animation: panel-out 420ms ease-in forwards;
+    }
+
+    &::backdrop {
+      background: rgba($night, 0.42);
+      backdrop-filter: blur(3px);
+      animation: fade-in 600ms ease;
+    }
+
+    &.is-closing::backdrop {
+      animation: fade-out 420ms ease forwards;
+    }
+  }
+
+  @keyframes panel-in {
+    from {
+      opacity: 0;
+      transform: translateX(3rem);
+    }
+  }
+
+  @keyframes panel-out {
+    to {
+      opacity: 0;
+      transform: translateX(3rem);
+    }
+  }
+
+  @keyframes panel-up {
+    from {
+      opacity: 0;
+      transform: translateY(3rem);
+    }
+  }
+
+  @keyframes panel-down {
+    to {
+      opacity: 0;
+      transform: translateY(3rem);
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes fade-out {
+    to {
+      opacity: 0;
+    }
+  }
+
+  .panel-header {
+    position: relative;
+    flex: 0 0 auto;
+    padding: 2.25rem 3rem 1.25rem;
+    border-bottom: 1px solid rgba($primary-blue, 0.3);
+  }
+
+  .panel-kicker {
+    margin: 0;
+    color: $light-blue;
+    font-family: $font-family-heading;
+    font-size: 0.8rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+
+    span {
+      padding: 0 0.35rem;
+      color: $ex-light-blue;
+    }
+  }
+
+  .panel-title {
+    position: relative;
+    margin: 0.6rem 4rem 0 0;
+    padding-left: 1.1rem;
+    font-size: clamp(1.4rem, 2.2vw, 1.85rem);
+    font-weight: 400;
+    letter-spacing: 0.12em;
+    line-height: 1.4;
+
+    &::before {
+      position: absolute;
+      top: 0.15em;
+      left: 0;
+      width: 0.45rem;
+      height: 1.1em;
+      background: $ex-light-blue;
+      content: '';
+    }
+  }
+
+  .panel-close {
+    position: absolute;
+    top: 2rem;
+    right: 2.5rem;
+    width: 2.4rem;
+    height: 2.4rem;
+    padding: 0;
+    border: 1px solid rgba($primary-blue, 0.55);
+    background: #fff;
+    cursor: pointer;
+    transition: background-color 180ms ease-out;
+
+    &::before,
+    &::after {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0.95rem;
+      height: 1px;
+      background: $primary-blue;
+      content: '';
+      transform: translate(-50%, -50%) rotate(45deg);
+    }
+
+    &::after {
+      transform: translate(-50%, -50%) rotate(-45deg);
+    }
+
+    &:hover,
+    &:focus-visible {
+      background: $ex-light-blue;
+      outline: none;
+    }
+  }
+
+  .panel-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 2rem 3rem 4rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-color: rgba($primary-blue, 0.4) transparent;
+    scrollbar-width: thin;
+  }
+
+  .prose {
+    font-size: 1rem;
+    letter-spacing: 0.02em;
+    line-height: 2.1;
+
+    :global(p) {
+      margin: 0 0 1.2em;
+    }
+
+    :global(strong) {
+      background: linear-gradient(transparent 62%, rgba($ex-light-blue, 0.9) 62%);
+      font-weight: 500;
+    }
+
+    :global(em) {
+      color: $primary-blue;
+      font-style: normal;
+    }
+  }
+
+  .panel-epigraph {
+    margin: 0 0 2rem;
+    padding: 0.85rem 1.2rem;
+    border-left: 0.35rem solid $ex-light-blue;
+    color: $primary-blue;
+    letter-spacing: 0.08em;
+    line-height: 1.9;
+  }
+
+  // Shared bordered link style for in-panel navigation, mirroring the article pager.
+  .panel-next,
+  .reader-pager button {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    width: 100%;
+    padding: 0.95rem 1.15rem;
+    border: 1px solid rgba($primary-blue, 0.5);
+    background: rgba(#fff, 0.6);
+    color: $content-color;
+    font: inherit;
+    letter-spacing: 0.08em;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 180ms ease-out, border-color 180ms ease-out;
+
+    &:hover,
+    &:focus-visible {
+      border-color: $primary-blue;
+      background: rgba($ex-light-blue, 0.35);
+      outline: none;
+    }
+  }
+
+  .panel-next {
+    align-items: flex-end;
+    margin-top: 2.5rem;
+    text-align: right;
+
+    &::after {
+      color: $light-blue;
+      font-family: $font-family-heading;
+      font-size: 0.72rem;
+      letter-spacing: 0.22em;
+      content: 'NEXT →';
+    }
+  }
+
+  .chapter-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .chapter-entry {
+    display: grid;
+    grid-template-columns: 3.25rem minmax(0, 1fr) 1.25rem;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+    padding: 1.1rem 1.25rem;
+    border: 1px solid rgba($primary-blue, 0.45);
+    background: rgba(#fff, 0.6);
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 180ms ease-out, border-color 180ms ease-out;
+
+    &:hover,
+    &:focus-visible {
+      border-color: $primary-blue;
+      background: rgba($ex-light-blue, 0.35);
+      outline: none;
+
+      .chapter-arrow {
+        transform: translateX(0.25rem) rotate(45deg);
+      }
+    }
+  }
+
+  .chapter-index {
+    color: $light-blue;
+    font-family: $font-family-heading;
+    font-size: 1.75rem;
+    letter-spacing: 0.06em;
+  }
+
+  .chapter-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .chapter-number,
+  .reader-number {
+    margin: 0;
+    color: $light-blue;
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+  }
+
+  .chapter-name {
+    font-size: 1.2rem;
+    letter-spacing: 0.1em;
+  }
+
+  .chapter-meta {
+    color: $light-blue;
+    font-size: 0.8rem;
+    letter-spacing: 0.06em;
+  }
+
+  .chapter-arrow {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-top: 1px solid $primary-blue;
+    border-right: 1px solid $primary-blue;
+    transform: rotate(45deg);
+    transition: transform 220ms $ease-out;
+  }
+
+  .reader-back {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: $light-blue;
+    font: inherit;
+    font-size: 0.85rem;
+    letter-spacing: 0.16em;
+    cursor: pointer;
+    transition: color 180ms ease-out;
+
+    &::before {
+      content: '← ';
+    }
+
+    &:hover,
+    &:focus-visible {
+      color: $primary-blue;
+      outline: none;
+    }
+  }
+
+  .reader-header {
+    margin: 1.5rem 0 2rem;
+    text-align: center;
+  }
+
+  .reader-title {
+    margin: 0.6rem 0 0;
+    font-size: 1.75rem;
+    font-weight: 400;
+    letter-spacing: 0.16em;
+    outline: none;
+  }
+
+  .reader-section + .reader-section {
+    margin-top: 2.5rem;
+  }
+
+  .reader-section-title {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 0 0 1.5rem;
+    color: $primary-blue;
+    font-size: 1rem;
+    font-weight: 400;
+    letter-spacing: 0.3em;
+
+    &::before,
+    &::after {
+      flex: 1 1 auto;
+      height: 1px;
+      background: rgba($primary-blue, 0.35);
+      content: '';
+    }
+  }
+
+  .reader-pager {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin-top: 3rem;
+
+    span {
+      color: $light-blue;
+      font-family: $font-family-heading;
+      font-size: 0.72rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+    }
+
+    button:last-child {
+      align-items: flex-end;
+      text-align: right;
+    }
+  }
+
+  .codex-note {
+    color: $light-blue;
+    font-size: 0.85rem;
+    letter-spacing: 0.08em;
+    text-align: center;
+
+    :global(p) {
+      margin: 0;
+    }
+
+    :global(strong) {
+      font-weight: 400;
+    }
+  }
+
+  .codex-tabs {
+    display: grid;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+    margin-top: 1.5rem;
+    border-bottom: 1px solid rgba($primary-blue, 0.35);
+  }
+
+  .codex-tab {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+    padding: 0.5rem 0.5rem 0.85rem;
+    border: 0;
+    background: none;
+    color: $light-blue;
+    font: inherit;
+    cursor: pointer;
+    transition: color 220ms ease;
+
+    &::after {
+      position: absolute;
+      right: 25%;
+      bottom: -1px;
+      left: 25%;
+      height: 2px;
+      background: $primary-blue;
+      content: '';
+      transform: scaleX(0);
+      transition: transform 320ms $ease-out;
+    }
+
+    &[aria-selected='true'] {
+      color: $content-color;
+
+      &::after {
+        transform: scaleX(1);
+      }
+    }
+
+    &:hover,
+    &:focus-visible {
+      color: $content-color;
+      outline: none;
+    }
+  }
+
+  .codex-tab-latin,
+  .character-latin {
+    color: $primary-blue;
+    font-family: $font-family-special;
+    font-size: 2rem;
+    line-height: 1;
+  }
+
+  .codex-tab-name {
+    font-size: 0.95rem;
+    letter-spacing: 0.2em;
+  }
+
+  .character-card {
+    margin-top: 2rem;
+    animation: fade-in 500ms ease;
+  }
+
+  .character-header {
+    position: relative;
+    padding: 1.5rem 7rem 1.35rem 1.5rem;
+    border: 1px solid rgba($primary-blue, 0.45);
+    background: linear-gradient(120deg, rgba($ex-light-blue, 0.6), rgba(#fff, 0) 70%);
+    overflow: hidden;
+
+    // A star-shaped crest echoing the diamond markers used across the page.
+    &::before,
+    &::after {
+      position: absolute;
+      top: 50%;
+      right: 2.25rem;
+      width: 3.5rem;
+      height: 3.5rem;
+      border: 1px solid rgba($primary-blue, 0.4);
+      content: '';
+      transform: translateY(-50%) rotate(45deg);
+    }
+
+    &::after {
+      transform: translateY(-50%);
+    }
+  }
+
+  .character-affinity {
+    margin: 0;
+    color: $light-blue;
+    font-size: 0.78rem;
+    letter-spacing: 0.28em;
+  }
+
+  .character-name {
+    margin: 0.45rem 0 0;
+    font-size: 2rem;
+    font-weight: 400;
+    letter-spacing: 0.18em;
+    line-height: 1.3;
+  }
+
+  .character-latin {
+    margin: 0.1rem 0 0;
+  }
+
+  .character-epithet {
+    margin: 0.6rem 0 0;
+    color: $primary-blue;
+    font-size: 0.9rem;
+    letter-spacing: 0.06em;
+
+    :global(em) {
+      font-style: normal;
+    }
+  }
+
+  .character-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+    column-gap: 1rem;
+    margin: 1.25rem 0 0;
+  }
+
+  .character-field {
+    padding: 0.85rem 0.25rem;
+    border-bottom: 1px solid rgba($primary-blue, 0.25);
+
+    &.is-long {
+      grid-column: 1 / -1;
+    }
+
+    dt {
+      color: $light-blue;
+      font-size: 0.75rem;
+      letter-spacing: 0.2em;
+    }
+
+    dd {
+      margin: 0.3rem 0 0;
+      line-height: 1.9;
+    }
+  }
+
+  .character-remark {
+    margin: 1.5rem 0 0;
+    padding: 0.75rem 1.1rem;
+    border-left: 0.35rem solid $ex-light-blue;
+    color: $primary-blue;
+    line-height: 1.9;
+  }
+
+  .cycle-figure {
+    margin: 0 0 2rem;
+    padding: 1.25rem 1rem 0.85rem;
+    border: 1px solid rgba($primary-blue, 0.4);
+    background: rgba(#fff, 0.6);
+
+    figcaption {
+      margin-top: 0.5rem;
+      color: $light-blue;
+      font-size: 0.8rem;
+      letter-spacing: 0.06em;
+      text-align: center;
+    }
+  }
+
+  .cycle-chart {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+
+    text {
+      font-size: 12px;
+      letter-spacing: 0.08em;
+    }
+  }
+
+  .cycle-axis {
+    stroke: rgba($primary-blue, 0.35);
+  }
+
+  .cycle-tick {
+    line {
+      stroke: rgba($primary-blue, 0.25);
+      stroke-dasharray: 2 4;
+    }
+
+    text {
+      fill: $light-blue;
+      text-anchor: middle;
+    }
+  }
+
+  .cycle-moon,
+  .cycle-star {
+    fill: none;
+    stroke-width: 2;
+  }
+
+  .cycle-moon {
+    stroke: $primary-blue;
+  }
+
+  .cycle-star {
+    stroke: $light-blue;
+    stroke-dasharray: 6 5;
+  }
+
+  // The moon curve draws itself each time the panel opens.
+  .novel-panel[open] path.cycle-moon {
+    stroke-dasharray: 1200;
+    animation: draw-curve 2.4s $ease-out both;
+  }
+
+  @keyframes draw-curve {
+    from {
+      stroke-dashoffset: 1200;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  .cycle-label text {
+    fill: $content-color;
+    font-size: 13px;
+  }
+
+  .cycle-legend text {
+    fill: $light-blue;
+  }
+
+  // Responsive -------------------------------------------------------------
+
+  @media (max-width: 850px) {
+    .scene-frame {
+      justify-content: flex-end;
+      padding: 8rem 1.5rem 5.5rem;
+    }
+
+    .scene-intro .scene-frame {
+      justify-content: center;
+    }
+
+    .stage-shade {
+      background:
+        linear-gradient(180deg, rgba($night, 0.5) 0%, rgba($night, 0) 24%, rgba($night, 0) 42%, rgba($night, 0.82) 78%, rgba($night, 0.92) 100%);
+    }
+
+    .stage-mist {
+      background: radial-gradient(ellipse 80% 45% at 50% 40%, rgba($mist, 0.6) 0%, rgba($mist, 0.92) 65%, $mist 100%);
+    }
+
+    .intro-copy h1 {
+      letter-spacing: 0.16em;
+    }
+
+    .scroll-cue {
+      bottom: 2.5rem;
+      left: 1.5rem;
+      font-size: 0.78rem;
+    }
+
+    .verse {
+      max-width: none;
+    }
+
+    .verse-heading {
+      margin-bottom: 1rem;
+    }
+
+    .verse-lines {
+      font-size: 1.2rem;
+      line-height: 1.8;
+    }
+
+    .verse-source {
+      margin-top: 1rem;
+      font-size: 0.82rem;
+    }
+
+    .hotspot-trigger {
+      --ring-size: 2.3rem;
+    }
+
+    .hotspot-label {
+      font-size: 0.85rem;
+    }
+
+    .novel-panel {
+      inset: auto 0 0;
+      width: 100vw;
+      height: 90dvh;
+      border-top: 1px solid rgba($primary-blue, 0.78);
+      border-left: 0;
+
+      &[open] {
+        animation-name: panel-up;
+      }
+
+      &.is-closing {
+        animation-name: panel-down;
+      }
+    }
+
+    .panel-header {
+      padding: 1.5rem 1.25rem 1rem;
+    }
+
+    .panel-title {
+      margin-right: 3rem;
+    }
+
+    .panel-close {
+      top: 1.25rem;
+      right: 1.25rem;
+    }
+
+    .panel-body {
+      padding: 1.5rem 1.25rem 3rem;
+    }
+
+    .prose {
+      font-size: 0.95rem;
+      line-height: 1.95;
+    }
+
+    .chapter-entry {
+      grid-template-columns: 2.5rem minmax(0, 1fr) 1rem;
+      padding: 0.9rem 1rem;
+    }
+
+    .reader-pager {
+      grid-template-columns: 1fr;
+    }
+
+    .character-header {
+      padding-right: 5rem;
+
+      &::before,
+      &::after {
+        right: 1.5rem;
+        width: 2.5rem;
+        height: 2.5rem;
+      }
+    }
+
+    .character-name {
+      font-size: 1.6rem;
+    }
+
+    .chapter-rail {
+      right: 0.85rem;
+      top: 38%;
+
+      .rail-numeral,
+      .rail-title {
+        display: none;
+      }
+
+      a {
+        width: 0.5rem;
+        height: 0.8rem;
+      }
+    }
+
+    .motion-toggle {
+      right: 1.5rem;
+      bottom: 1.5rem;
+
+      .motion-label {
+        display: none;
+      }
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global(html:has(.novel)) {
+      scroll-behavior: auto;
+    }
+
+    .is-ready .stage-camera,
+    .is-ready .hotspot-layer,
+    .stage-drift {
+      transition: none;
+    }
+
+    .hotspot-ring::after,
+    .scroll-cue::after,
+    .novel-panel,
+    .novel-panel::backdrop,
+    .character-card,
+    .novel-panel[open] path.cycle-moon {
+      animation: none;
+    }
+
+    .swap > span {
+      transition: none;
+    }
+
+    .verse-line,
+    .verse-source,
+    .verse-heading,
+    .outro-copy,
+    .intro-copy {
+      filter: none;
+    }
+
+    .stage-video {
+      filter: none;
+    }
+  }
+</style>

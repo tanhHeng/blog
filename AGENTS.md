@@ -76,7 +76,11 @@ This repository contains `TANH.MOE`, a personal editorial blog for tanh_Heng. It
 
 ### Page and layout architecture
 
-Astro file-based routing exposes files under `src/pages/` as routes. The current content routes are `/` and `/articles/reading-test`; the navbar also advertises `/about` and `/novel`, but those routes do not currently have corresponding page files, so treat them as planned or incomplete navigation targets rather than implemented features.
+Astro file-based routing exposes files under `src/pages/` as routes. The current content routes are `/`, `/articles`, `/articles/reading-test`, and `/novel`; the navbar also advertises `/about`, which does not currently have a page file, so treat it as a planned navigation target rather than an implemented feature.
+
+`src/pages/novel.astro` is a self-contained immersive page: a fixed looping video stage (`public/novel/`) whose camera pans and zooms to per-scene focus points, blur-revealed verse sections, and a chapter rail. Interaction is text-only: each scene's in-image hotspot label swaps to its destination on hover/focus and opens a `<dialog>` reading panel (prologue, chapter list and reader, character codex, world-building with a night-phase cycle chart); the outro repeats every hotspot plus a cue that scrolls back to the opening. Scene excerpts, hotspot labels, and focus coordinates live in the page's `scenes` array; coordinates are percentages of the video frame. It hides the site-wide circle texture and footnote; verify desktop, narrow, and reduced-motion behavior when changing it.
+
+The novel text lives in `src/novel/flowe-orld.md` (not a route). `src/lib/novel.ts` splits its compiled HTML by heading: `# 序章`, volume `#` headings holding `## Chapter NN / Title` with `###` sections, and `# 谐相记录图鉴` holding a `## … / 世界观` section plus `## affinity / name` character sections whose `label：value` paragraphs become profile fields. Keep that heading structure when editing the draft; the build fails if a required section is missing.
 
 The shared layout stack is:
 
