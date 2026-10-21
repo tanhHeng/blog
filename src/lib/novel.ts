@@ -144,7 +144,7 @@ export const chapters: Chapter[] = sections
 
 if (chapters.length === 0) throw new Error('Novel draft src/novel/flowe-orld.md has no `## Chapter NN / Title` heading.');
 
-const codexBlock = ensure(sections.find((block) => block.title === '谐相记录图鉴'), 'the `# 谐相记录图鉴` section');
+const codexBlock = ensure(sections.find((block) => block.title === '谐相图鉴'), 'the `# 谐相图鉴` section');
 const worldBlock = ensure(codexBlock.children.find((block) => block.title.includes('世界观')), 'the `## … / 世界观` section');
 const [worldTitle, worldLabel] = splitTitle(worldBlock.title);
 
