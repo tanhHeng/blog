@@ -71,7 +71,7 @@ const pianoKeys = [...octave, ...octave];
 						<p class="tag">{interest}</p>
 					))}
 				</div>
-				<p class="about-signature" data-reveal>tanh_Heng</p>
+				<span class="about-signature" role="img" aria-label="tanh_Heng" data-reveal></span>
 			</section>
 			<section class="recent-content" hidden>
 				<div class="recent-heading" data-reveal>
@@ -1043,11 +1043,12 @@ p {
 
 	.about-signature {
 		align-self: flex-end;
-		color: $light-blue;
-		font-family: $font-family-special;
-		font-size: 2.75rem;
-		// Italianno's glyph box is ~1.25em; a tighter line box spills into the section's scroll height.
-		line-height: 1.25;
+		width: 9.5rem;
+		aspect-ratio: 366 / 164;
+		margin-top: 0.25rem;
+		// The SVG is used as a mask so the ink takes the palette colour instead of its own fill.
+		background: $light-blue;
+		mask: url("/svg/signature.svg") center / contain no-repeat;
 	}
 }
 
@@ -1419,7 +1420,7 @@ p {
 		}
 
 		.about-signature {
-			font-size: 2.25rem;
+			width: 7.5rem;
 		}
 	}
 
