@@ -573,6 +573,11 @@ const isExternal = (href: string) => href.startsWith('http');
 }
 
 @media (max-width: 900px) {
+  // Same top clearance as the article archive on phones, so the title does not sit against the navbar.
+  .about-page {
+    padding: 6.5rem 1.25rem 3.5rem;
+  }
+
   .about-grid {
     grid-template-columns: 1fr;
   }
