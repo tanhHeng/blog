@@ -1,6 +1,8 @@
-# TANH.MOE
+<div align="center">
+  <img src="./banner.svg" alt="TANH.MOE banner" width="80%" />
+</div>
 
-![TANH.MOE banner](./banner.svg)
+# TANH.MOE
 
 Hi, I'm **tanh_Heng** (tanh丶桁): a deep learning enthusiast and amateur graphic designer exploring the space between code, algorithms, and visual design.
 
