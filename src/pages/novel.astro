@@ -2086,8 +2086,13 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
       padding: 8rem 1.5rem 5.5rem;
     }
 
+    // Anchored to the bottom rather than centred, so the title keeps a fixed distance above the scroll cue.
+    // The frame tracks the visible viewport (`dvh`), so when the mobile toolbars collapse the cue and title follow
+    // the screen bottom down; the scene keeps its `svh` height, so scroll stops do not move.
     .scene-intro .scene-frame {
-      justify-content: center;
+      justify-content: flex-end;
+      height: 100dvh;
+      padding-bottom: calc(11rem + env(safe-area-inset-bottom));
     }
 
     .stage-shade {
