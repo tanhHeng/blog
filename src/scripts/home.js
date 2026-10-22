@@ -568,3 +568,48 @@ onPageLoad((scope) => {
 			attributeFilter: ['class', 'hidden'],
 		});
 	});
+
+// Footer friend link (shown on narrow screens): cycles through the friend list.
+onPageLoad((scope) => {
+	const link = document.querySelector('[data-friend-rotator]');
+	if (!link) return;
+	const friends = JSON.parse(link.dataset.friends ?? '[]');
+	if (friends.length < 2) return;
+	const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+	let index = 0;
+
+	const name = link.querySelector('.footnote-friend-name');
+	if (!name) return;
+	const show = () => {
+		index = (index + 1) % friends.length;
+		link.href = friends[index].url;
+		name.textContent = friends[index].name;
+	};
+	let animation;
+	const roll = (keyframes) => {
+		animation = name.animate(keyframes, { duration: 260, easing: 'cubic-bezier(0.65, 0, 0.35, 1)', fill: 'forwards' });
+		return animation.finished;
+	};
+	scope.cleanup(() => animation?.cancel());
+
+	// Like a scrolling counter: the old name drops out downwards, the new one rolls in from above,
+	// while the link width eases to the new name so Contact and GitHub glide into place.
+	const switchFriend = async () => {
+		link.style.width = `${link.getBoundingClientRect().width}px`;
+		await roll([{ opacity: 1, translate: '0 0' }, { opacity: 0, translate: '0 0.25rem' }]);
+		show();
+		link.style.width = `${name.getBoundingClientRect().width}px`;
+		await roll([{ opacity: 0, translate: '0 -0.25rem' }, { opacity: 1, translate: '0 0' }]);
+	};
+
+	const cycle = () => {
+		// Hold while the link is hovered or focused so it never changes under the pointer.
+		if (!link.matches(':hover, :focus-visible')) {
+			if (reducedMotion.matches) show();
+			else switchFriend().catch(() => {});
+		}
+		scope.timeout(cycle, 3000);
+	};
+	scope.timeout(cycle, 3000);
+	scope.cleanup(() => link.style.removeProperty('width'));
+});

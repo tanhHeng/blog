@@ -124,7 +124,8 @@ const codaKeys = pianoKeys.map((black, index) => {
 				<nav class="footnote-links" aria-label="Footer links" data-reveal>
 					<a class="link-underline" href="mailto:contact@tanh.moe">Contact</a>
 					<a class="link-underline" href="https://github.com/tanhHeng/blog" target="_blank" rel="noreferrer">GitHub</a>
-					<a class="link-underline" href="https://blog.arcadia.moe" target="_blank" rel="noreferrer">4rcadia</a>
+					<a class="link-underline footnote-friend-static" href="https://blog.arcadia.moe" target="_blank" rel="noreferrer">4rcadia</a>
+					<a class="link-underline footnote-friend" href={friendLinks[0].url} target="_blank" rel="noreferrer" data-friend-rotator data-friends={JSON.stringify(friendLinks)}><span class="footnote-friend-name">{friendLinks[0].name}</span></a>
 				</nav>
 				<p class="footnote-copyright" data-reveal>Articles: <a class="link-underline" href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans" target="_blank" rel="noreferrer">CC BY-NC-SA 4.0</a> <span>/</span> Code: <a class="link-underline" href="https://gnu.net.cn/licenses/gpl-3.0.html" target="_blank" rel="noreferrer">GPL-3.0</a></p>
 				<a class="coda-top link-underline" href="#chapter-1" data-chapter-link="0" data-reveal>Back to prologue ↑</a>
@@ -782,6 +783,17 @@ p {
       letter-spacing: 0.06em;
       transition: color 180ms ease-out;
     }
+
+    // The script pins `width` to the measured name width, so neighbours slide instead of jumping.
+    .footnote-friend {
+      display: none;
+      white-space: nowrap;
+      transition: color 180ms ease-out, width 420ms cubic-bezier(0.65, 0, 0.35, 1);
+    }
+
+    .footnote-friend-name {
+      display: inline-block;
+    }
   }
 
   .footnote-copyright {
@@ -808,6 +820,19 @@ p {
 }
 
 @media (max-width: 900px) {
+  // On phones the keyboard is too small to play; friends rotate through the footer link instead.
+  .footpage-content {
+    .coda-keys,
+    .footnote-friend-static {
+      display: none;
+    }
+
+    // Same specificity as the base `.footnote-links .footnote-friend { display: none }` so it wins.
+    .footnote-links .footnote-friend {
+      display: inline-block;
+    }
+  }
+
   .footpage-content {
     min-height: 12rem;
 
