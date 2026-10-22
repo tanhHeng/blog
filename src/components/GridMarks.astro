@@ -1,0 +1,250 @@
+---
+// Crisp grid annotations that follow a mouse pointer: the nearest grid row and column light up around it, the
+// nearest intersection gets a marker with its grid coordinate, its neighbours get ticks, and a click sends a
+// ring from that intersection. Drawn unmasked above `DynamicCircles`, whose grid it snaps to.
+---
+
+<div class="grid-marks" id="grid-marks" transition:persist="grid-marks" aria-hidden="true">
+  <span class="grid-line is-row"></span>
+  <span class="grid-line is-column"></span>
+  <span class="grid-tick" style="--dx: -1; --dy: 0"></span>
+  <span class="grid-tick" style="--dx: 1; --dy: 0"></span>
+  <span class="grid-tick" style="--dx: 0; --dy: -1"></span>
+  <span class="grid-tick" style="--dx: 0; --dy: 1"></span>
+  <span class="grid-node"></span>
+  <span class="grid-label"></span>
+</div>
+
+<script>
+  import { onPageLoad } from '../lib/pageLifecycle';
+
+  onPageLoad((scope) => {
+    const layer = document.getElementById('grid-marks');
+    if (!layer || getComputedStyle(layer).display === 'none') return;
+    const label = layer.querySelector<HTMLElement>('.grid-label')!;
+    const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let idleTimer = 0;
+    let frame = 0;
+    let pointerX = 0;
+    let pointerY = 0;
+    let lastCell = '';
+    // Over readable or actionable content the marks nearly vanish, so they never compete with it.
+    const contentSelector = 'a, button, input, textarea, select, summary, label, dialog, img, video, svg, figure, pre, code, table, blockquote, li, p, h1, h2, h3, h4, h5, h6, [role="button"]';
+    let overContent = false;
+    // Content under `pointer-events: none` (the homepage sections, which let the scroll targets beneath take
+    // input) never becomes the event target, so the pointer is also tested against content boxes. Decorative
+    // `aria-hidden` subtrees are skipped: some, like the homepage attraction layer, span the whole viewport.
+    const isContent = (element: Element) => element.closest('[aria-hidden="true"]') === null;
+    const pointsAtContent = (target: EventTarget | null, x: number, y: number) => {
+      const hit = target instanceof Element ? target.closest(contentSelector) : null;
+      if (hit && isContent(hit)) return true;
+      const page = document.querySelector('.page-content');
+      if (!page) return false;
+      for (const element of page.querySelectorAll(contentSelector)) {
+        const box = element.getBoundingClientRect();
+        if (x >= box.left && x <= box.right && y >= box.top && y <= box.bottom && box.width > 0 && isContent(element)) return true;
+      }
+      return false;
+    };
+    let lastTarget: EventTarget | null = null;
+
+    // Same tile as the `DynamicCircles` mask (`min(10vh, 10vw)`, origin at the viewport corner); the SVG tile
+    // draws its cross through the tile centre, so intersections sit at half-tile offsets.
+    const tile = () => Math.min(window.innerWidth, window.innerHeight) * 0.1;
+    const nearest = () => {
+      const size = tile();
+      const column = Math.round(pointerX / size - 0.5);
+      const row = Math.round(pointerY / size - 0.5);
+      return { size, column, row, x: (column + 0.5) * size, y: (row + 0.5) * size };
+    };
+
+    const hide = () => {
+      layer.classList.remove('is-active');
+    };
+    const render = () => {
+      frame = 0;
+      const { size, column, row, x, y } = nearest();
+      layer.style.setProperty('--tile', `${size}px`);
+      layer.style.setProperty('--px', `${pointerX}px`);
+      layer.style.setProperty('--py', `${pointerY}px`);
+      layer.style.setProperty('--gx', `${x}px`);
+      layer.style.setProperty('--gy', `${y}px`);
+      const cell = `${String(column + 1).padStart(2, '0')} · ${String(row + 1).padStart(2, '0')}`;
+      if (cell !== lastCell) {
+        label.textContent = cell;
+        lastCell = cell;
+      }
+      layer.classList.add('is-active');
+      overContent = pointsAtContent(lastTarget, pointerX, pointerY);
+      layer.classList.toggle('is-muted', overContent);
+      scope.clearTimeout(idleTimer);
+      idleTimer = scope.timeout(hide, 2400);
+    };
+
+    scope.listen(document, 'pointermove', (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse' || !finePointer.matches) return;
+      pointerX = event.clientX;
+      pointerY = event.clientY;
+      lastTarget = event.target;
+      if (!frame) frame = scope.frame(render);
+    });
+    scope.listen(document, 'mouseout', (event: MouseEvent) => {
+      if (!event.relatedTarget) hide();
+    });
+    scope.listen(window, 'blur', hide);
+    scope.listen(document, 'pointerdown', (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse' || !finePointer.matches || reducedMotion.matches) return;
+      if (pointsAtContent(event.target, event.clientX, event.clientY)) return;
+      pointerX = event.clientX;
+      pointerY = event.clientY;
+      render();
+      const { x, y } = nearest();
+      const pulse = document.createElement('span');
+      pulse.className = 'grid-pulse';
+      pulse.style.left = `${x}px`;
+      pulse.style.top = `${y}px`;
+      layer.append(pulse);
+      pulse.animate(
+        [{ scale: '0.15', opacity: 1 }, { scale: '1', opacity: 0 }],
+        { duration: 900, easing: 'cubic-bezier(0.2, 0.7, 0.3, 1)' },
+      ).finished.finally(() => pulse.remove());
+    });
+  });
+</script>
+
+<style lang="scss">
+  @use '../styles/global.scss' as *;
+
+  // `--px/--py` is the pointer, `--gx/--gy` the snapped intersection and `--tile` the grid size, all in px.
+  .grid-marks {
+    --tile: 10vmin;
+    --px: -100vw;
+    --py: -100vh;
+    --gx: -100vw;
+    --gy: -100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 500ms ease-out;
+
+    &.is-active {
+      opacity: 0.75;
+      transition-duration: 300ms;
+    }
+
+    &.is-active.is-muted {
+      opacity: 0.03;
+    }
+  }
+
+  // Grid lines fade out about two tiles from the pointer and glide when they snap to the next line.
+  .grid-line {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transition: translate 260ms cubic-bezier(0.2, 0.7, 0.3, 1);
+
+    &.is-row {
+      width: 100%;
+      height: 1px;
+      translate: 0 calc(var(--gy) - 0.5px);
+      background: linear-gradient(90deg, transparent calc(var(--px) - var(--tile) * 2), rgba($primary-blue, 0.35) var(--px), transparent calc(var(--px) + var(--tile) * 2));
+    }
+
+    &.is-column {
+      width: 1px;
+      height: 100%;
+      translate: calc(var(--gx) - 0.5px) 0;
+      background: linear-gradient(180deg, transparent calc(var(--py) - var(--tile) * 2), rgba($primary-blue, 0.35) var(--py), transparent calc(var(--py) + var(--tile) * 2));
+    }
+  }
+
+  .grid-node,
+  .grid-tick,
+  .grid-label,
+  .grid-pulse {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+
+  .grid-node {
+    width: 7px;
+    height: 7px;
+    border: 1px solid rgba($primary-blue, 0.7);
+    background: rgba($primary-blue, 0.08);
+    translate: calc(var(--gx) - 50%) calc(var(--gy) - 50%);
+    rotate: 45deg;
+    transition: translate 260ms cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+
+  .grid-tick {
+    width: 9px;
+    height: 9px;
+    translate: calc(var(--gx) + var(--dx) * var(--tile) - 50%) calc(var(--gy) + var(--dy) * var(--tile) - 50%);
+    opacity: 0.4;
+    transition: translate 320ms cubic-bezier(0.2, 0.7, 0.3, 1);
+
+    &::before,
+    &::after {
+      content: '';
+      position: absolute;
+      background: $primary-blue;
+    }
+
+    &::before {
+      top: 4px;
+      left: 0;
+      width: 9px;
+      height: 1px;
+    }
+
+    &::after {
+      top: 0;
+      left: 4px;
+      width: 1px;
+      height: 9px;
+    }
+  }
+
+  .grid-label {
+    translate: calc(var(--gx) + 0.6rem) calc(var(--gy) + 0.45rem);
+    color: $light-blue;
+    font-family: $font-family-heading;
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    white-space: nowrap;
+    transition: translate 260ms cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+
+  .grid-pulse {
+    width: calc(var(--tile) * 2);
+    height: calc(var(--tile) * 2);
+    border: 1px solid rgba($primary-blue, 0.35);
+    border-radius: 50%;
+    translate: -50% -50%;
+  }
+
+  @media not ((hover: hover) and (pointer: fine)) {
+    .grid-marks {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .grid-marks,
+    .grid-line,
+    .grid-node,
+    .grid-tick,
+    .grid-label {
+      transition: none;
+    }
+  }
+</style>

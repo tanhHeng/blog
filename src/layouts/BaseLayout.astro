@@ -2,6 +2,7 @@
 import { ClientRouter } from 'astro:transitions';
 import Navbar from '../components/Navbar.astro';
 import DynamicCircles from '../components/DynamicCircles.astro';
+import GridMarks from '../components/GridMarks.astro';
 import MouseCircle from '../components/MouseCircle.astro';
 import PageTransitionVeil from '../components/PageTransitionVeil.astro';
 import '../styles/global.scss';
@@ -41,6 +42,7 @@ const variant = transition?.variant ?? (Astro.url.pathname === '/' ? 'home' : ac
   </head>
   <body>
     <DynamicCircles />
+    <GridMarks />
     <MouseCircle />
     <Navbar activePage={activePage} />
     <PageTransitionVeil />

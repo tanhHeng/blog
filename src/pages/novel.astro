@@ -753,8 +753,8 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     background: $night;
   }
 
-  // The fixed stage covers the site-wide circle textures; they would only add noise behind the video.
-  :global(body:has(.novel) .dynamic-circles-container) {
+  // The fixed stage covers the site-wide circle textures and grid marks; they would only add noise behind the video.
+  :global(body:has(.novel) :is(.dynamic-circles-container, .grid-marks)) {
     display: none;
   }
 
