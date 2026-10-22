@@ -46,6 +46,7 @@ const variant = transition?.variant ?? (Astro.url.pathname === '/' ? 'home' : ac
     <div class="page-content">
       <slot />
     </div>
+    {showFootnote && <div class="footnote-spacer" aria-hidden="true"></div>}
     {showFootnote && <footer class="site-footnote" aria-label="Site footnote">
       <div class="footnote-rule" aria-hidden="true">
         <span></span>
@@ -67,17 +68,37 @@ const variant = transition?.variant ?? (Astro.url.pathname === '/' ? 'home' : ac
 <script>
   import '../lib/transitionCoordinator';
   import { onPageLoad } from '../lib/pageLifecycle';
+  // The footnote is fixed to the viewport bottom; an in-flow spacer of the same height lets the reader scroll
+  // past the content end. `--reveal` (0–1) drives the footnote's opacity over the last `fadeDistance` of scroll,
+  // reaching 1 exactly at the page bottom. It is also capped by how far the reader has scrolled, so a page that
+  // barely scrolls never shows the footnote over its content before any scrolling happens.
   onPageLoad((scope) => {
     const footnote = document.querySelector<HTMLElement>('.site-footnote');
-    if (!footnote) return;
-    const updateFootnoteVisibility = () => {
-      const revealOffset = 160;
-      const atPageBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - revealOffset;
-      footnote.classList.toggle('is-visible', atPageBottom);
+    const spacer = document.querySelector<HTMLElement>('.footnote-spacer');
+    if (!footnote || !spacer) return;
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const height = footnote.offsetHeight;
+      spacer.style.height = `${height}px`;
+      const fadeDistance = height * 0.4;
+      const remaining = document.documentElement.scrollHeight - (window.scrollY + window.innerHeight);
+      const toBottom = 1 - remaining / fadeDistance;
+      const scrolled = window.scrollY / fadeDistance;
+      const reveal = Math.min(1, Math.max(0, Math.min(toBottom, scrolled)));
+      footnote.style.setProperty('--reveal', reveal.toFixed(3));
+      footnote.classList.toggle('is-visible', reveal > 0.6);
     };
-    scope.listen(window, 'scroll', updateFootnoteVisibility, { passive: true });
-    scope.listen(window, 'resize', updateFootnoteVisibility);
-    updateFootnoteVisibility();
+    const request = () => {
+      if (!frame) frame = scope.frame(update);
+    };
+    const resize = new ResizeObserver(request);
+    resize.observe(footnote);
+    resize.observe(document.body);
+    scope.observe(resize);
+    scope.listen(window, 'scroll', request, { passive: true });
+    scope.listen(window, 'resize', request);
+    update();
   });
 </script>
 <style lang="scss">
@@ -95,10 +116,18 @@ const variant = transition?.variant ?? (Astro.url.pathname === '/' ? 'home' : ac
     flex: 1 0 auto;
   }
 
+  .footnote-spacer {
+    flex: none;
+    height: 15rem;
+  }
+
   .site-footnote {
-    position: sticky;
+    --reveal: 0;
+    position: fixed;
+    right: 0;
     bottom: 0;
-    z-index: 0;
+    left: 0;
+    z-index: 2;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -106,17 +135,12 @@ const variant = transition?.variant ?? (Astro.url.pathname === '/' ? 'home' : ac
     box-sizing: border-box;
     min-height: 15rem;
     padding: 3rem 1.5rem 2.5rem;
-    background: rgba(#fff, 0.68);
-    backdrop-filter: blur(16px);
     color: $light-blue;
-    mask-image: linear-gradient(to bottom, transparent, #000 1.75rem, #000);
     text-align: center;
-    opacity: 0;
+    opacity: var(--reveal);
     pointer-events: none;
-    transition: opacity 240ms ease-out;
 
     &.is-visible {
-      opacity: 1;
       pointer-events: auto;
     }
   }
