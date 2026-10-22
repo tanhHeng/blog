@@ -983,7 +983,9 @@ p {
 	}
 
 	.footpage-content {
-		padding-bottom: 0;
+		// The hover underline of "Back to prologue" hangs 0.2rem below the text; keep it inside the
+		// scrolling section so revealing it does not create overflow.
+		padding-bottom: 0.5rem;
 		text-align: center;
 
 		// Sections scroll (`overflow-y: auto`) in this layout, which clips the friend name floating above
