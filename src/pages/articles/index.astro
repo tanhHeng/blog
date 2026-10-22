@@ -1,6 +1,5 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import GridTexture from '../../components/GridTexture.astro';
 import RotatingCircles from '../../components/RotatingCircles.astro';
 import { articles, titleOrder } from '../../lib/articles';
 
@@ -36,7 +35,6 @@ const pluralArticles = (count: number) => `${count} ${count === 1 ? 'article' : 
 
 <BaseLayout activePage="Article" title="Articles | TANH.MOE" description={description} transition={{ variant: 'article', kicker: 'Archive', numeral: formatIndex(articles.length), caption: pluralArticles(articles.length) }}>
   <div class="archive-decoration" aria-hidden="true">
-    <GridTexture />
     <RotatingCircles />
     <p class="archive-edge-words">math<br />physics<br />geography</p>
   </div>
