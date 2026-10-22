@@ -9,11 +9,18 @@ const formatIndex = (index: number) => String(index).padStart(2, '0');
 // Two piano octaves; `true` marks a black key. Shared by the section sweep and the coda ornament.
 const octave = [false, true, false, true, false, false, true, false, true, false, true, false];
 const pianoKeys = [...octave, ...octave];
-// Coda ornament: white keys sit edge to edge; each black key straddles the seam after `whiteBefore` white keys.
+// Friend links played by the coda keys; keys cycle through the list in keyboard order.
+const friendLinks = [
+	{ name: '4rcadia', url: 'https://blog.arcadia.moe' },
+	{ name: 'BFladderbean', url: 'https://bfladderbean.me' },
+	{ name: 'Tianya', url:'https://tianya.martianya.cloud/'},
+	{ name: 'InkBai', url:'https://inkbai.fun/'}
+];
+// Coda ornament: white keys stand apart; each black key straddles the gap after `whiteBefore` white keys.
 let whiteCount = 0;
 const codaKeys = pianoKeys.map((black, index) => {
 	if (!black) whiteCount += 1;
-	return { black, index, whiteBefore: whiteCount };
+	return { black, index, whiteBefore: whiteCount, friend: friendLinks[index % friendLinks.length] };
 });
 ---
 
@@ -109,10 +116,10 @@ const codaKeys = pianoKeys.map((black, index) => {
 				)}
 			</section>
 			<section class="footpage-content" hidden>
-				<div class="coda-keys" aria-hidden="true" data-reveal>
-					{codaKeys.filter((key) => !key.black).map((key) => <span class="coda-white" style={`--key-index: ${key.index}`}></span>)}
-					{codaKeys.filter((key) => key.black).map((key) => <span class="coda-black" style={`--key-index: ${key.index}; --seam: ${key.whiteBefore}`}></span>)}
-				</div>
+				<nav class="coda-keys" aria-label="Friend links" data-reveal>
+					{codaKeys.filter((key) => !key.black).map((key) => <a class="coda-white" href={key.friend.url} target="_blank" rel="noreferrer" style={`--key-index: ${key.index}`}><span class="key-friend">{key.friend.name}</span></a>)}
+					{codaKeys.filter((key) => key.black).map((key) => <a class="coda-black" href={key.friend.url} target="_blank" rel="noreferrer" style={`--key-index: ${key.index}; --seam: ${key.whiteBefore}`}><span class="key-friend">{key.friend.name}</span></a>)}
+				</nav>
 				<p class="signature" data-reveal><span>Life is Piano.</span><span>You are Pianist.</span></p>
 				<nav class="footnote-links" aria-label="Footer links" data-reveal>
 					<a class="link-underline" href="mailto:contact@tanh.moe">Contact</a>
@@ -662,15 +669,45 @@ p {
     gap: var(--white-gap);
     height: 3rem;
 
-    span {
+    > a {
       box-sizing: border-box;
       transition:
-        transform 220ms ease-out calc(var(--key-index) * 18ms),
-        border-color 220ms ease-out calc(var(--key-index) * 18ms),
-        background-color 220ms ease-out calc(var(--key-index) * 18ms);
+        transform 220ms ease-out,
+        border-color 220ms ease-out,
+        background-color 220ms ease-out;
+
+      &:hover,
+      &:focus-visible {
+        z-index: 1;
+        transform: translateY(3px);
+        outline: none;
+      }
+    }
+
+    // Friend name floats up out of the hovered key.
+    .key-friend {
+      position: absolute;
+      bottom: calc(100% + 0.4rem);
+      left: 50%;
+      color: $primary-blue;
+      font-family: $font-family-heading;
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      translate: -50% 0.6rem;
+      transition: opacity 260ms ease-out, translate 420ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    > a:hover .key-friend,
+    > a:focus-visible .key-friend {
+      opacity: 1;
+      translate: -50% 0;
     }
 
     .coda-white {
+      position: relative;
       width: var(--white-width);
       height: 100%;
       border: 1px solid $ex-light-blue;
@@ -681,6 +718,8 @@ p {
 
     .coda-black {
       position: absolute;
+      // Above white keys even while a hovered white key is lifted to z-index 1.
+      z-index: 2;
       top: 0;
       left: calc(var(--seam) * (var(--white-width) + var(--white-gap)) - var(--white-gap) / 2);
       width: calc(var(--white-width) * 0.7);
@@ -691,15 +730,14 @@ p {
 	  border-bottom-right-radius: 1px;
       translate: -50% 0;
     }
-    &:hover span {
-      transform: translateY(3px);
-    }
 
-    &:hover .coda-white {
+    .coda-white:hover,
+    .coda-white:focus-visible {
       border-color: $primary-blue;
     }
 
-    &:hover .coda-black {
+    .coda-black:hover,
+    .coda-black:focus-visible {
       background: $primary-blue;
     }
   }
@@ -922,6 +960,12 @@ p {
 	.footpage-content {
 		padding-bottom: 0;
 		text-align: center;
+
+		// Sections scroll (`overflow-y: auto`) in this layout, which clips the friend name floating above
+		// the keys; reserve room for it inside the section.
+		.coda-keys {
+			margin-top: 1.75rem;
+		}
 
 		.signature {
 			margin-top: 1.5rem;
