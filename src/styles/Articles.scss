@@ -817,14 +817,6 @@
   overflow: hidden;
   pointer-events: none;
 }
-.archive-grid-texture {
-  position: absolute;
-  inset: 15% 40% 0 0;
-  background: url("/svg/grid-decoration.svg") repeat;
-  background-size: 164px;
-  mask-image: radial-gradient(ellipse, #000, transparent 72%);
-  opacity: 0.4;
-}
 .archive-edge-words {
   position: absolute;
   right: 2.5rem;
@@ -948,10 +940,6 @@
   .articles-page .article-description {
     font-size: 0.85rem;
     line-height: 1.75;
-  }
-  .archive-grid-texture {
-    inset: 0 0 60%;
-    opacity: 0.2;
   }
 }
 

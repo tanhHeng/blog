@@ -87,8 +87,9 @@ The novel text lives in `src/novel/flowe-orld.md` (not a route). `src/lib/novel.
 The shared layout stack is:
 
 1. `BaseLayout.astro` owns the HTML document, metadata, favicon, language attribute, global styles, navbar, animated background circles, desktop mouse-following circle, and the page transition (`transition` prop).
-2. `PageLayout.astro` wraps general pages (homepage, 404) with optional text decorations and the homepage hero artwork.
-3. `ArticleLayout.astro` wraps Markdown articles with article metadata, reading content, a generated table of contents, article-specific decorations, and `lang="zh-CN"` metadata.
+2. `ArticleLayout.astro` wraps Markdown articles with article metadata, reading content, a generated table of contents, article-specific decorations, and `lang="zh-CN"` metadata.
+
+The homepage and 404 use `BaseLayout.astro` directly and place `TextDecorations` and `HeroSection` themselves. The article archive and About page share `GridTexture.astro`, whose tiles match the size and origin of the `DynamicCircles` grid mask so the two grids coincide.
 
 Astro `<ClientRouter />` enables same-origin client-side routing while preserving full-page fallback for unsupported routes. `BaseLayout.astro` installs it in the shared head, persists the navbar, background circles, pointer circle, and transition veil, and supplies route-transition metadata on `<html>`. `transitionCoordinator.ts` starts the variant-specific veil during `astro:before-preparation`, runs loading and cover animation concurrently, updates the veil from the incoming document before swap, then reveals after `astro:page-load`; `prefers-reduced-motion` skips the veil animation. The navbar keeps one live DOM node and synchronizes its active link from the incoming document before swap.
 

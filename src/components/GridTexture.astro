@@ -1,0 +1,28 @@
+---
+// Faded grid behind the archive-style pages. Place it inside a fixed, viewport-sized decoration layer.
+// The tiles share size and origin with the site-wide circle mask (`DynamicCircles.astro`), so the circles
+// light up these same lines instead of drawing a second, offset grid. Keep both in sync.
+---
+
+<div class="grid-texture" aria-hidden="true"></div>
+
+<style lang="scss">
+  // The layer covers the whole viewport so its tiles start at the viewport origin; the radial mask alone
+  // picks the visible region (desktop: lower-left 60% × 85%; phones: top 40%). Ellipse radii are the
+  // region's half-size × √2, matching the `farthest-corner` ellipse of a box that size.
+  .grid-texture {
+    position: absolute;
+    inset: 0;
+    background: url('/svg/grid-decoration.svg') repeat;
+    background-size: min(10vh, 10vw);
+    mask-image: radial-gradient(42.4% 60.1% at 30% 57.5%, #000, transparent 72%);
+    opacity: 0.4;
+  }
+
+  @media (max-width: 900px) {
+    .grid-texture {
+      mask-image: radial-gradient(70.7% 28.3% at 50% 20%, #000, transparent 72%);
+      opacity: 0.2;
+    }
+  }
+</style>

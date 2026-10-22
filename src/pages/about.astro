@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import GridTexture from '../components/GridTexture.astro';
 import RotatingCircles from '../components/RotatingCircles.astro';
 
 // Profile copy follows the GitHub profile README (github.com/tanhHeng/tanhHeng); keep both in sync.
@@ -47,7 +48,7 @@ const isExternal = (href: string) => href.startsWith('http');
 
 <BaseLayout activePage="About" lang="zh-CN" title="关于 | TANH.MOE" description={description} transition={{ variant: 'article', kicker: '关于', numeral: 'tanh丶桁', caption: motto }}>
   <div class="about-decoration" aria-hidden="true">
-    <div class="about-grid-texture"></div>
+    <GridTexture />
     <RotatingCircles />
   </div>
 
@@ -157,15 +158,6 @@ const isExternal = (href: string) => href.startsWith('http');
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-}
-
-.about-grid-texture {
-  position: absolute;
-  inset: 15% 40% 0 0;
-  background: url('/svg/grid-decoration.svg') repeat;
-  background-size: 164px;
-  mask-image: radial-gradient(ellipse, #000, transparent 72%);
-  opacity: 0.4;
 }
 
 .about-page {
@@ -589,11 +581,6 @@ const isExternal = (href: string) => href.startsWith('http');
 
   .about-sidebar {
     position: static;
-  }
-
-  .about-grid-texture {
-    inset: 0 0 60%;
-    opacity: 0.2;
   }
 
   .project-link {

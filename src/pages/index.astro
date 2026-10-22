@@ -1,5 +1,7 @@
 ---
-import PageLayout from '../layouts/PageLayout.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import HeroSection from '../components/HeroSection.astro';
+import TextDecorations from '../components/TextDecorations.astro';
 import { articles } from '../lib/articles';
 import { friendLinks } from '../lib/friends';
 import '../styles/global.scss';
@@ -18,7 +20,8 @@ const codaKeys = pianoKeys.map((black, index) => {
 });
 ---
 
-<PageLayout title="TANH.MOE | Personal Blog" showFootnote={false} showLeftText={false}>
+<BaseLayout title="TANH.MOE | Personal Blog" showFootnote={false}>
+	<TextDecorations showLeft={false} />
 	<nav class="chapter-rail" aria-label="Homepage chapters">
 		<p class="chapter-cue"><span aria-hidden="true"></span>Scroll to explore</p>
 		<ol>
@@ -130,7 +133,8 @@ const codaKeys = pianoKeys.map((black, index) => {
 			<line class="circle-attraction-line" x1="0" y1="0" x2="0" y2="0"></line>
 		))}
 	</svg>
-</PageLayout>
+	<HeroSection />
+</BaseLayout>
 
 <script src="../scripts/home.js"></script>
 
