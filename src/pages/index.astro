@@ -9,6 +9,12 @@ const formatIndex = (index: number) => String(index).padStart(2, '0');
 // Two piano octaves; `true` marks a black key. Shared by the section sweep and the coda ornament.
 const octave = [false, true, false, true, false, false, true, false, true, false, true, false];
 const pianoKeys = [...octave, ...octave];
+// Coda ornament: white keys sit edge to edge; each black key straddles the seam after `whiteBefore` white keys.
+let whiteCount = 0;
+const codaKeys = pianoKeys.map((black, index) => {
+	if (!black) whiteCount += 1;
+	return { black, index, whiteBefore: whiteCount };
+});
 ---
 
 <PageLayout title="TANH.MOE | Personal Blog" showFootnote={false} showLeftText={false}>
@@ -104,7 +110,8 @@ const pianoKeys = [...octave, ...octave];
 			</section>
 			<section class="footpage-content" hidden>
 				<div class="coda-keys" aria-hidden="true" data-reveal>
-					{pianoKeys.map((black, index) => <span class:list={{ 'is-black': black }} style={`--key-index: ${index}`}></span>)}
+					{codaKeys.filter((key) => !key.black).map((key) => <span class="coda-white" style={`--key-index: ${key.index}`}></span>)}
+					{codaKeys.filter((key) => key.black).map((key) => <span class="coda-black" style={`--key-index: ${key.index}; --seam: ${key.whiteBefore}`}></span>)}
 				</div>
 				<p class="signature" data-reveal><span>Life is Piano.</span><span>You are Pianist.</span></p>
 				<nav class="footnote-links" aria-label="Footer links" data-reveal>
@@ -645,33 +652,55 @@ p {
   color: $light-blue;
   text-align: center;
 
+  // White keys stand apart with a small gap; black keys straddle the gaps from the top. A ring in the
+  // page colour keeps a narrow gap between each black key and the white keys around it.
   .coda-keys {
+    --white-width: 0.75rem;
+    --white-gap: 2px;
+    position: relative;
     display: flex;
-    align-items: flex-start;
-    gap: 3px;
-    height: 2.6rem;
+    gap: var(--white-gap);
+    height: 3rem;
 
     span {
-      width: 0.6rem;
-      height: 100%;
-      border: 1px solid $ex-light-blue;
-      border-top: none;
-      border-radius: 0 0 2px 2px;
+      box-sizing: border-box;
       transition:
         transform 220ms ease-out calc(var(--key-index) * 18ms),
-        border-color 220ms ease-out calc(var(--key-index) * 18ms);
-
-      &.is-black {
-        width: 0.35rem;
-        height: 62%;
-        border-color: $light-blue;
-        background: $light-blue;
-      }
+        border-color 220ms ease-out calc(var(--key-index) * 18ms),
+        background-color 220ms ease-out calc(var(--key-index) * 18ms);
     }
 
+    .coda-white {
+      width: var(--white-width);
+      height: 100%;
+      border: 1px solid $ex-light-blue;
+	  border-bottom-left-radius: 3px;
+	  border-bottom-right-radius: 3px;
+      border-top: none;
+    }
+
+    .coda-black {
+      position: absolute;
+      top: 0;
+      left: calc(var(--seam) * (var(--white-width) + var(--white-gap)) - var(--white-gap) / 2);
+      width: calc(var(--white-width) * 0.7);
+      height: 65%;
+      background: $light-blue;
+      box-shadow: 0 0 0 2px #fff;
+	  border-bottom-left-radius: 1px;
+	  border-bottom-right-radius: 1px;
+      translate: -50% 0;
+    }
     &:hover span {
       transform: translateY(3px);
+    }
+
+    &:hover .coda-white {
       border-color: $primary-blue;
+    }
+
+    &:hover .coda-black {
+      background: $primary-blue;
     }
   }
 
