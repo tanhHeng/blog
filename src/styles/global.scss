@@ -25,16 +25,6 @@ html {
   font-family: $font-family-default;
 }
 
-// Browser-native cross-document view transitions; each page styles its own arrival in `PageTransitionVeil.astro`.
-@view-transition {
-  navigation: auto;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  @view-transition {
-    navigation: none;
-  }
-}
 
 .link-underline {
   position: relative;

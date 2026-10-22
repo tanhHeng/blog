@@ -88,22 +88,24 @@ The shared layout stack is:
 2. `PageLayout.astro` wraps general pages (homepage, 404) with optional text decorations and the homepage hero artwork.
 3. `ArticleLayout.astro` wraps Markdown articles with article metadata, reading content, a generated table of contents, article-specific decorations, and `lang="zh-CN"` metadata.
 
-Page transitions are browser-native cross-document view transitions (`@view-transition` in `global.scss`), not Astro's `<ClientRouter />`, so every page keeps full-page navigation and its scripts run normally. Browsers without support simply navigate. The page being entered styles the whole transition: `BaseLayout.astro` applies `transition:name="root"` plus `transition:animate` from `src/lib/pageTransitions.ts` (`home`, `article`, `novel`; pages without a `transition` prop, such as 404 and the missing `/about`, get a plain fade), and renders `PageTransitionVeil.astro`, an overlay that only displays while an inline `pagereveal` script marks `html.vt-arriving`. Only `forwards` animations apply without the router. Veil timings are tuned to the root durations; change them together.
+Astro `<ClientRouter />` enables same-origin client-side routing while preserving full-page fallback for unsupported routes. `BaseLayout.astro` installs it in the shared head, persists the navbar, background circles, pointer circle, and transition veil, and supplies route-transition metadata on `<html>`. `transitionCoordinator.ts` starts the variant-specific veil during `astro:before-preparation`, runs loading and cover animation concurrently, updates the veil from the incoming document before swap, then reveals after `astro:page-load`; `prefers-reduced-motion` skips the veil animation. The navbar keeps one live DOM node and synchronizes its active link from the incoming document before swap.
 
-`src/pages/index.astro` is the homepage. It renders the brand introduction, About Me content, recent-article area, and footer as sections inside a scroll-driven composition. Its inline browser script controls section activation, navigation/scroll transitions, and responsive behavior; change that script cautiously and verify both desktop and narrow viewport behavior.
+`src/pages/index.astro` is the homepage. It renders the brand introduction, About Me content, recent-article area, and footer as sections inside a scroll-driven composition. `src/scripts/home.js` initializes both section navigation and circle attraction on every `astro:page-load`; the shared page lifecycle scope aborts listeners and disconnects observers, timers, animations, and animation frames on `astro:before-swap`.
+
+Page-specific scripts register through `src/lib/pageLifecycle.ts`. Use `onPageLoad` to query current-page DOM and bind resources through the provided scope; cleanup runs before the body is swapped. In particular, the novel page's global wheel/touch/key handlers must remain scoped so they never intercept input after leaving `/novel`.
 
 `src/pages/articles/*.md` is the article content layer. Each Markdown article supplies frontmatter such as `title`, `date`, `tags`, `wordCount`, `readingTime`, and `description`, and explicitly selects `ArticleLayout.astro`. Markdown headings become anchors through Astro's heading extraction and feed `ArticleContents.astro`, which displays levels 2–4 in the table of contents.
 
 ### Reusable components
 
-- `Navbar.astro`: fixed brand/navigation bar; receives `activePage` and marks the matching link active. Keep its link names and route targets synchronized with actual pages.
+- `Navbar.astro`: fixed brand/navigation bar; receives `activePage` during server rendering and marks the matching link active. Keep its link names and route targets synchronized with actual pages. Its `.navbar-content` (`#site-navbar`) uses `transition:persist`, preserving one live DOM node across navigation.
 - `DynamicCircles.astro`: fixed, pointer-transparent animated radial circles, optionally masked by `public/svg/grid-decoration.svg`; its browser code generates motion and follows the pointer for the mask effect.
 - `MouseCircle.astro`: desktop-only pointer follower. It hides itself for coarse pointers, touch devices, narrow viewports, blur, and hidden tabs; do not re-enable it indiscriminately on mobile.
 - `HeroSection.astro`: homepage hero image plus `RotatingCircles`; measures the navbar and image at runtime to handle overlap and mobile centering.
 - `RotatingCircles.astro`: decorative rotating circle treatment used by the homepage and article layout.
 - `TextDecorations.astro`: peripheral editorial text ornaments used by the default layout.
 - `ArticleContents.astro`: collapsible/generated article table of contents with responsive behavior and heading links.
-- `PageTransitionVeil.astro`: per-variant transition overlay (home: brand dots and rings riding a circular iris; article: kicker, rising numerals, and a rule riding a bottom-up wipe; novel: white mist with the novel's tagline, thinning into the novel's opening mist). Holds the root `vt-*` keyframes.
+- `PageTransitionVeil.astro`: persistent per-variant transition overlay (home: brand dots and circular iris; article: archive/title text and directional wipe; novel: white mist and tagline). The Web Animations API sequences its cover before DOM swap and reveal after page initialization.
 
 ### Styling and visual conventions
 

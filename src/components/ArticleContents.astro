@@ -47,13 +47,14 @@ const visibleHeadings = headings.filter(({ depth }) => depth >= 2 && depth <= 4)
 </details>
 
 <script>
-  const contents = document.querySelector<HTMLDetailsElement>('[data-article-contents]');
-  const article = document.querySelector<HTMLElement>('.article-body');
-  const list = contents?.querySelector('ol');
+  import { onPageLoad } from '../lib/pageLifecycle';
 
-  if (contents && article && list) initializeArticleContents(contents, article, list);
+  onPageLoad((scope) => {
+    const contents = document.querySelector<HTMLDetailsElement>('[data-article-contents]');
+    const article = document.querySelector<HTMLElement>('.article-body');
+    const list = contents?.querySelector('ol');
+    if (!contents || !article || !list) return;
 
-  function initializeArticleContents(contents: HTMLDetailsElement, article: HTMLElement, list: HTMLOListElement) {
     if (list.children.length === 0) {
       article.querySelectorAll('h2, h3, h4').forEach((heading) => {
         if (!heading.id) return;
@@ -79,11 +80,10 @@ const visibleHeadings = headings.filter(({ depth }) => depth >= 2 && depth <= 4)
       const item = link.parentElement;
       return heading && item ? [{ heading, item, link }] : [];
     });
-
     let current: (typeof entries)[number] | undefined;
     let frame = 0;
+    let closeTimer = 0;
 
-    // The rail fill ends at the current entry, so it is measured from the list instead of the page.
     const setCurrent = (next: typeof current) => {
       if (next === current) return;
       current?.item.classList.remove('is-current');
@@ -100,47 +100,33 @@ const visibleHeadings = headings.filter(({ depth }) => depth >= 2 && depth <= 4)
       const scrollable = document.documentElement.scrollHeight - window.innerHeight;
       const progress = scrollable > 0 ? Math.min(Math.max(window.scrollY / scrollable, 0), 1) : 1;
       if (percent) percent.textContent = `${Math.round(progress * 100)}%`;
-
       const readingLine = window.innerHeight * 0.3;
       let next: typeof current;
       for (const entry of entries) {
         if (entry.heading.getBoundingClientRect().top > readingLine) break;
         next = entry;
       }
-      // Short final sections never reach the reading line, so the page end owns the last entry.
       if (progress >= 0.995 && entries.length > 0) next = entries[entries.length - 1];
       setCurrent(next);
     };
 
     const requestUpdate = () => {
-      if (!frame) frame = requestAnimationFrame(update);
+      if (!frame) frame = scope.frame(update);
     };
-
-    window.addEventListener('scroll', requestUpdate, { passive: true });
-    window.addEventListener('resize', requestUpdate);
-    update();
-
-    const mobileQuery = window.matchMedia('(max-width: 850px)');
-    let closeTimer: number | undefined;
-
     const expand = () => {
-      window.clearTimeout(closeTimer);
+      scope.clearTimeout(closeTimer);
       contents.open = true;
-      requestAnimationFrame(() => contents.setAttribute('data-expanded', ''));
+      scope.frame(() => contents.setAttribute('data-expanded', ''));
     };
-
-    // `open` is removed after the exit transition; removing it immediately would hide the body mid-animation.
     const collapse = () => {
       if (!contents.hasAttribute('data-expanded')) return;
-      window.clearTimeout(closeTimer);
+      scope.clearTimeout(closeTimer);
       contents.removeAttribute('data-expanded');
-      closeTimer = window.setTimeout(() => {
-        contents.open = false;
-      }, 320);
+      closeTimer = scope.timeout(() => { contents.open = false; }, 320);
     };
-
+    const mobileQuery = window.matchMedia('(max-width: 850px)');
     const syncMode = () => {
-      window.clearTimeout(closeTimer);
+      scope.clearTimeout(closeTimer);
       if (mobileQuery.matches) {
         contents.removeAttribute('data-expanded');
         contents.open = false;
@@ -150,41 +136,36 @@ const visibleHeadings = headings.filter(({ depth }) => depth >= 2 && depth <= 4)
       }
     };
 
-    contents.addEventListener('click', (event) => {
+    scope.listen(window, 'scroll', requestUpdate, { passive: true });
+    scope.listen(window, 'resize', requestUpdate);
+    scope.listen(contents, 'click', ((event: MouseEvent) => {
       if (!(event.target instanceof Element)) return;
       if (event.target.closest('summary')) {
         event.preventDefault();
         if (contents.hasAttribute('data-expanded')) collapse();
         else expand();
-        return;
-      }
-      if (event.target.closest('[data-contents-close]')) {
+      } else if (event.target.closest('[data-contents-close]')) {
         collapse();
         summary?.focus();
-        return;
+      } else if (mobileQuery.matches && event.target.closest('a')) collapse();
+    }) as EventListener);
+    scope.listen(document, 'pointerdown', ((event: PointerEvent) => {
+      if (mobileQuery.matches && event.target instanceof Node && !contents.contains(event.target)) collapse();
+    }) as EventListener);
+    scope.listen(document, 'focusin', ((event: FocusEvent) => {
+      if (mobileQuery.matches && event.target instanceof Node && !contents.contains(event.target)) collapse();
+    }) as EventListener);
+    scope.listen(document, 'keydown', ((event: KeyboardEvent) => {
+      if (event.key === 'Escape' && mobileQuery.matches && contents.hasAttribute('data-expanded')) {
+        collapse();
+        summary?.focus();
       }
-      if (mobileQuery.matches && event.target.closest('a')) collapse();
-    });
-
-    document.addEventListener('pointerdown', (event) => {
-      if (!mobileQuery.matches || !(event.target instanceof Node) || contents.contains(event.target)) return;
-      collapse();
-    });
-
-    document.addEventListener('focusin', (event) => {
-      if (!mobileQuery.matches || !(event.target instanceof Node) || contents.contains(event.target)) return;
-      collapse();
-    });
-
-    document.addEventListener('keydown', (event) => {
-      if (event.key !== 'Escape' || !mobileQuery.matches || !contents.hasAttribute('data-expanded')) return;
-      collapse();
-      summary?.focus();
-    });
-
-    mobileQuery.addEventListener('change', syncMode);
+    }) as EventListener);
+    scope.listen(mobileQuery, 'change', syncMode);
+    scope.cleanup(() => list.style.removeProperty('--contents-fill'));
+    update();
     syncMode();
-  }
+  });
 </script>
 
 <style scoped lang="scss">

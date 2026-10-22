@@ -2,7 +2,6 @@
 import BaseLayout from './BaseLayout.astro';
 import HeroSection from '../components/HeroSection.astro';
 import TextDecorations from '../components/TextDecorations.astro';
-import type { PageTransition } from '../lib/pageTransitions';
 
 interface Props {
   activePage?: string;
@@ -14,7 +13,6 @@ interface Props {
   rightText?: string;
   heroImage?: string;
   title?: string;
-  transition?: PageTransition;
 }
 
 const {
@@ -27,11 +25,10 @@ const {
   rightText,
   heroImage,
   title = "TANH.MOE",
-  transition,
 } = Astro.props;
 ---
 
-<BaseLayout activePage={activePage} showFootnote={showFootnote} title={title} transition={transition}>
+<BaseLayout activePage={activePage} showFootnote={showFootnote} title={title}>
   {showTextDecorations && (
     <TextDecorations leftText={leftText} rightText={rightText} showLeft={showLeftText} />
   )}

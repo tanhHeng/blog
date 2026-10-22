@@ -7,16 +7,16 @@ interface Props {
   useMask?: boolean;
 }
 
-const { 
-  minRadius = 7, 
+const {
+  minRadius = 7,
   maxRadius = 20,
-  minOrbitOffset = 20, // percentage
-  maxOrbitOffset = 50,  // percentage
+  minOrbitOffset = 20,
+  maxOrbitOffset = 50,
   useMask = true
 } = Astro.props;
 ---
 
-<div class={useMask ? "dynamic-circles-container with-mask" : "dynamic-circles-container"} id="circles-container" data-min-radius={minRadius} data-max-radius={maxRadius} data-min-orbit-offset={minOrbitOffset} data-max-orbit-offset={maxOrbitOffset}>
+<div class={useMask ? "dynamic-circles-container with-mask" : "dynamic-circles-container"} id="circles-container" data-min-radius={minRadius} data-max-radius={maxRadius} data-min-orbit-offset={minOrbitOffset} data-max-orbit-offset={maxOrbitOffset} transition:persist="dynamic-circles">
   <div class="dynamic-circle" style={`
     width: 100vw;
     height: 140vh;
@@ -35,202 +35,124 @@ const {
     --duration: 0s;
     --direction: normal;
   `}/>
-  <div 
-    class="dynamic-circle mouse-circle"
-    id="mask-mouse-circle"
-    style={`
-      background: radial-gradient(
-        circle at center,
-        rgba(137, 146, 189, var(--opacity)) 0%,
-        rgba(137, 146, 189, 1) 50%,
-        rgba(137, 146, 189, 0.5) 60%,
-        rgba(137, 146, 189, 0) 100%
-      );
-      --x: 50vw;
-      --y: 50vh;
-      --radius: 1.6rem;
-      --orbit-offset-x: 0;
-      --orbit-offset-y: 0;
-      --opacity: 1;
-      --duration: 0s;
-      --direction: normal;
-    `}
-  />
+  <div class="dynamic-circle mouse-circle" id="mask-mouse-circle" style={`
+    background: radial-gradient(
+      circle at center,
+      rgba(137, 146, 189, var(--opacity)) 0%,
+      rgba(137, 146, 189, 1) 50%,
+      rgba(137, 146, 189, 0.5) 60%,
+      rgba(137, 146, 189, 0) 100%
+    );
+    --x: 50vw;
+    --y: 50vh;
+    --radius: 1.6rem;
+    --orbit-offset-x: 0;
+    --orbit-offset-y: 0;
+    --opacity: 1;
+    --duration: 0s;
+    --direction: normal;
+  `}/>
 </div>
 
-<script is:inline>
-  (function() {
+<script>
+  import { onPageLoad } from '../lib/pageLifecycle';
+
+  onPageLoad((scope) => {
     const container = document.getElementById('circles-container');
     if (!container) return;
-    
-    const minRadius = parseFloat(container.dataset.minRadius || '7');
-    const maxRadius = parseFloat(container.dataset.maxRadius || '20');
-    const minOrbitOffset = parseFloat(container.dataset.minOrbitOffset || '20');
-    const maxOrbitOffset = parseFloat(container.dataset.maxOrbitOffset || '50');
-    
-    const circleCount = Math.floor(Math.random() * 7) + 12; // 12-18 circles
-    const rightBoundary = 70.5; // in vw
-    const circles = [];
-    
-    // Helper functions
-    function isPointInCircle(px, py, cx, cy, r) {
+    if (!container.dataset.generated) {
+    const minRadius = Number.parseFloat(container.dataset.minRadius ?? '7');
+    const maxRadius = Number.parseFloat(container.dataset.maxRadius ?? '20');
+    const minOrbitOffset = Number.parseFloat(container.dataset.minOrbitOffset ?? '20');
+    const maxOrbitOffset = Number.parseFloat(container.dataset.maxOrbitOffset ?? '50');
+    const circleCount = Math.floor(Math.random() * 7) + 12;
+    const rightBoundary = 70.5;
+    const circles: { id: number; x: number; y: number; radius: number; orbitOffset: number; orbitOffsetX: number; orbitOffsetY: number; opacity: number; duration: number; direction: string }[] = [];
+
+    function isPointInCircle(px: number, py: number, cx: number, cy: number, r: number) {
       const dx = px - cx;
       const dy = py - cy;
-      return (dx * dx + dy * dy) < (r * r);
+      return dx * dx + dy * dy < r * r;
     }
-    
-    function distance(x1, y1, x2, y2) {
-      const dx = x1 - x2;
-      const dy = y1 - y2;
-      return Math.sqrt(dx * dx + dy * dy);
+
+    function distance(x1: number, y1: number, x2: number, y2: number) {
+      return Math.hypot(x1 - x2, y1 - y2);
     }
-    
-    function canIntersectDuringRotation(x1, y1, r1, orbitOffset1, x2, y2, r2, orbitOffset2) {
-      const centerDist = distance(x1, y1, x2, y2);
-      const circle1Outer = orbitOffset1 + r1;
-      const circle2Outer = orbitOffset2 + r2;
-      
-      if (centerDist <= circle1Outer + circle2Outer) {
-        return true;
+
+    function canIntersectDuringRotation(x1: number, y1: number, r1: number, orbitOffset1: number, x2: number, y2: number, r2: number, orbitOffset2: number) {
+      return distance(x1, y1, x2, y2) <= orbitOffset1 + r1 + orbitOffset2 + r2;
+    }
+
+    function countIntersections(x: number, y: number, r: number, orbitOffset: number, existingCircles: typeof circles) {
+      return existingCircles.filter((circle) => canIntersectDuringRotation(x, y, r, orbitOffset, circle.x, circle.y, circle.radius, circle.orbitOffset)).length;
+    }
+
+    function wouldCauseExistingToExceedLimit(x: number, y: number, r: number, orbitOffset: number, existingCircles: typeof circles) {
+      for (const circle of existingCircles) {
+        if (!canIntersectDuringRotation(x, y, r, orbitOffset, circle.x, circle.y, circle.radius, circle.orbitOffset)) continue;
+        const existingIntersections = existingCircles.filter((other) => other.id !== circle.id && canIntersectDuringRotation(circle.x, circle.y, circle.radius, circle.orbitOffset, other.x, other.y, other.radius, other.orbitOffset)).length;
+        if (existingIntersections >= 3) return true;
       }
       return false;
     }
-    
-    function countIntersections(x, y, r, orbitOffset, existingCircles) {
-      let count = 0;
-      for (const circle of existingCircles) {
-        if (canIntersectDuringRotation(x, y, r, orbitOffset, circle.x, circle.y, circle.radius, circle.orbitOffset)) {
-          count++;
-        }
-      }
-      return count;
+
+    function isOrbitCenterInsideSweptArea(x: number, y: number, existingCircles: typeof circles) {
+      return existingCircles.some((circle) => isPointInCircle(x, y, circle.x, circle.y, circle.orbitOffset + circle.radius));
     }
-    
-    function wouldCauseExistingToExceedLimit(x, y, r, orbitOffset, existingCircles) {
-      for (const circle of existingCircles) {
-        if (canIntersectDuringRotation(x, y, r, orbitOffset, circle.x, circle.y, circle.radius, circle.orbitOffset)) {
-          let existingIntersections = 0;
-          for (const other of existingCircles) {
-            if (other.id !== circle.id && canIntersectDuringRotation(
-              circle.x, circle.y, circle.radius, circle.orbitOffset,
-              other.x, other.y, other.radius, other.orbitOffset
-            )) {
-              existingIntersections++;
-            }
-          }
-          if (existingIntersections >= 3) {
-            return true;
-          }
-        }
-      }
-      return false;
+
+    function wouldContainExistingOrbitCenter(x: number, y: number, r: number, orbitOffset: number, existingCircles: typeof circles) {
+      return existingCircles.some((circle) => isPointInCircle(circle.x, circle.y, x, y, orbitOffset + r));
     }
-    
-    function isOrbitCenterInsideSweptArea(x, y, existingCircles) {
-      for (const circle of existingCircles) {
-        const outerRadius = circle.orbitOffset + circle.radius;
-        if (isPointInCircle(x, y, circle.x, circle.y, outerRadius)) {
-          return true;
-        }
-      }
-      return false;
-    }
-    
-    function wouldContainExistingOrbitCenter(x, y, r, orbitOffset, existingCircles) {
-      const outerRadius = orbitOffset + r;
-      for (const circle of existingCircles) {
-        if (isPointInCircle(circle.x, circle.y, x, y, outerRadius)) {
-          return true;
-        }
-      }
-      return false;
-    }
-    
-    const maxAttempts = 100;
-    
-    // Generate circles
-    for (let i = 0; i < circleCount; i++) {
-      let validPosition = false;
+
+    for (let id = 0; id < circleCount; id++) {
       let attempts = 0;
-      let x, y, radius, orbitOffsetPercent, orbitOffset;
-      
-      while (!validPosition && attempts < maxAttempts) {
+      let validPosition = false;
+      let x = 0;
+      let y = 0;
+      let radius = 0;
+      let orbitOffset = 0;
+      while (!validPosition && attempts < 100) {
         attempts++;
-        
         radius = Math.random() * (maxRadius - minRadius) + minRadius;
-        orbitOffsetPercent = (Math.random() * (maxOrbitOffset - minOrbitOffset) + minOrbitOffset) / 100;
-        orbitOffset = orbitOffsetPercent * radius;
-        
-        const minX = 0;
-        const maxX = rightBoundary;
-        const minY = 0;
-        const maxY = 100;
-        
-        x = Math.random() * (maxX - minX) + minX;
-        y = Math.random() * (maxY - minY) + minY;
-        
-        const orbitCenterInside = isOrbitCenterInsideSweptArea(x, y, circles);
-        const containsExistingCenter = wouldContainExistingOrbitCenter(x, y, radius, orbitOffset, circles);
-        const intersectionCount = countIntersections(x, y, radius, orbitOffset, circles);
-        const wouldBreakExisting = wouldCauseExistingToExceedLimit(x, y, radius, orbitOffset, circles);
-        
-        if (!orbitCenterInside && !containsExistingCenter && intersectionCount <= 3 && !wouldBreakExisting) {
-          validPosition = true;
-        }
+        orbitOffset = ((Math.random() * (maxOrbitOffset - minOrbitOffset) + minOrbitOffset) / 100) * radius;
+        x = Math.random() * rightBoundary;
+        y = Math.random() * 100;
+        validPosition = !isOrbitCenterInsideSweptArea(x, y, circles) && !wouldContainExistingOrbitCenter(x, y, radius, orbitOffset, circles) && countIntersections(x, y, radius, orbitOffset, circles) <= 3 && !wouldCauseExistingToExceedLimit(x, y, radius, orbitOffset, circles);
       }
-      
-      if (validPosition) {
-        const orbitAngle = Math.random() * Math.PI * 2;
-        const orbitOffsetX = Math.cos(orbitAngle) * orbitOffset;
-        const orbitOffsetY = Math.sin(orbitAngle) * orbitOffset;
-        const opacity = Math.random() * 0.45 + 0.25;
-        const duration = Math.random() * 7 + 3;
-        const direction = Math.random() < 0.5 ? 'normal' : 'reverse';
-        
-        circles.push({
-          id: i,
-          x: x,
-          y: y,
-          radius: radius,
-          orbitOffset: orbitOffset,
-          orbitOffsetX: orbitOffsetX,
-          orbitOffsetY: orbitOffsetY,
-          opacity: opacity,
-          duration: duration,
-          direction: direction
-        });
-      }
+      if (!validPosition) continue;
+      const orbitAngle = Math.random() * Math.PI * 2;
+      circles.push({
+        id,
+        x,
+        y,
+        radius,
+        orbitOffset,
+        orbitOffsetX: Math.cos(orbitAngle) * orbitOffset,
+        orbitOffsetY: Math.sin(orbitAngle) * orbitOffset,
+        opacity: Math.random() * 0.45 + 0.25,
+        duration: Math.random() * 7 + 3,
+        direction: Math.random() < 0.5 ? 'normal' : 'reverse',
+      });
     }
-    
-    // Create and insert circle elements before the mouse circle
+
     const mouseCircle = container.querySelector('#mask-mouse-circle');
-    circles.forEach(function(circle) {
+    circles.forEach((circle) => {
       const div = document.createElement('div');
       div.className = 'dynamic-circle';
-      div.style.cssText = '--x: ' + circle.x + 'vw; ' +
-        '--y: ' + circle.y + 'vh; ' +
-        '--radius: min(' + circle.radius + 'vh, ' + circle.radius + 'vw); ' +
-        '--orbit-offset-x: min(' + circle.orbitOffsetX + 'vh, ' + circle.orbitOffsetX + 'vw); ' +
-        '--orbit-offset-y: min(' + circle.orbitOffsetY + 'vh, ' + circle.orbitOffsetY + 'vw); ' +
-        '--opacity: ' + circle.opacity + '; ' +
-        '--duration: ' + circle.duration + 's; ' +
-        '--direction: ' + circle.direction + ';';
+      div.style.cssText = `--x:${circle.x}vw;--y:${circle.y}vh;--radius:min(${circle.radius}vh, ${circle.radius}vw);--orbit-offset-x:min(${circle.orbitOffsetX}vh, ${circle.orbitOffsetX}vw);--orbit-offset-y:min(${circle.orbitOffsetY}vh, ${circle.orbitOffsetY}vw);--opacity:${circle.opacity};--duration:${circle.duration}s;--direction:${circle.direction};`;
       container.insertBefore(div, mouseCircle);
     });
-  })();
-</script>
+    container.dataset.generated = 'true';
+    }
 
-<script>
-  const mouseCircle = document.getElementById('mask-mouse-circle') as HTMLElement | null;
-  
-  if (mouseCircle) {
-    document.addEventListener('mousemove', (e: MouseEvent) => {
-      const x = (e.clientX / window.innerWidth) * 100;
-      const y = (e.clientY / window.innerHeight) * 100;
-      mouseCircle.style.setProperty('--x', `${x}vw`);
-      mouseCircle.style.setProperty('--y', `${y}vh`);
-    });
-  }
+    const maskMouseCircle = document.getElementById('mask-mouse-circle');
+    if (maskMouseCircle) {
+      scope.listen(document, 'mousemove', ((event: MouseEvent) => {
+        maskMouseCircle.style.setProperty('--x', `${(event.clientX / window.innerWidth) * 100}vw`);
+        maskMouseCircle.style.setProperty('--y', `${(event.clientY / window.innerHeight) * 100}vh`);
+      }) as EventListener);
+    }
+  });
 </script>
 
 <style is:global lang="scss">
@@ -243,9 +165,8 @@ const {
     pointer-events: none;
     z-index: 0;
     overflow: hidden;
-    
+
     &.with-mask {
-      // Apply repeating grid pattern as a mask
       mask-image: url('/svg/grid-decoration.svg');
       mask-size: min(10vh, 10vw);
       mask-repeat: repeat;
@@ -260,32 +181,21 @@ const {
     width: calc(var(--radius) * 2);
     height: calc(var(--radius) * 2);
     border-radius: 50%;
-    background: radial-gradient(
-      circle at center,
-      rgba(137, 146, 189, var(--opacity)) 0%,
-      rgba(137, 146, 189, 0) 100%
-    );
+    background: radial-gradient(circle at center, rgba(137, 146, 189, var(--opacity)) 0%, rgba(137, 146, 189, 0) 100%);
     left: var(--x);
     top: var(--y);
     transform: translate(-50%, -50%);
     animation: orbit var(--duration) linear infinite;
     animation-direction: var(--direction);
     transform-origin: calc(50% + var(--orbit-offset-x)) calc(50% + var(--orbit-offset-y));
-    
+
     &.mouse-circle {
-      // No animation for mouse circle
       animation: none;
-      // Smooth transition when mouse moves
-      // transition: left 0.1s ease-out, top 0.1s ease-out;
     }
   }
 
   @keyframes orbit {
-    from {
-      transform: translate(-50%, -50%) rotate(0deg);
-    }
-    to {
-      transform: translate(-50%, -50%) rotate(360deg);
-    }
+    from { transform: translate(-50%, -50%) rotate(0deg); }
+    to { transform: translate(-50%, -50%) rotate(360deg); }
   }
 </style>

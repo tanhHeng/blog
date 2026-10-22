@@ -199,7 +199,9 @@ const pluralArticles = (count: number) => `${count} ${count === 1 ? 'article' : 
 </BaseLayout>
 
 <script>
-  function initializeArticleFilters() {
+  import { onPageLoad } from '../../lib/pageLifecycle';
+
+  onPageLoad((scope) => {
     const page = document.querySelector<HTMLElement>('[data-articles-page]');
     if (!page) return;
 
@@ -270,7 +272,7 @@ const pluralArticles = (count: number) => `${count} ${count === 1 ? 'article' : 
       updateResults();
     }
 
-    page.addEventListener('click', (event) => {
+    scope.listen(page, 'click', (event) => {
       if (!(event.target instanceof Element)) return;
       const button = event.target.closest<HTMLButtonElement>('button');
       if (!button || !page.contains(button)) return;
@@ -292,13 +294,7 @@ const pluralArticles = (count: number) => `${count} ${count === 1 ? 'article' : 
     for (const button of tagButtons) button.disabled = false;
     allButton.disabled = false;
     if (clearButton) clearButton.disabled = false;
-    window.addEventListener('popstate', readSelection);
-    window.addEventListener('pageshow', (event) => {
-      if (event.persisted) readSelection();
-    });
-  }
-
-  initializeArticleFilters();
+  });
 </script>
 
 <style lang="scss">

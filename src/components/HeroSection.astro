@@ -1,68 +1,61 @@
 ---
 import RotatingCircles from './RotatingCircles.astro';
-interface Props {
-  imageSrc?: string;
-  imageAlt?: string;
-}
+interface Props { imageSrc?: string; imageAlt?: string; }
 
-const {
-  imageSrc = '/img/hero.png',
-  imageAlt = 'Hero Image',
-} = Astro.props;
+const { imageSrc = '/img/hero.png', imageAlt = 'Hero Image' } = Astro.props;
 ---
 
 <img src={imageSrc} alt={imageAlt} class="hero-image" />
 <RotatingCircles />
 
-<script is:inline>
-  (() => {
-    const heroImage = document.querySelector('.hero-image');
-    const navbar = document.querySelector('.navbar-content');
-	const root = document.documentElement;
+<script>
+  import { onPageLoad } from '../lib/pageLifecycle';
+  onPageLoad((scope) => {
+    const heroImage = document.querySelector<HTMLImageElement>('.hero-image');
+    const navbar = document.querySelector<HTMLElement>('.navbar-content');
+    const root = document.documentElement;
     if (!heroImage || !navbar) return;
 
-    function syncHeroLayout() {
+    const syncHeroLayout = () => {
       const navbarRect = navbar.getBoundingClientRect();
-
       root.classList.remove('home-mobile-layout');
-		heroImage.classList.remove('hero-image--mobile-layout', 'hero-image--centered');
+      heroImage.classList.remove('hero-image--mobile-layout', 'hero-image--centered');
       heroImage.style.removeProperty('left');
       heroImage.style.right = '0px';
       root.style.setProperty('--hero-right-overflow', '0px');
-
       const baseImageRect = heroImage.getBoundingClientRect();
       const overlap = Math.max(0, navbarRect.right - baseImageRect.left);
       const rightOffset = -Math.min(100, overlap);
       heroImage.style.right = `${rightOffset}px`;
-
-      const cssMobileLayout = getComputedStyle(root)
-        .getPropertyValue('--home-mobile-layout')
-        .trim() === '1';
+      const cssMobileLayout = getComputedStyle(root).getPropertyValue('--home-mobile-layout').trim() === '1';
       root.classList.toggle('home-mobile-layout', cssMobileLayout);
       heroImage.classList.toggle('hero-image--mobile-layout', cssMobileLayout);
-
       if (cssMobileLayout) {
         const mobileImageRect = heroImage.getBoundingClientRect();
-        const fitsViewport = mobileImageRect.width <= innerWidth;
-		heroImage.classList.toggle('hero-image--centered', !fitsViewport);
+        heroImage.classList.toggle('hero-image--centered', mobileImageRect.width > innerWidth);
         heroImage.style.removeProperty('right');
         root.style.setProperty('--hero-right-overflow', '0px');
         root.style.setProperty('--hero-left-edge', `${mobileImageRect.left}px`);
         return;
       }
-
       const desktopImageRect = heroImage.getBoundingClientRect();
       root.style.setProperty('--hero-right-overflow', `${-rightOffset}px`);
       root.style.setProperty('--hero-left-edge', `${desktopImageRect.left}px`);
     }
 
-	window.addEventListener('load', syncHeroLayout, { once: true });
-
-	window.addEventListener('resize', syncHeroLayout);
-	navbar.addEventListener('transitionend', syncHeroLayout);
-	heroImage.addEventListener('load', syncHeroLayout, { once: true });
-	syncHeroLayout();
-  })();
+    scope.listen(window, 'resize', syncHeroLayout);
+    scope.listen(navbar, 'transitionend', syncHeroLayout);
+    scope.listen(heroImage, 'load', syncHeroLayout, { once: true });
+    scope.listen(window, 'load', syncHeroLayout, { once: true });
+    scope.cleanup(() => {
+      root.classList.remove('home-mobile-layout');
+      heroImage.classList.remove('hero-image--mobile-layout', 'hero-image--centered');
+      heroImage.style.removeProperty('right');
+      root.style.removeProperty('--hero-right-overflow');
+      root.style.removeProperty('--hero-left-edge');
+    });
+    syncHeroLayout();
+  });
 </script>
 
 <style lang="scss">

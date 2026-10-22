@@ -350,10 +350,14 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
 </BaseLayout>
 
 <script>
-  const root = document.querySelector<HTMLElement>('[data-novel]');
-  if (root) initializeNovel(root);
+  import { onPageLoad } from '../lib/pageLifecycle';
 
-  function initializeNovel(root: HTMLElement) {
+  onPageLoad((scope) => {
+    const root = document.querySelector<HTMLElement>('[data-novel]');
+    if (root) initializeNovel(root, scope);
+  });
+
+  function initializeNovel(root: HTMLElement, scope: import('../lib/pageLifecycle').PageScope) {
     const camera = root.querySelector<HTMLElement>('[data-stage-camera]')!;
     const drifts = Array.from(root.querySelectorAll<HTMLElement>('[data-stage-drift]'));
     const video = root.querySelector<HTMLVideoElement>('[data-stage-video]')!;
@@ -434,6 +438,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
       }
     }, { rootMargin: '-50% 0px -50% 0px' });
     scenes.forEach((scene) => sceneObserver.observe(scene));
+    scope.observe(sceneObserver);
 
     // `--intro` runs 0 → 1 across the first viewport of scroll and dissolves the white mist.
     const updateScroll = () => {
@@ -441,10 +446,10 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
       const intro = Math.min(Math.max(window.scrollY / (window.innerHeight * 0.85), 0), 1);
       root.style.setProperty('--intro', intro.toFixed(3));
     };
-    window.addEventListener('scroll', () => {
-      if (!frame) frame = requestAnimationFrame(updateScroll);
+    scope.listen(window, 'scroll', () => {
+      if (!frame) frame = scope.frame(updateScroll);
     }, { passive: true });
-    narrow.addEventListener('change', placeCamera);
+    scope.listen(narrow, 'change', placeCamera);
 
     // Scene navigation --------------------------------------------------------
     // Native snapping runs at a browser-fixed speed, so whole-scene moves are glided here instead:
@@ -470,7 +475,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
       currentStop = Math.min(Math.max(index, 0), stops.length - 1);
       const from = window.scrollY;
       const to = measureStops()[currentStop];
-      cancelAnimationFrame(glideFrame);
+      scope.cancelFrame(glideFrame);
       glideFrame = 0;
       if (reducedMotion.matches || Math.abs(to - from) < 1) {
         window.scrollTo({ top: to, behavior: 'instant' });
@@ -483,19 +488,19 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
         const eased = t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2;
         window.scrollTo({ top: from + (to - from) * eased, behavior: 'instant' });
         if (t < 1) {
-          glideFrame = requestAnimationFrame(step);
+          glideFrame = scope.frame(step);
         } else {
           glideFrame = 0;
           lockedUntil = Math.max(lockedUntil, now + 300);
         }
       };
-      glideFrame = requestAnimationFrame(step);
+      glideFrame = scope.frame(step);
     };
 
     const panelOpen = () => root.querySelector('.novel-panel[open]') !== null;
 
     // Trackpad inertia keeps firing after a glide; each absorbed event extends the lock until input goes quiet.
-    window.addEventListener('wheel', (event) => {
+    scope.listen(window, 'wheel', (event) => {
       if (panelOpen() || event.ctrlKey) return;
       event.preventDefault();
       const now = performance.now();
@@ -508,7 +513,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     }, { passive: false });
 
     const keySteps: Record<string, number> = { ArrowDown: 1, PageDown: 1, ArrowUp: -1, PageUp: -1 };
-    window.addEventListener('keydown', (event) => {
+    scope.listen(window, 'keydown', (event) => {
       if (panelOpen() || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
       const onPage = event.target === document.body || event.target === document.documentElement;
       let next: number | undefined;
@@ -522,13 +527,13 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     });
 
     let touchStartY: number | undefined;
-    window.addEventListener('touchstart', (event) => {
+    scope.listen(window, 'touchstart', (event) => {
       touchStartY = event.touches.length === 1 ? event.touches[0].clientY : undefined;
     }, { passive: true });
-    window.addEventListener('touchmove', (event) => {
+    scope.listen(window, 'touchmove', (event) => {
       if (!panelOpen() && event.touches.length === 1) event.preventDefault();
     }, { passive: false });
-    window.addEventListener('touchend', (event) => {
+    scope.listen(window, 'touchend', (event) => {
       if (touchStartY === undefined || panelOpen() || glideFrame) return;
       const distance = touchStartY - event.changedTouches[0].clientY;
       touchStartY = undefined;
@@ -536,15 +541,15 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     });
 
     // Scrollbar drags, find-in-page and focus moves can still leave the page between scenes; settle onto the nearest.
-    window.addEventListener('scroll', () => {
+    scope.listen(window, 'scroll', () => {
       if (glideFrame) return;
-      window.clearTimeout(settleTimer);
-      settleTimer = window.setTimeout(() => {
+      scope.clearTimeout(settleTimer);
+      settleTimer = scope.timeout(() => {
         if (!glideFrame && !panelOpen()) goTo(nearestStop());
       }, 180);
     }, { passive: true });
 
-    window.addEventListener('resize', () => {
+    scope.listen(window, 'resize', () => {
       placeCamera();
       if (!glideFrame) window.scrollTo({ top: measureStops()[currentStop], behavior: 'instant' });
     });
@@ -552,9 +557,9 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
 
     // Pointer parallax moves inner layers so it never fights the camera transition; hotspots share it to stay pinned.
     let driftFrame = 0;
-    window.addEventListener('pointermove', (event) => {
+    scope.listen(window, 'pointermove', (event) => {
       if (event.pointerType !== 'mouse' || reducedMotion.matches || driftFrame) return;
-      driftFrame = requestAnimationFrame(() => {
+      driftFrame = scope.frame(() => {
         driftFrame = 0;
         const dx = (event.clientX / window.innerWidth - 0.5) * -18;
         const dy = (event.clientY / window.innerHeight - 0.5) * -12;
@@ -573,7 +578,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     for (const trigger of root.querySelectorAll<HTMLElement>('[data-reveal-scene]')) {
       const scene = root.querySelector(`[data-scene="${trigger.dataset.revealScene}"]`);
       for (const [type, revealed] of [['pointerenter', true], ['pointerleave', false], ['focus', true], ['blur', false]] as const) {
-        trigger.addEventListener(type, () => scene?.classList.toggle('is-revealed', revealed));
+        scope.listen(trigger, type, () => scene?.classList.toggle('is-revealed', revealed));
       }
     }
 
@@ -589,7 +594,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
         return;
       }
       panel.classList.add('is-closing');
-      panel.addEventListener('animationend', function finish(event) {
+      scope.listen(panel, 'animationend', function finish(event) {
         if (event.target !== panel) return;
         panel.removeEventListener('animationend', finish);
         panel.close();
@@ -632,7 +637,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
       tab.focus();
     };
 
-    root.addEventListener('click', (event) => {
+    scope.listen(root, 'click', (event) => {
       if (!(event.target instanceof Element)) return;
       const target = event.target;
       const glideLink = target.closest<HTMLElement>('[data-glide-to]');
@@ -660,7 +665,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
       if (tab) selectTab(tab);
     });
 
-    root.addEventListener('keydown', (event) => {
+    scope.listen(root, 'keydown', (event) => {
       if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
       const tab = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-codex-tab]') : null;
       const tabs = Array.from(tab?.parentElement?.querySelectorAll<HTMLElement>('[data-codex-tab]') ?? []);
@@ -671,11 +676,11 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     });
 
     for (const panel of panels) {
-      panel.addEventListener('cancel', (event) => {
+      scope.listen(panel, 'cancel', (event) => {
         event.preventDefault();
         closePanel(panel);
       });
-      panel.addEventListener('close', () => panel.classList.remove('is-closing'));
+      scope.listen(panel, 'close', () => panel.classList.remove('is-closing'));
     }
 
     const setPlaying = (playing: boolean) => {
@@ -685,13 +690,21 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
       motionToggle.querySelector('.motion-label')!.textContent = playing ? 'Pause' : 'Play';
       root.classList.toggle('is-paused', !playing);
     };
-    motionToggle.addEventListener('click', () => setPlaying(video.paused));
+    scope.listen(motionToggle, 'click', () => setPlaying(video.paused));
     if (reducedMotion.matches) setPlaying(false);
 
+    scope.cleanup(() => {
+      scope.cancelFrame(frame);
+      scope.cancelFrame(glideFrame);
+      scope.cancelFrame(driftFrame);
+      scope.clearTimeout(settleTimer);
+      video.pause();
+      for (const panel of panels) if (panel.open) panel.close();
+    });
     updateScroll();
-    setActiveScene(scenes[0]);
+    setActiveScene(stops[currentStop] ?? scenes[0]);
     // Enables transitions only after the first placement, so the page does not animate in from the origin.
-    requestAnimationFrame(() => root.classList.add('is-ready'));
+    scope.frame(() => root.classList.add('is-ready'));
   }
 </script>
 

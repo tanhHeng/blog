@@ -1,11 +1,12 @@
 ---
+import { ClientRouter } from 'astro:transitions';
 import Navbar from '../components/Navbar.astro';
 import DynamicCircles from '../components/DynamicCircles.astro';
 import MouseCircle from '../components/MouseCircle.astro';
 import PageTransitionVeil from '../components/PageTransitionVeil.astro';
-import { rootTransitions, type PageTransition } from '../lib/pageTransitions';
 import '../styles/global.scss';
 import 'animate.css';
+import type { PageTransition } from '../lib/pageTransitions';
 
 interface Props {
   activePage?: string;
@@ -13,7 +14,6 @@ interface Props {
   description?: string;
   lang?: string;
   showFootnote?: boolean;
-  /** How this page arrives during a cross-document view transition; pages without one use a plain fade. */
   transition?: PageTransition;
 }
 
@@ -25,10 +25,9 @@ const {
   showFootnote = true,
   transition,
 } = Astro.props;
-const rootAnimation = transition ? rootTransitions[transition.variant] : 'fade';
 ---
 
-<html lang={lang} transition:name="root" transition:animate={rootAnimation}>
+<html lang={lang} data-transition-variant={transition?.variant ?? (Astro.url.pathname === '/' ? 'home' : activePage === 'Novel' ? 'novel' : activePage === 'Article' ? 'article' : 'plain')} data-transition-kicker={transition?.kicker} data-transition-numeral={transition?.numeral} data-transition-caption={transition?.caption} data-transition-lines={transition?.lines ? JSON.stringify(transition.lines) : undefined} transition:animate="none">
   <head>
     <meta charset="utf-8" />
     <link rel="icon" href="/favicon.svg" />
@@ -36,21 +35,13 @@ const rootAnimation = transition ? rootTransitions[transition.variant] : 'fade';
     <meta name="generator" content={Astro.generator} />
     {title && <title>{title}</title>}
     {description && <meta name="description" content={description} />}
-    <!-- Runs before first render: `pagereveal` must flag an arriving transition before the new snapshot is taken. -->
-    <script is:inline>
-      addEventListener('pagereveal', (event) => {
-        if (!event.viewTransition) return;
-        const root = document.documentElement;
-        root.classList.add('vt-arriving');
-        event.viewTransition.finished.finally(() => root.classList.remove('vt-arriving'));
-      });
-    </script>
+    <ClientRouter />
   </head>
   <body>
     <DynamicCircles />
     <MouseCircle />
     <Navbar activePage={activePage} />
-    {transition && <PageTransitionVeil {...transition} />}
+    <PageTransitionVeil />
     <div class="page-content">
       <slot />
     </div>
@@ -72,23 +63,22 @@ const rootAnimation = transition ? rootTransitions[transition.variant] : 'fade';
   </body>
 </html>
 
-<script is:inline>
-  (() => {
-    const footnote = document.querySelector('.site-footnote');
+<script>
+  import '../lib/transitionCoordinator';
+  import { onPageLoad } from '../lib/pageLifecycle';
+  onPageLoad((scope) => {
+    const footnote = document.querySelector<HTMLElement>('.site-footnote');
     if (!footnote) return;
-
     const updateFootnoteVisibility = () => {
       const revealOffset = 160;
       const atPageBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - revealOffset;
       footnote.classList.toggle('is-visible', atPageBottom);
     };
-
-    window.addEventListener('scroll', updateFootnoteVisibility, { passive: true });
-    window.addEventListener('resize', updateFootnoteVisibility);
+    scope.listen(window, 'scroll', updateFootnoteVisibility, { passive: true });
+    scope.listen(window, 'resize', updateFootnoteVisibility);
     updateFootnoteVisibility();
-  })();
+  });
 </script>
-
 <style lang="scss">
   @use '../styles/global.scss' as *;
 

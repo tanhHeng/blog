@@ -1,44 +1,25 @@
----
-import type { PageTransition } from '../lib/pageTransitions';
-
-type Props = PageTransition;
-
-const { variant, kicker, numeral, caption, lines = [] } = Astro.props;
-
-// Rendered only while a view transition arrives on this page (`html.vt-arriving`, set in `BaseLayout.astro`),
-// so it is captured into the new snapshot as its own layer above both pages. The pseudo-element is not
-// animated; the veil animates itself and ends invisible, so the transition's length is set by the root
-// animations in `lib/pageTransitions.ts`.
----
-<div class:list={['page-veil', `veil-${variant}`]} transition:name="page-veil" transition:animate="none" aria-hidden="true">
-  {variant === 'home' && (
-    <>
-      <span class="veil-ring"></span>
-      <span class="veil-ring"></span>
-      <span class="veil-ring"></span>
-      <span class="veil-dots"><span></span><span></span><span></span></span>
-    </>
-  )}
-  {variant === 'article' && (
-    <>
-      <span class="veil-edge"></span>
-      <div class="veil-band">
-        {kicker && <p class="veil-kicker">{kicker}</p>}
-        {numeral && (
-          <p class="veil-numeral">
-            {[...numeral].map((char, index) => <span style={`--i: ${index}`}>{char}</span>)}
-          </p>
-        )}
-        {caption && <p class="veil-caption">{caption}</p>}
-      </div>
-    </>
-  )}
-  {variant === 'novel' && (
+<div class="page-veil" data-transition-veil data-phase="idle" data-variant="home" data-direction="forward" transition:persist="page-transition-veil" aria-hidden="true">
+  <div class="veil-home" aria-hidden="true">
+    <span class="veil-ring"></span>
+    <span class="veil-ring"></span>
+    <span class="veil-ring"></span>
+    <span class="veil-dots"><span></span><span></span><span></span></span>
+  </div>
+  <div class="veil-article">
+    <span class="veil-edge"></span>
+    <div class="veil-band">
+      <p class="veil-kicker" data-veil-kicker></p>
+      <p class="veil-numeral" data-veil-numeral></p>
+      <p class="veil-caption" data-veil-caption></p>
+    </div>
+  </div>
+  <div class="veil-novel">
     <div class="veil-verse">
-      {lines.map((line, index) => <p class="veil-line" style={`--i: ${index}`}>{line}</p>)}
+      <p class="veil-line" data-veil-line="0"></p>
+      <p class="veil-line" data-veil-line="1"></p>
       <div class="veil-rule"><span></span><span></span><span></span></div>
     </div>
-  )}
+  </div>
 </div>
 
 <style lang="scss">
@@ -50,19 +31,38 @@ const { variant, kicker, numeral, caption, lines = [] } = Astro.props;
   .page-veil {
     position: fixed;
     inset: 0;
-    z-index: 10000;
-    display: none;
+    z-index: 5;
     overflow: hidden;
+    background: #fff;
+    opacity: 0;
     pointer-events: none;
+    visibility: hidden;
   }
 
-  :global(html.vt-arriving) .page-veil {
+  .page-veil[data-phase='covering'],
+  .page-veil[data-phase='revealing'] {
+    visibility: visible;
+  }
+
+  .veil-home,
+  .veil-article,
+  .veil-novel {
+    position: absolute;
+    inset: 0;
+    display: none;
+    overflow: hidden;
+  }
+
+  .page-veil[data-variant='home'] .veil-home,
+  .page-veil[data-variant='article'] .veil-article,
+  .page-veil[data-variant='novel'] .veil-novel {
     display: block;
   }
 
-  // Home: geometry. Three brand dots gather at the centre, then rings ride the iris edge outward.
+  .veil-home {
+    background: #fff;
+  }
 
-  // Matches `vt-iris` (200ms delay, 1100ms, 75vmax radius) so the first ring traces the reveal edge.
   .veil-ring {
     position: absolute;
     top: 50%;
@@ -72,19 +72,18 @@ const { variant, kicker, numeral, caption, lines = [] } = Astro.props;
     border: 1.5px solid $primary-blue;
     border-radius: 50%;
     transform: translate(-50%, -50%);
-    animation:
-      veil-ring-grow 1100ms $ease-in-out 200ms both,
-      veil-fade-late 1100ms linear 200ms both;
 
     &:nth-child(2) {
       border-color: $light-blue;
-      animation-delay: 290ms;
     }
 
     &:nth-child(3) {
       border-color: $ex-light-blue;
-      animation-delay: 380ms;
     }
+  }
+
+  .page-veil[data-phase='covering'][data-variant='home'] .veil-ring {
+    animation: veil-ring-grow 900ms $ease-in-out both;
   }
 
   .veil-dots {
@@ -100,7 +99,7 @@ const { variant, kicker, numeral, caption, lines = [] } = Astro.props;
       height: 0.85rem;
       border-radius: 50%;
       background: $ex-light-blue;
-      animation: veil-dot 760ms $ease-out both;
+      animation: none;
 
       &:nth-child(2) {
         background: $light-blue;
@@ -114,18 +113,19 @@ const { variant, kicker, numeral, caption, lines = [] } = Astro.props;
     }
   }
 
-  // Article: text and numbers. A rule rides the wipe edge up; the label dissolves as the edge passes it.
+  .veil-article {
+    background: #fff;
 
-  // Matches `vt-wipe-up` (350ms delay, 950ms).
+  }
+
   .veil-edge {
     position: absolute;
-    left: 0;
     right: 0;
+    left: 0;
+    top: 0;
     height: 1px;
     background: $primary-blue;
-    animation:
-      veil-edge-rise 950ms $ease-in-out 350ms both,
-      veil-fade-late 950ms linear 350ms both;
+    box-shadow: 0 0 1.2rem rgba($primary-blue, 0.24);
 
     &::before,
     &::after {
@@ -156,13 +156,29 @@ const { variant, kicker, numeral, caption, lines = [] } = Astro.props;
     width: min(40rem, 84vw);
     text-align: center;
     transform: translate(-50%, -50%);
+    animation: none;
+  }
+
+  .page-veil[data-phase='covering'] .veil-dots span {
+    animation: veil-dot 760ms $ease-out both;
+  }
+
+  .page-veil[data-phase='covering'] .veil-band {
     animation: veil-band 1300ms ease both;
   }
 
-  .veil-kicker {
+  .veil-numeral :global(span) {
+    display: inline-block;
+  }
+
+  .veil-kicker,
+  .veil-caption {
     margin: 0;
-    color: $light-blue;
     font-family: $font-family-heading;
+  }
+
+  .veil-kicker {
+    color: $light-blue;
     font-size: 0.9rem;
     letter-spacing: 0.32em;
     text-transform: uppercase;
@@ -176,28 +192,18 @@ const { variant, kicker, numeral, caption, lines = [] } = Astro.props;
     letter-spacing: 0.06em;
     line-height: 1.1;
     white-space: nowrap;
-
-    span {
-      display: inline-block;
-      animation: veil-digit 620ms $ease-out calc(80ms + var(--i) * 45ms) both;
-    }
   }
 
   .veil-caption {
-    margin: 0.75rem 0 0;
+    margin-top: 0.75rem;
     color: $primary-blue;
     font-family: $font-family-default;
     font-size: 1rem;
     letter-spacing: 0.12em;
   }
 
-  // Novel: text. A white mist gathers, the tagline surfaces line by line, then the mist thins into the
-  // novel's own opening mist (`.stage-mist` in `novel.astro` uses the same light gradient).
-
-  // Spans `vt-under-veil` (1700ms): in by 22%, out from 70%.
   .veil-novel {
     background: radial-gradient(ellipse 60% 55% at 50% 48%, #fff 0%, $mist 70%);
-    animation: veil-mist 1700ms linear both;
   }
 
   .veil-verse {
@@ -219,7 +225,6 @@ const { variant, kicker, numeral, caption, lines = [] } = Astro.props;
     font-family: $font-family-default;
     font-size: clamp(1.3rem, 2.4vw, 2rem);
     letter-spacing: 0.18em;
-    animation: veil-line 900ms ease calc(320ms + var(--i) * 260ms) both;
 
     & + & {
       color: $primary-blue;
@@ -236,34 +241,41 @@ const { variant, kicker, numeral, caption, lines = [] } = Astro.props;
       height: 0.6rem;
       border-radius: 50%;
       background: $ex-light-blue;
-      animation: veil-dot 1100ms $ease-out calc(700ms + var(--d, 0ms)) both;
 
       &:nth-child(2) {
-        --d: 80ms;
         background: $light-blue;
       }
 
       &:nth-child(3) {
-        --d: 160ms;
         background: $primary-blue;
       }
     }
+  }
+
+  .page-veil[data-phase='covering'][data-variant='novel'] .veil-line {
+    animation: veil-line 900ms ease both;
+  }
+
+  .page-veil[data-phase='covering'][data-variant='novel'] .veil-line + .veil-line {
+    animation-delay: 160ms;
+  }
+
+  .page-veil[data-phase='covering'][data-variant='novel'] .veil-rule span {
+    animation: veil-dot 900ms $ease-out 180ms both;
+  }
+
+  .page-veil[data-phase='covering'][data-variant='novel'] .veil-rule span:nth-child(2) {
+    animation-delay: 260ms;
+  }
+
+  .page-veil[data-phase='covering'][data-variant='novel'] .veil-rule span:nth-child(3) {
+    animation-delay: 340ms;
   }
 
   @keyframes veil-ring-grow {
     to {
       width: 150vmax;
       height: 150vmax;
-    }
-  }
-
-  @keyframes veil-fade-late {
-    0%,
-    75% {
-      opacity: 1;
-    }
-    100% {
-      opacity: 0;
     }
   }
 
@@ -280,15 +292,6 @@ const { variant, kicker, numeral, caption, lines = [] } = Astro.props;
     100% {
       opacity: 0;
       transform: scale(1.6);
-    }
-  }
-
-  @keyframes veil-edge-rise {
-    from {
-      top: 100%;
-    }
-    to {
-      top: 0%;
     }
   }
 
@@ -311,26 +314,6 @@ const { variant, kicker, numeral, caption, lines = [] } = Astro.props;
     }
   }
 
-  @keyframes veil-digit {
-    from {
-      opacity: 0;
-      transform: translateY(0.45em);
-    }
-  }
-
-  @keyframes veil-mist {
-    0% {
-      opacity: 0;
-    }
-    22%,
-    70% {
-      opacity: 1;
-    }
-    100% {
-      opacity: 0;
-    }
-  }
-
   @keyframes veil-line {
     from {
       opacity: 0;
@@ -338,72 +321,10 @@ const { variant, kicker, numeral, caption, lines = [] } = Astro.props;
       transform: translateY(0.5rem);
     }
   }
-</style>
 
-<style is:global lang="scss">
-  @use '../styles/global.scss' as *;
-
-  /* Root keyframes are referenced by name from the `::view-transition-*(root)` rules Astro generates. */
-  ::view-transition-old(root),
-  ::view-transition-new(root) {
-    mix-blend-mode: normal;
-  }
-
-  /* Whatever the snapshots leave uncovered shows the new page's canvas, which is night blue on the
-     novel. Back the transition with the mist instead. */
-  :root:has(.veil-novel)::view-transition {
-    background-color: $mist;
-  }
-
-  @keyframes vt-recede {
-    to {
-      opacity: 0;
-      transform: scale(0.96);
-    }
-  }
-
-  @keyframes vt-iris {
-    from {
-      clip-path: circle(0 at 50% 50%);
-    }
-    to {
-      clip-path: circle(75vmax at 50% 50%);
-    }
-  }
-
-  @keyframes vt-lift {
-    to {
-      opacity: 0;
-      transform: translateY(-3rem);
-    }
-  }
-
-  @keyframes vt-wipe-up {
-    from {
-      clip-path: inset(100% 0 0 0);
-    }
-    to {
-      clip-path: inset(0 0 0 0);
-    }
-  }
-
-  /* Washes out without losing opacity: the old page must stay opaque until the mist veil covers it. */
-  @keyframes vt-mist-fade {
-    to {
-      filter: brightness(1.25) saturate(0.6) blur(6px);
-    }
-  }
-
-  /* The new page stays hidden until the veil is fully opaque (22% of `veil-mist`), so it never shows
-     before the mist; it then waits underneath for the veil to thin. */
-  @keyframes vt-under-veil {
-    0%,
-    22% {
-      opacity: 0;
-    }
-    22.1%,
-    100% {
-      opacity: 1;
+  @media (prefers-reduced-motion: reduce) {
+    .page-veil * {
+      animation-duration: 1ms !important;
     }
   }
 </style>

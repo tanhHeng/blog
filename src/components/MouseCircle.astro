@@ -2,55 +2,49 @@
 // Mouse-following circle component
 ---
 
-<div class="mouse-circle" id="mouse-circle" hidden aria-hidden="true" style="--x: 50vw; --y: 50vh"></div>
+<div class="mouse-circle" id="mouse-circle" transition:persist="mouse-circle" hidden aria-hidden="true" style="--x: 50vw; --y: 50vh"></div>
 
-<script is:inline>
-  const mouseCircle = document.getElementById('mouse-circle');
+<script>
+  import { onPageLoad } from '../lib/pageLifecycle';
 
-  if (mouseCircle) {
+  onPageLoad((scope) => {
+    const mouseCircle = document.getElementById('mouse-circle');
+    if (!mouseCircle) return;
     const coarsePointer = window.matchMedia('(pointer: coarse)');
     const narrowViewport = window.matchMedia('(max-width: 900px)');
-
-    const isMobileDevice = () =>
-      coarsePointer.matches || narrowViewport.matches || navigator.maxTouchPoints > 0;
-
+    const isMobileDevice = () => coarsePointer.matches || narrowViewport.matches || navigator.maxTouchPoints > 0;
     const hideMouseCircle = () => {
       mouseCircle.hidden = true;
       mouseCircle.setAttribute('aria-hidden', 'true');
     };
-
     const showMouseCircle = () => {
       if (!isMobileDevice() && document.hasFocus()) {
         mouseCircle.hidden = false;
         mouseCircle.setAttribute('aria-hidden', 'false');
       }
     };
-
-    const updateMouseCircle = (e) => {
+    const updateMouseCircle = (event: MouseEvent) => {
       if (isMobileDevice() || !document.hasFocus()) {
         hideMouseCircle();
         return;
       }
-
-      const x = (e.clientX / window.innerWidth) * 100;
-      const y = (e.clientY / window.innerHeight) * 100;
-      mouseCircle.style.setProperty('--x', `${x}vw`);
-      mouseCircle.style.setProperty('--y', `${y}vh`);
+      mouseCircle.style.setProperty('--x', `${(event.clientX / window.innerWidth) * 100}vw`);
+      mouseCircle.style.setProperty('--y', `${(event.clientY / window.innerHeight) * 100}vh`);
       showMouseCircle();
     };
-
-    document.addEventListener('mousemove', updateMouseCircle);
-    document.addEventListener('mouseleave', hideMouseCircle);
-    window.addEventListener('blur', hideMouseCircle);
-    document.addEventListener('visibilitychange', () => {
+    scope.listen(document, 'mousemove', updateMouseCircle as EventListener);
+    scope.listen(document, 'mouseleave', hideMouseCircle);
+    scope.listen(window, 'blur', hideMouseCircle);
+    scope.listen(document, 'visibilitychange', () => {
       if (document.visibilityState !== 'visible') hideMouseCircle();
     });
-    coarsePointer.addEventListener('change', hideMouseCircle);
-    narrowViewport.addEventListener('change', hideMouseCircle);
-    window.addEventListener('resize', () => {
+    scope.listen(coarsePointer, 'change', hideMouseCircle);
+    scope.listen(narrowViewport, 'change', hideMouseCircle);
+    scope.listen(window, 'resize', () => {
       if (isMobileDevice()) hideMouseCircle();
     });
-  }
+    scope.cleanup(hideMouseCircle);
+  });
 </script>
 
 <style lang="scss">
