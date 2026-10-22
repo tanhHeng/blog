@@ -135,8 +135,8 @@ const variant = transition?.variant ?? (Astro.url.pathname === '/' ? 'home' : ac
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    min-height: 15rem;
-    padding: 3rem 1.5rem 2.5rem;
+    // Height follows the content; the spacer mirrors it, so this top padding is the gap below the page content.
+    padding: 1.6rem 1.5rem 2.5rem;
     color: $light-blue;
     text-align: center;
     opacity: var(--reveal);
@@ -246,8 +246,7 @@ const variant = transition?.variant ?? (Astro.url.pathname === '/' ? 'home' : ac
 
   @media (max-width: 900px) {
     .site-footnote {
-      min-height: 12rem;
-      padding: 2.5rem 1rem 2rem;
+      padding: 1.1rem 1rem 2rem;
     }
 
     .footnote-signature {

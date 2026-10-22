@@ -146,7 +146,8 @@ const pagerLinks = [
   justify-content: center;
   gap: var(--shell-gap);
   width: min(calc(100vw - 4rem), 92rem);
-  margin: 3.2rem auto 5rem;
+  // No bottom margin: the site footnote's own top padding is the only gap below the card.
+  margin: 3.2rem auto 0;
 }
 
 // Line-art assets are alpha masks, so one rule tints both placements with the site palette.
@@ -590,7 +591,7 @@ const pagerLinks = [
     --reading-shell-gutter: 1rem;
     display: block;
     width: auto;
-    margin: 8rem 1rem 3rem;
+    margin: 8rem 1rem 0;
   }
 
   .left-decoration,
