@@ -1,6 +1,7 @@
 ---
 import PageLayout from '../layouts/PageLayout.astro';
 import { articles } from '../lib/articles';
+import { friendLinks } from '../lib/friends';
 import '../styles/global.scss';
 
 const chapters = ['Prologue', 'About', 'Recent', 'Coda'];
@@ -9,13 +10,6 @@ const formatIndex = (index: number) => String(index).padStart(2, '0');
 // Two piano octaves; `true` marks a black key. Shared by the section sweep and the coda ornament.
 const octave = [false, true, false, true, false, false, true, false, true, false, true, false];
 const pianoKeys = [...octave, ...octave];
-// Friend links played by the coda keys; keys cycle through the list in keyboard order.
-const friendLinks = [
-	{ name: '4rcadia', url: 'https://blog.arcadia.moe' },
-	{ name: 'BFladderbean', url: 'https://bfladderbean.me' },
-	{ name: 'Tianya', url:'https://tianya.martianya.cloud/'},
-	{ name: 'InkBai', url:'https://inkbai.fun/'}
-];
 // Coda ornament: white keys stand apart; each black key straddles the gap after `whiteBefore` white keys.
 let whiteCount = 0;
 const codaKeys = pianoKeys.map((black, index) => {
@@ -124,7 +118,6 @@ const codaKeys = pianoKeys.map((black, index) => {
 				<nav class="footnote-links" aria-label="Footer links" data-reveal>
 					<a class="link-underline" href="mailto:contact@tanh.moe">Contact</a>
 					<a class="link-underline" href="https://github.com/tanhHeng/blog" target="_blank" rel="noreferrer">GitHub</a>
-					<a class="link-underline footnote-friend-static" href="https://blog.arcadia.moe" target="_blank" rel="noreferrer">4rcadia</a>
 					<a class="link-underline footnote-friend" href={friendLinks[0].url} target="_blank" rel="noreferrer" data-friend-rotator data-friends={JSON.stringify(friendLinks)}><span class="footnote-friend-name">{friendLinks[0].name}</span></a>
 				</nav>
 				<p class="footnote-copyright" data-reveal>Articles: <a class="link-underline" href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans" target="_blank" rel="noreferrer">CC BY-NC-SA 4.0</a> <span>/</span> Code: <a class="link-underline" href="https://gnu.net.cn/licenses/gpl-3.0.html" target="_blank" rel="noreferrer">GPL-3.0</a></p>
@@ -854,9 +847,9 @@ p {
 
 @media (max-width: 900px) {
   // On phones the keyboard is too small to play; friends rotate through the footer link instead.
+  // On wider screens the keyboard is the only friend-link entry.
   .footpage-content {
-    .coda-keys,
-    .footnote-friend-static {
+    .coda-keys {
       display: none;
     }
 

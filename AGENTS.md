@@ -94,6 +94,8 @@ Astro `<ClientRouter />` enables same-origin client-side routing while preservin
 
 `src/pages/index.astro` is the homepage. It renders the brand introduction, About Me content, recent-article area, and footer as sections inside a scroll-driven composition. `src/scripts/home.js` initializes both section navigation and circle attraction on every `astro:page-load`; the shared page lifecycle scope aborts listeners and disconnects observers, timers, animations, and animation frames on `astro:before-swap`.
 
+Friend links live in `src/lib/friends.ts`. On the homepage coda, the piano keys are the only friend-link entry where they are shown (wider than `900px`); below that the keys are hidden and a single footer link cycles through the friends. The site footnote in `BaseLayout.astro` always uses that cycling link. Both use `src/scripts/friendRotator.ts`, which drives every `[data-friend-rotator]` link and pauses while the link is hidden, hovered, or focused.
+
 Page-specific scripts register through `src/lib/pageLifecycle.ts`. Use `onPageLoad` to query current-page DOM and bind resources through the provided scope; cleanup runs before the body is swapped. In particular, the novel page's global wheel/touch/key handlers must remain scoped so they never intercept input after leaving `/novel`.
 
 `src/pages/articles/*.md` is the article content layer. Each Markdown article supplies frontmatter such as `title`, `date`, `tags`, `wordCount`, `readingTime`, and `description`, and explicitly selects `ArticleLayout.astro`. Markdown headings become anchors through Astro's heading extraction and feed `ArticleContents.astro`, which displays levels 2–4 in the table of contents.

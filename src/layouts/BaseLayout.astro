@@ -7,6 +7,7 @@ import PageTransitionVeil from '../components/PageTransitionVeil.astro';
 import '../styles/global.scss';
 import 'animate.css';
 import { homeRootTransition, type PageTransition } from '../lib/pageTransitions';
+import { friendLinks } from '../lib/friends';
 
 interface Props {
   activePage?: string;
@@ -58,7 +59,7 @@ const variant = transition?.variant ?? (Astro.url.pathname === '/' ? 'home' : ac
       <nav class="footnote-links" aria-label="Footer links">
         <a class="link-underline" href="mailto:contact@tanh.moe">Contact</a>
         <a class="link-underline" href="https://github.com/tanhHeng/blog" target="_blank" rel="noreferrer">GitHub</a>
-        <a class="link-underline" href="https://blog.arcadia.moe" target="_blank" rel="noreferrer">4rcadia</a>
+        <a class="link-underline footnote-friend" href={friendLinks[0].url} target="_blank" rel="noreferrer" data-friend-rotator data-friends={JSON.stringify(friendLinks)}><span class="footnote-friend-name">{friendLinks[0].name}</span></a>
       </nav>
       <p class="footnote-copyright">Articles: <a class="link-underline" href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans" target="_blank" rel="noreferrer">CC BY-NC-SA 4.0</a> <span>/</span> Code: <a class="link-underline" href="https://gnu.net.cn/licenses/gpl-3.0.html" target="_blank" rel="noreferrer">GPL-3.0</a></p>
     </footer>}
@@ -67,6 +68,7 @@ const variant = transition?.variant ?? (Astro.url.pathname === '/' ? 'home' : ac
 
 <script>
   import '../lib/transitionCoordinator';
+  import '../scripts/friendRotator';
   import { onPageLoad } from '../lib/pageLifecycle';
   // The footnote is fixed to the viewport bottom; an in-flow spacer of the same height lets the reader scroll
   // past the content end. `--reveal` (0–1) drives the footnote's opacity over the last `fadeDistance` of scroll,
@@ -214,6 +216,17 @@ const variant = transition?.variant ?? (Astro.url.pathname === '/' ? 'home' : ac
       font-size: 0.82rem;
       letter-spacing: 0.06em;
       transition: color 180ms ease-out;
+    }
+
+    // The rotator script pins `width` to the measured name width, so neighbours slide instead of jumping.
+    .footnote-friend {
+      display: inline-block;
+      white-space: nowrap;
+      transition: color 180ms ease-out, width 420ms cubic-bezier(0.65, 0, 0.35, 1);
+    }
+
+    .footnote-friend-name {
+      display: inline-block;
     }
   }
 
