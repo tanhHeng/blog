@@ -540,20 +540,37 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
       if (Math.abs(distance) > 40) goTo(currentStop + Math.sign(distance));
     });
 
-    // Scrollbar drags, find-in-page and focus moves can still leave the page between scenes; settle onto the nearest.
-    scope.listen(window, 'scroll', () => {
-      if (glideFrame) return;
+    // Invariant: outside a glide (and an open panel) the page rests exactly on a scene. Anything that leaves it
+    // between scenes (scrollbar drags, find-in-page, focus moves, momentum or layout shifts carried over from the
+    // previous page on mobile) is settled onto the nearest scene; resting on one just syncs `currentStop`.
+    const settle = () => {
+      if (glideFrame || panelOpen()) return;
+      const tops = measureStops();
+      const resting = tops.findIndex((top) => Math.abs(top - window.scrollY) < 1);
+      if (resting >= 0) currentStop = resting;
+      else goTo(nearestStop());
+    };
+    const requestSettle = (delay: number) => {
       scope.clearTimeout(settleTimer);
-      settleTimer = scope.timeout(() => {
-        if (!glideFrame && !panelOpen()) goTo(nearestStop());
-      }, 180);
+      settleTimer = scope.timeout(settle, delay);
+    };
+
+    scope.listen(window, 'scroll', () => {
+      if (!glideFrame) requestSettle(180);
     }, { passive: true });
 
+    // A viewport resize keeps the reader on the same scene rather than the nearest one, since every stop moves.
     scope.listen(window, 'resize', () => {
       placeCamera();
       if (!glideFrame) window.scrollTo({ top: measureStops()[currentStop], behavior: 'instant' });
     });
+
+    // Layout changes that fire no scroll or resize (fonts, mobile toolbar unit changes) can also move the stops.
+    const flowObserver = new ResizeObserver(() => requestSettle(180));
+    flowObserver.observe(root);
+    scope.observe(flowObserver);
     currentStop = nearestStop();
+    requestSettle(0);
 
     // Pointer parallax moves inner layers so it never fights the camera transition; hotspots share it to stay pinned.
     let driftFrame = 0;
