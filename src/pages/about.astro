@@ -1,0 +1,611 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import RotatingCircles from '../components/RotatingCircles.astro';
+
+// Profile copy follows the GitHub profile README (github.com/tanhHeng/tanhHeng); keep both in sync.
+const motto = '风雪拂枕，北星饮尘。';
+const description = '在深度学习、软件开发、Minecraft 工具与平面设计之间探索，把想象做成实用的系统、清晰的解释，以及认真打磨的界面。';
+
+const profile = [
+  { term: '名字', detail: 'tanh丶桁' },
+  { term: '所在', detail: '江苏 · 南京大学' },
+  { term: '所属', detail: 'LazyAlienServer' },
+  { term: '主页', detail: 'tanh.moe' },
+];
+
+const doing = [
+  { verb: '构建', name: 'TANH.MOE', mark: 'BLOG', text: '记录写作、技术思考与日常观察的个人博客，也是一场关于阅读体验的设计练习。', href: '/' },
+  { verb: '主催', name: 'Graduate Texts in Minecraft', mark: 'GTMC', text: '一部由社区协作撰写的技术 Minecraft 在线教材，我参与组织并在文章仓库中贡献内容。', href: 'https://techmc.wiki' },
+  { verb: '参与', name: 'LazyAlienServer', mark: 'LAS', text: '为 Minecraft 服务端编写插件与工具，让服务器的日常运维更省心。', href: 'https://github.com/LazyAlienServer' },
+];
+
+const skills = [
+  { group: '语言', items: ['Python', 'Java', 'TypeScript', 'HTML', 'CSS'] },
+  { group: '机器学习', items: ['PyTorch', 'TensorFlow', 'Keras'] },
+  { group: '前端', items: ['Astro', 'Vue', 'Sass'] },
+  { group: '创作与工具', items: ['Minecraft', 'Fabric', 'Figma', '平面设计'] },
+];
+
+const projects = [
+  { name: 'TANH.MOE', kind: 'Astro', text: '以 Astro 构建的个人博客，用设计驱动的阅读体验记录文章与日常。', href: 'https://github.com/tanhHeng/blog' },
+  { name: 'Graduate Texts in Minecraft', kind: 'TypeScript', text: '技术 Minecraft 的社区协作在线教材。', href: 'https://github.com/techmc-wiki/gtmc' },
+  { name: 'LitematicaPreview', kind: 'Tauri', text: '极快的 Minecraft 投影、世界文件及相关文件预览工具。', href: 'https://github.com/Arcadi4/LitematicaPreview' },
+  { name: 'MirrorMcsmcdR', kind: 'Python', text: 'MCDR 插件，可通过 MCSManager、终端或 RCON 控制镜像服并同步文件。', href: 'https://github.com/LazyAlienServer/MirrorMcsmcdR' },
+  { name: 'Where2go', kind: 'Python', text: 'MCDR 位置插件，共享坐标点、查询玩家位置，并支持 Xaero 路点。', href: 'https://github.com/LazyAlienServer/Where2go' },
+  { name: 'BotQraftReforged', kind: 'Python', text: '基于 MCDReforged、适配官方 QQ 机器人的开发框架。', href: 'https://github.com/tanhHeng/BotQraftReforged' },
+];
+
+const contacts = [
+  { label: '邮箱', value: 'contact@tanh.moe', href: 'mailto:contact@tanh.moe' },
+  { label: 'GitHub', value: 'tanhHeng', href: 'https://github.com/tanhHeng' },
+  { label: '哔哩哔哩', value: 'tanh丶桁', href: 'https://space.bilibili.com/454721668' },
+];
+
+const formatIndex = (index: number) => String(index).padStart(2, '0');
+const isExternal = (href: string) => href.startsWith('http');
+---
+
+<BaseLayout activePage="About" lang="zh-CN" title="关于 | TANH.MOE" description={description} transition={{ variant: 'article', kicker: '关于', numeral: 'tanh丶桁', caption: motto }}>
+  <div class="about-decoration" aria-hidden="true">
+    <div class="about-grid-texture"></div>
+    <RotatingCircles />
+  </div>
+
+  <main class="about-page">
+    <div class="about-grid">
+      <aside class="about-sidebar">
+        <p class="about-eyebrow">关于 <span>/</span> 自述</p>
+        <h1>关于我<span class="heading-dot" aria-hidden="true"></span></h1>
+        <p class="about-motto">{motto}</p>
+        <p class="about-intro">早上好、中午好，以及晚上好～这里是 tanh丶桁。{description}</p>
+        <dl class="about-profile">
+          {profile.map(({ term, detail }) => (
+            <div>
+              <dt>{term}</dt>
+              <dd>{detail}</dd>
+            </div>
+          ))}
+        </dl>
+        <span class="about-signature" role="img" aria-label="tanh丶桁的签名"></span>
+      </aside>
+
+      <div class="about-sections">
+        <section aria-labelledby="about-doing">
+          <header class="section-header">
+            <span class="section-index">01</span>
+            <h2 id="about-doing">项目</h2>
+          </header>
+          <ol class="doing-thread">
+            {doing.map(({ verb, name, mark, text, href }) => (
+              <li class="doing-item">
+                <span class="doing-node" aria-hidden="true"></span>
+                <a class="doing-link" href={href} target={isExternal(href) ? '_blank' : undefined} rel={isExternal(href) ? 'noreferrer' : undefined}>
+                  <span class="doing-mark" aria-hidden="true">{mark}</span>
+                  <span class="doing-verb">{verb}</span>
+                  <span class="doing-body">
+                    <span class="doing-name">{name}<span class="doing-arrow" aria-hidden="true">→</span></span>
+                    <span class="doing-text">{text}</span>
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section aria-labelledby="about-skills">
+          <header class="section-header">
+            <span class="section-index">02</span>
+            <h2 id="about-skills">技术栈</h2>
+          </header>
+          <dl class="skill-groups">
+            {skills.map(({ group, items }) => (
+              <div class="skill-group">
+                <dt>{group}</dt>
+                <dd>{items.map((item) => <span class="skill-tag">{item}</span>)}</dd>
+              </div>
+            ))}
+          </dl>
+          <p class="section-note">平时在 Minecraft 1.18.2 与 1.20.1 中研究游戏机制与源码，使用 yarn 映射；平面设计主要用 Figma。</p>
+        </section>
+
+        <section aria-labelledby="about-projects">
+          <header class="section-header">
+            <span class="section-index">03</span>
+            <h2 id="about-projects">精选项目</h2>
+          </header>
+          <ol class="project-list">
+            {projects.map(({ name, kind, text, href }, index) => (
+              <li>
+                <a class="project-link" href={href} target="_blank" rel="noreferrer">
+                  <span class="project-index">{formatIndex(index + 1)}</span>
+                  <span class="project-copy">
+                    <span class="project-name">{name}</span>
+                    <span class="project-text">{text}</span>
+                  </span>
+                  <span class="project-kind">{kind}</span>
+                </a>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section aria-labelledby="about-contact">
+          <header class="section-header">
+            <span class="section-index">04</span>
+            <h2 id="about-contact">联系</h2>
+          </header>
+          <p class="section-note">对项目有疑问或想法，欢迎在对应仓库提交 issue，让讨论保持公开、便于检索；其他事情可以写信给我。</p>
+          <ul class="contact-list">
+            {contacts.map(({ label, value, href }) => (
+              <li>
+                <span class="contact-label">{label}</span>
+                <a class="link-underline" href={href} target={isExternal(href) ? '_blank' : undefined} rel={isExternal(href) ? 'noreferrer' : undefined}>{value}</a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
+    </div>
+  </main>
+</BaseLayout>
+
+<style lang="scss">
+@use '../styles/global.scss' as *;
+
+.about-decoration {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.about-grid-texture {
+  position: absolute;
+  inset: 15% 40% 0 0;
+  background: url('/svg/grid-decoration.svg') repeat;
+  background-size: 164px;
+  mask-image: radial-gradient(ellipse, #000, transparent 72%);
+  opacity: 0.4;
+}
+
+.about-page {
+  position: relative;
+  padding: 2rem clamp(1.5rem, 3.5vw, 4rem) 5rem;
+  color: $content-color;
+  font-family: $font-family-default;
+
+  // The shared navbar is transparent; keep scrolling content behind a page-local veil.
+  &::before {
+    content: '';
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 3;
+    height: 6rem;
+    background: linear-gradient(#fff 72%, rgba(#fff, 0));
+    pointer-events: none;
+  }
+
+  &,
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  :is(h1, h2, h3, p, dl, dd, ul, ol) {
+    margin: 0;
+  }
+
+  :is(ul, ol) {
+    padding: 0;
+    list-style: none;
+  }
+
+  a:focus-visible {
+    outline: 2px solid $content-color;
+    outline-offset: 4px;
+  }
+}
+
+.about-grid {
+  display: grid;
+  grid-template-columns: minmax(18rem, 26rem) minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(2rem, 5vw, 6rem);
+  max-width: 96rem;
+  margin: 0 auto;
+}
+
+.about-sidebar {
+  position: sticky;
+  top: 6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+
+  h1 {
+    display: flex;
+    align-items: baseline;
+    gap: 0.8rem;
+    color: $home-title-color;
+    font-size: clamp(3rem, 4.4vw, 4.6rem);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    line-height: 1.15;
+  }
+}
+
+.about-eyebrow {
+  font-size: 0.72rem;
+  letter-spacing: 0.3em;
+  line-height: 1.6;
+
+  span {
+    margin: 0 0.5rem;
+    color: $light-blue;
+  }
+}
+
+.heading-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: $ex-light-blue;
+}
+
+.about-motto {
+  padding-left: 0.9rem;
+  border-left: 2px solid $ex-light-blue;
+  color: $primary-blue;
+  font-size: 1.05rem;
+  letter-spacing: 0.2em;
+}
+
+.about-intro {
+  max-width: 24rem;
+  font-size: 0.9rem;
+  line-height: 2;
+  text-wrap: pretty;
+}
+
+.about-profile {
+  display: grid;
+  gap: 0.55rem;
+  padding: 1rem 0;
+  border-block: 1px solid rgba($primary-blue, 0.2);
+  font-size: 0.85rem;
+
+  div {
+    display: grid;
+    grid-template-columns: 3.5rem 1fr;
+    align-items: baseline;
+  }
+
+  dt {
+    color: $light-blue;
+    letter-spacing: 0.2em;
+  }
+}
+
+// `signature.svg` is a mask so the ink takes the palette colour, as on the homepage.
+.about-signature {
+  align-self: flex-start;
+  width: 9rem;
+  aspect-ratio: 366 / 164;
+  background: $light-blue;
+  mask: url('/svg/signature.svg') center / contain no-repeat;
+}
+
+.about-sections {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(3rem, 6vw, 4.5rem);
+  min-width: 0;
+  padding-top: 0.35rem;
+}
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba($primary-blue, 0.2);
+
+  h2 {
+    color: $home-title-color;
+    font-size: clamp(1.6rem, 2.2vw, 2.1rem);
+    font-weight: 400;
+    letter-spacing: 0.1em;
+  }
+}
+
+.section-index {
+  color: $light-blue;
+  font-family: $font-family-heading;
+  font-size: 0.85rem;
+  letter-spacing: 0.15em;
+}
+
+.section-note {
+  margin-top: 1.25rem !important;
+  max-width: 40rem;
+  color: $primary-blue;
+  font-size: 0.85rem;
+  line-height: 2;
+}
+
+// A single thread runs down the left; each project hangs on it as a node, its rows stepping right like
+// a descending phrase. A pale oversized character sits behind each row as its seal-like keyword.
+// Scoped under `.about-page` so the page's list reset (`padding: 0`) does not drop the thread gutter.
+.about-page .doing-thread {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  --step: clamp(1rem, 4vw, 3.5rem);
+  gap: 2.25rem;
+  padding: 0.5rem 0 0.5rem 2.25rem;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0.45rem;
+    width: 1px;
+    background: linear-gradient(transparent, rgba($primary-blue, 0.45) 12%, rgba($primary-blue, 0.45) 88%, transparent);
+  }
+}
+
+.doing-item {
+  position: relative;
+  margin-left: calc(var(--i) * var(--step));
+
+  @for $i from 1 through 3 {
+    &:nth-child(#{$i}) {
+      --i: #{$i - 1};
+    }
+  }
+
+  // Node sizes and tints echo the navbar's three brand circles.
+  &:nth-child(1) .doing-node { --node-size: 0.95rem; --node-color: #{$ex-light-blue}; }
+  &:nth-child(2) .doing-node { --node-size: 0.8rem; --node-color: #{$light-blue}; }
+  &:nth-child(3) .doing-node { --node-size: 0.65rem; --node-color: #{$primary-blue}; }
+}
+
+.doing-node {
+  position: absolute;
+  top: 0.55rem;
+  // Pulled back by the row's step so every node sits on the thread.
+  left: calc(-2.25rem + 0.45rem - var(--node-size) / 2 + 0.5px - var(--i) * var(--step));
+  width: var(--node-size);
+  height: var(--node-size);
+  border: 1px solid var(--node-color);
+  border-radius: 50%;
+  background: #fff;
+  transition: background-color 240ms ease-out, transform 240ms ease-out;
+
+  .doing-item:has(.doing-link:is(:hover, :focus-visible)) & {
+    background: var(--node-color);
+    transform: scale(1.35);
+  }
+}
+
+.doing-link {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1.1rem;
+  max-width: 40rem;
+  color: inherit;
+  text-decoration: none;
+  isolation: isolate;
+}
+
+.doing-mark {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  z-index: -1;
+  color: rgba($ex-light-blue, 0.55);
+  font-family: $font-family-heading;
+  font-size: clamp(3.5rem, 6.5vw, 5.5rem);
+  letter-spacing: 0.04em;
+  line-height: 1;
+  transform: translateY(-50%);
+  transition: color 300ms ease-out, transform 300ms ease-out;
+  user-select: none;
+
+  .doing-link:is(:hover, :focus-visible) & {
+    color: rgba($light-blue, 0.4);
+    transform: translate(0.75rem, -50%);
+  }
+}
+
+.doing-verb {
+  padding: 0.2rem 0;
+  border-right: 1px solid rgba($primary-blue, 0.3);
+  padding-right: 0.7rem;
+  color: $primary-blue;
+  font-size: 0.8rem;
+  letter-spacing: 0.35em;
+  writing-mode: vertical-rl;
+}
+
+.doing-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding-right: clamp(3rem, 8vw, 6rem);
+}
+
+.doing-name {
+  color: $home-title-color;
+  font-size: clamp(1.25rem, 1.9vw, 1.6rem);
+  line-height: 1.3;
+}
+
+.doing-arrow {
+  display: inline-block;
+  margin-left: 0.6rem;
+  color: $light-blue;
+  font-size: 0.9em;
+  opacity: 0;
+  transform: translateX(-0.5rem);
+  transition: opacity 220ms ease-out, transform 220ms ease-out;
+
+  .doing-link:is(:hover, :focus-visible) & {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.doing-text {
+  font-size: 0.85rem;
+  line-height: 1.9;
+}
+
+.skill-groups {
+  display: grid;
+  gap: 1rem;
+}
+
+.skill-group {
+  display: grid;
+  grid-template-columns: 6rem 1fr;
+  align-items: baseline;
+  gap: 1rem;
+
+  dt {
+    color: $primary-blue;
+    font-size: 0.85rem;
+    letter-spacing: 0.15em;
+  }
+
+  dd {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+}
+
+.skill-tag {
+  padding: 0.2rem 0.75rem;
+  border-radius: 999px;
+  background: rgba($ex-light-blue, 0.7);
+  font-size: 0.8rem;
+}
+
+.project-list li + li {
+  border-top: 1px solid rgba($primary-blue, 0.14);
+}
+
+.project-link {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 1.05rem 0.5rem;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 200ms ease-out;
+
+  &:hover {
+    background: rgba($ex-light-blue, 0.35);
+
+    .project-name {
+      color: $home-title-color;
+    }
+  }
+}
+
+.project-index {
+  color: $light-blue;
+  font-family: $font-family-heading;
+  font-size: 0.85rem;
+}
+
+.project-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.project-name {
+  font-size: 1.1rem;
+  transition: color 200ms ease-out;
+}
+
+.project-text {
+  font-size: 0.85rem;
+  line-height: 1.8;
+}
+
+.project-kind {
+  color: $primary-blue;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+}
+
+.contact-list {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.25rem !important;
+
+  li {
+    display: grid;
+    grid-template-columns: 6rem 1fr;
+    align-items: baseline;
+    gap: 1rem;
+  }
+}
+
+.contact-label {
+  color: $primary-blue;
+  font-size: 0.85rem;
+  letter-spacing: 0.15em;
+}
+
+.link-underline {
+  justify-self: start;
+  color: $content-color;
+}
+
+@media (max-width: 900px) {
+  .about-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .about-sidebar {
+    position: static;
+  }
+
+  .about-grid-texture {
+    inset: 0 0 60%;
+    opacity: 0.2;
+  }
+
+  .project-link {
+    grid-template-columns: 2.25rem minmax(0, 1fr);
+
+    .project-kind {
+      grid-column: 2;
+    }
+  }
+
+  .skill-group,
+  .contact-list li {
+    grid-template-columns: 4.5rem 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .doing-link,
+  .doing-node,
+  .doing-mark,
+  .doing-arrow {
+    transition: none !important;
+  }
+}
+</style>
