@@ -124,6 +124,23 @@
   // ring and the selected sector's lift unclipped.
   overflow: clip;
   overflow-clip-margin: 1rem;
+  // The core's type scales with the ring (`cqi`), so it fits whatever size `--orbit-size` resolves to.
+  container-type: inline-size;
+}
+
+// Smaller rings drop secondary core lines instead of letting the stack spill past the circle.
+@container (max-width: 23rem) {
+  .orbit-eyebrow,
+  .orbit-mode,
+  .orbit-core-rule {
+    display: none;
+  }
+}
+
+@container (max-width: 19rem) {
+  .articles-page .orbit-selection {
+    display: none;
+  }
 }
 
 .orbit-guide {
@@ -224,7 +241,7 @@
 
   h2 {
     margin: 0.3rem 0 0.45rem;
-    font-size: clamp(1.75rem, 2.2vw, 2.6rem);
+    font-size: clamp(1.35rem, 9cqi, 2.6rem);
     font-weight: 400;
     line-height: 1.2;
   }
@@ -240,7 +257,7 @@
 }
 
 .orbit-summary {
-  font-size: 0.83rem;
+  font-size: clamp(0.72rem, 3.3cqi, 0.83rem);
 }
 
 .articles-page .orbit-selection {
@@ -251,7 +268,7 @@
   overflow-wrap: anywhere;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  font-size: 0.7rem;
+  font-size: clamp(0.62rem, 2.8cqi, 0.7rem);
   line-height: 1.6;
 }
 
@@ -840,9 +857,6 @@
   }
   .article-number {
     font-size: 1.9rem;
-  }
-  .orbit-eyebrow {
-    display: none;
   }
 }
 
