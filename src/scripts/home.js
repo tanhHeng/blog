@@ -613,3 +613,35 @@ onPageLoad((scope) => {
 	scope.timeout(cycle, 3000);
 	scope.cleanup(() => link.style.removeProperty('width'));
 });
+
+// Coda piano: an occasional left-to-right wave over the white keys. Hovering lets the current pass
+// finish but holds further passes until the pointer leaves.
+onPageLoad((scope) => {
+	const keys = document.querySelector('.coda-keys');
+	const whites = keys?.querySelectorAll('.coda-white');
+	if (!keys || !whites?.length) return;
+	if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+	const interval = 3000;
+	let waiting = false;
+
+	const play = () => {
+		if (keys.matches(':hover')) {
+			waiting = true;
+			return;
+		}
+		keys.classList.remove('is-waving');
+		void keys.offsetWidth; // restart the CSS animation
+		keys.classList.add('is-waving');
+	};
+	scope.listen(whites[whites.length - 1], 'animationend', () => {
+		keys.classList.remove('is-waving');
+		scope.timeout(play, interval);
+	});
+	scope.listen(keys, 'pointerleave', () => {
+		if (!waiting) return;
+		waiting = false;
+		scope.timeout(play, interval / 3);
+	});
+	scope.timeout(play, 2000);
+	scope.cleanup(() => keys.classList.remove('is-waving'));
+});

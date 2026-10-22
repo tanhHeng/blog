@@ -117,7 +117,7 @@ const codaKeys = pianoKeys.map((black, index) => {
 			</section>
 			<section class="footpage-content" hidden>
 				<nav class="coda-keys" aria-label="Friend links" data-reveal>
-					{codaKeys.filter((key) => !key.black).map((key) => <a class="coda-white" href={key.friend.url} target="_blank" rel="noreferrer" style={`--key-index: ${key.index}`}><span class="key-friend">{key.friend.name}</span></a>)}
+					{codaKeys.filter((key) => !key.black).map((key) => <a class="coda-white" href={key.friend.url} target="_blank" rel="noreferrer" style={`--key-index: ${key.index}; --white-index: ${key.whiteBefore - 1}`}><span class="key-friend">{key.friend.name}</span></a>)}
 					{codaKeys.filter((key) => key.black).map((key) => <a class="coda-black" href={key.friend.url} target="_blank" rel="noreferrer" style={`--key-index: ${key.index}; --seam: ${key.whiteBefore}`}><span class="key-friend">{key.friend.name}</span></a>)}
 				</nav>
 				<p class="signature" data-reveal><span>Life is Piano.</span><span>You are Pianist.</span></p>
@@ -731,6 +731,12 @@ p {
 	  border-bottom-left-radius: 3px;
 	  border-bottom-right-radius: 3px;
       border-top: none;
+      // Wave: keys dip left to right in turn while `home.js` sets `is-waving`, one pass at a time.
+      // Uses `translate` so it composes with the hover `transform`.
+    }
+
+    &.is-waving .coda-white {
+      animation: coda-wave 640ms ease-in-out calc(var(--white-index) * 90ms);
     }
 
     .coda-black {
@@ -756,6 +762,17 @@ p {
     .coda-black:hover,
     .coda-black:focus-visible {
       background: $primary-blue;
+    }
+  }
+
+  @keyframes coda-wave {
+    0%,
+    100% {
+      translate: 0 0;
+    }
+    50% {
+      translate: 0 3px;
+      border-color: $light-blue;
     }
   }
 
@@ -1041,8 +1058,12 @@ p {
 	}
 
 	.chapter-rail .chapter-label,
-	.footpage-content .coda-keys span {
+	.footpage-content .coda-keys > a {
 		transition: none;
+	}
+
+	.footpage-content .coda-keys .coda-white {
+		animation: none;
 	}
 }
 </style>
