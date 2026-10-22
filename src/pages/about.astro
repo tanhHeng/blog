@@ -578,6 +578,11 @@ const isExternal = (href: string) => href.startsWith('http');
     padding: 6.5rem 1.25rem 3.5rem;
   }
 
+  // Phones are too narrow for the stepped rows; every project lines up on the thread.
+  .about-page .doing-thread {
+    --step: 0rem;
+  }
+
   .about-grid {
     grid-template-columns: 1fr;
   }
