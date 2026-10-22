@@ -990,9 +990,10 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     pointer-events: none;
   }
 
+  // `svh` is the viewport with mobile browser toolbars shown, so verse and cues never sit under the bottom bar.
   .scene {
     position: relative;
-    height: 100vh;
+    height: 100svh;
   }
 
   .scene-frame {
@@ -1002,8 +1003,8 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     flex-direction: column;
     justify-content: center;
     box-sizing: border-box;
-    height: 100vh;
-    padding: navbar.$navbar-actual-height 10vw 4rem;
+    height: 100svh;
+    padding: navbar.$navbar-actual-height 10vw calc(4rem + env(safe-area-inset-bottom));
   }
 
   // Intro ----------------------------------------------------------------
