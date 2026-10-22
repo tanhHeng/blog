@@ -250,7 +250,10 @@ onPageLoad((scope) => {
     currentIndex = initialIndex;
     showSection(contentSections[initialIndex]);
     updateChapter(initialIndex, 'down');
-    if (!reducedMotion.matches) revealIn(contentSections[initialIndex], 'down');
+    // During a ClientRouter arrival the iris already reveals a snapshot of the finished page; replaying
+    // the reveal on the live DOM underneath would jump back to half-hidden rows when the snapshot ends.
+    const arrivingThroughTransition = document.documentElement.hasAttribute('data-astro-transition');
+    if (!reducedMotion.matches && !arrivingThroughTransition) revealIn(contentSections[initialIndex], 'down');
   });
 
 onPageLoad((scope) => {

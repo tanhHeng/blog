@@ -65,14 +65,16 @@ function populate(transition: Transition, incoming: Document) {
   });
 }
 
+// Novel and plain veils animate opacity only, which stays on the compositor; animating `filter`
+// repaints the full-screen mist every frame over the novel's video and stutters as the reveal ends.
 function frames(variant: Variant, direction: string, entering: boolean): Keyframe[] {
-  const full = { opacity: 1, clipPath: 'inset(0)', filter: 'blur(0px)' };
+  if (variant === 'novel' || variant === 'plain') {
+    return entering ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 1 }, { opacity: 0 }];
+  }
   const hidden = variant === 'home'
     ? { opacity: 1, clipPath: 'circle(0 at 50% 50%)' }
-    : variant === 'article'
-      ? { opacity: 1, clipPath: (direction === 'back') !== entering ? 'inset(100% 0 0)' : 'inset(0 0 100% 0)' }
-      : { opacity: 0, filter: variant === 'novel' ? 'blur(8px)' : 'none' };
-  const covered = variant === 'home' ? { opacity: 1, clipPath: 'circle(75vmax at 50% 50%)' } : full;
+    : { opacity: 1, clipPath: (direction === 'back') !== entering ? 'inset(100% 0 0)' : 'inset(0 0 100% 0)' };
+  const covered = variant === 'home' ? { opacity: 1, clipPath: 'circle(75vmax at 50% 50%)' } : { opacity: 1, clipPath: 'inset(0)' };
   return entering ? [hidden, covered] : [covered, hidden];
 }
 
