@@ -317,6 +317,8 @@ p {
 }
 
 // Outlined ghost numeral echoing the current chapter; sits behind the copy.
+// The outline grows with the screen width (1px at 1200px wide, capped at 1.5px from 1800px); a fixed 1px reads
+// as a broken hairline on large screens.
 .chapter-numeral {
 	position: fixed;
 	top: 15vh;
@@ -327,7 +329,7 @@ p {
 	font-size: clamp(9rem, 24vh, 16rem);
 	line-height: 0.8;
 	letter-spacing: -0.02em;
-	-webkit-text-stroke: 1px rgba($light-blue, 0.55);
+	-webkit-text-stroke: clamp(1px, 100vw / 1200, 1.5px) rgba($light-blue, 0.55);
 	pointer-events: none;
 	user-select: none;
 }
