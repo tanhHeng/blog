@@ -362,6 +362,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     const drifts = Array.from(root.querySelectorAll<HTMLElement>('[data-stage-drift]'));
     const video = root.querySelector<HTMLVideoElement>('[data-stage-video]')!;
     const hotspotLayer = root.querySelector<HTMLElement>('[data-hotspot-layer]')!;
+    const stage = camera.parentElement!;
     const hotspots = Array.from(root.querySelectorAll<HTMLElement>('[data-hotspot]'));
     const scenes = Array.from(root.querySelectorAll<HTMLElement>('[data-scene]'));
     const railLinks = Array.from(root.querySelectorAll<HTMLAnchorElement>('[data-rail-link]'));
@@ -377,9 +378,10 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
 
     // Places the frame so `focus` lands on the composition target, clamped so the frame always covers the viewport.
     const placeCamera = () => {
-      // Client size excludes the reserved scrollbar gutter, matching what fixed layers actually cover.
-      const vw = document.documentElement.clientWidth;
-      const vh = document.documentElement.clientHeight;
+      // Measured from the fixed stage itself: it excludes the reserved scrollbar gutter and, unlike the root's
+      // client height (the small viewport on mobile), grows when the browser toolbars collapse.
+      const vw = stage.clientWidth;
+      const vh = stage.clientHeight;
       const width = Math.max(vw, vh * frameRatio);
       const height = width / frameRatio;
       const chapter = activeScene?.dataset.focusX !== undefined ? activeScene : undefined;
@@ -569,6 +571,10 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     const flowObserver = new ResizeObserver(() => requestSettle(180));
     flowObserver.observe(root);
     scope.observe(flowObserver);
+    // Toolbar collapse resizes the fixed stage without always firing `resize`; keep the frame covering it.
+    const stageObserver = new ResizeObserver(() => placeCamera());
+    stageObserver.observe(stage);
+    scope.observe(stageObserver);
     currentStop = nearestStop();
     requestSettle(0);
 
@@ -1007,7 +1013,9 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     pointer-events: none;
   }
 
-  // `svh` is the viewport with mobile browser toolbars shown, so verse and cues never sit under the bottom bar.
+  // Scroll distance per scene uses `svh` (toolbars shown) so stops never move when mobile toolbars collapse;
+  // the sticky frame tracks the visible viewport (`dvh`), so its content stays clear of the bottom bar and
+  // follows the screen bottom down when the bar hides.
   .scene {
     position: relative;
     height: 100svh;
@@ -1020,7 +1028,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     flex-direction: column;
     justify-content: center;
     box-sizing: border-box;
-    height: 100svh;
+    height: 100dvh;
     padding: navbar.$navbar-actual-height 10vw calc(4rem + env(safe-area-inset-bottom));
   }
 
@@ -2087,11 +2095,8 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     }
 
     // Anchored to the bottom rather than centred, so the title keeps a fixed distance above the scroll cue.
-    // The frame tracks the visible viewport (`dvh`), so when the mobile toolbars collapse the cue and title follow
-    // the screen bottom down; the scene keeps its `svh` height, so scroll stops do not move.
     .scene-intro .scene-frame {
       justify-content: flex-end;
-      height: 100dvh;
       padding-bottom: calc(11rem + env(safe-area-inset-bottom));
     }
 
