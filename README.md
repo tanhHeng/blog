@@ -36,4 +36,5 @@ Built with [Astro](https://astro.build), Sass, and a little TypeScript; there is
 
 ## License
 
-[GPL-3.0](./LICENSE)
+- **Code:** [GPL-3.0](./LICENSE)
+- **Articles and other written content** (including the novel): [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans)
