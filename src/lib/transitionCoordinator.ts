@@ -101,9 +101,13 @@ document.addEventListener('astro:before-preparation', (event: TransitionBeforePr
   current = transition;
   veil.dataset.variant = transition.variant;
   veil.dataset.direction = transition.direction;
+  event.signal.addEventListener('abort', () => { if (current === transition) reset(transition); }, { once: true });
+
+  // Home opens through the root view-transition iris (`homeRootTransition`); swap as soon as it loads.
+  if (transition.variant === 'home') return;
+
   veil.dataset.phase = 'covering';
   veil.querySelectorAll<HTMLElement>('[data-veil-kicker], [data-veil-numeral], [data-veil-caption], [data-veil-line]').forEach((element) => { element.textContent = ''; });
-  event.signal.addEventListener('abort', () => { if (current === transition) reset(transition); }, { once: true });
 
   // Fetch and cover concurrently; never swap an uncovered page, even when loading is cached.
   const loader = event.loader;
@@ -129,7 +133,14 @@ onBeforeSwap((event) => {
   document.querySelectorAll<HTMLAnchorElement>('#site-navbar .nav-link').forEach((link) => {
     link.classList.toggle('active', link.getAttribute('href') === activeHref);
   });
-  if (current) populate(current, event.newDocument);
+  if (!current) return;
+  if (current.variant === 'home') {
+    const transition = current;
+    transition.veil.dataset.phase = 'iris';
+    window.setTimeout(() => { if (current === transition) reset(transition); }, 1500);
+    return;
+  }
+  populate(current, event.newDocument);
 });
 
 document.addEventListener('astro:page-load', () => {
@@ -139,7 +150,7 @@ document.addEventListener('astro:page-load', () => {
     reset(transition);
     return;
   }
-  if (transition.arriving) return;
+  if (transition.arriving || transition.variant === 'home') return;
   transition.arriving = true;
   transition.veil.dataset.phase = 'revealing';
   void transition.entering?.then(() => {

@@ -6,7 +6,7 @@ import MouseCircle from '../components/MouseCircle.astro';
 import PageTransitionVeil from '../components/PageTransitionVeil.astro';
 import '../styles/global.scss';
 import 'animate.css';
-import type { PageTransition } from '../lib/pageTransitions';
+import { homeRootTransition, type PageTransition } from '../lib/pageTransitions';
 
 interface Props {
   activePage?: string;
@@ -25,9 +25,10 @@ const {
   showFootnote = true,
   transition,
 } = Astro.props;
+const variant = transition?.variant ?? (Astro.url.pathname === '/' ? 'home' : activePage === 'Novel' ? 'novel' : activePage === 'Article' ? 'article' : 'plain');
 ---
 
-<html lang={lang} data-transition-variant={transition?.variant ?? (Astro.url.pathname === '/' ? 'home' : activePage === 'Novel' ? 'novel' : activePage === 'Article' ? 'article' : 'plain')} data-transition-kicker={transition?.kicker} data-transition-numeral={transition?.numeral} data-transition-caption={transition?.caption} data-transition-lines={transition?.lines ? JSON.stringify(transition.lines) : undefined} transition:animate="none">
+<html lang={lang} data-transition-variant={variant} data-transition-kicker={transition?.kicker} data-transition-numeral={transition?.numeral} data-transition-caption={transition?.caption} data-transition-lines={transition?.lines ? JSON.stringify(transition.lines) : undefined} transition:name="root" transition:animate={variant === 'home' ? homeRootTransition : 'none'}>
   <head>
     <meta charset="utf-8" />
     <link rel="icon" href="/favicon.svg" />

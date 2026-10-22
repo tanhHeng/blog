@@ -1,4 +1,4 @@
-<div class="page-veil" data-transition-veil data-phase="idle" data-variant="home" data-direction="forward" transition:persist="page-transition-veil" aria-hidden="true">
+<div class="page-veil" data-transition-veil data-phase="idle" data-variant="home" data-direction="forward" transition:persist="page-transition-veil" transition:name="page-veil" transition:animate="none" aria-hidden="true">
   <div class="veil-home" aria-hidden="true">
     <span class="veil-ring"></span>
     <span class="veil-ring"></span>
@@ -84,6 +84,46 @@
 
   .page-veil[data-phase='covering'][data-variant='home'] .veil-ring {
     animation: veil-ring-grow 900ms $ease-in-out both;
+  }
+
+  // Home arrival: the page itself opens through the root `vt-iris`; the veil is transparent and only
+  // carries rings riding the iris edge (same 200ms delay, 1100ms, 75vmax radius) and the brand dots.
+  .page-veil[data-phase='iris'] {
+    visibility: visible;
+    opacity: 1;
+    background: transparent;
+
+    .veil-home {
+      background: transparent;
+    }
+
+    .veil-ring {
+      animation:
+        veil-ring-grow 1100ms $ease-in-out 200ms both,
+        veil-fade-late 1100ms linear 200ms both;
+
+      &:nth-child(2) {
+        animation-delay: 290ms;
+      }
+
+      &:nth-child(3) {
+        animation-delay: 380ms;
+      }
+    }
+
+    .veil-dots span {
+      animation: veil-dot 760ms $ease-out both;
+    }
+  }
+
+  @keyframes veil-fade-late {
+    0%,
+    75% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
   }
 
   .veil-dots {
@@ -325,6 +365,30 @@
   @media (prefers-reduced-motion: reduce) {
     .page-veil * {
       animation-duration: 1ms !important;
+    }
+  }
+</style>
+
+<style is:global>
+  /* Root keyframes referenced by `homeRootTransition` in `lib/pageTransitions.ts`. */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    mix-blend-mode: normal;
+  }
+
+  @keyframes vt-recede {
+    to {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+  }
+
+  @keyframes vt-iris {
+    from {
+      clip-path: circle(0 at 50% 50%);
+    }
+    to {
+      clip-path: circle(75vmax at 50% 50%);
     }
   }
 </style>
