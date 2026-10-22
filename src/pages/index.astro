@@ -364,6 +364,22 @@ p {
 		height: 62%;
 		background: linear-gradient(to bottom, rgba($light-blue, 0), rgba($light-blue, 0.38));
 	}
+
+	// Keys stretch across the full width on narrow layouts, so fewer keys keep them from becoming
+	// slivers: 17 (through the next E, ending on a white key) up to 900px, one octave up to 720px.
+	// Breakpoints reuse the site's narrow-layout (900px) and article card (720px) widths.
+	// Hidden keys still receive the sweep classes harmlessly.
+	@media (max-width: 900px) {
+		&:nth-child(n + 18) {
+			display: none;
+		}
+	}
+
+	@media (max-width: 720px) {
+		&:nth-child(n + 13) {
+			display: none;
+		}
+	}
 }
 
 .main-content {
