@@ -403,8 +403,69 @@ const pagerLinks = [
     padding-left: 0.35rem;
   }
 
+  // Body links, drawn with four background layers so every part follows links that wrap across lines:
+  // 1. a looping blue gradient clipped to the glyphs (the text colour), on top;
+  // 2. a solid underline that sweeps in from the left on hover;
+  // 3. the faint resting underline;
+  // 4. a pale wash that rises behind the lower half of the text on hover.
+  // Only the first layer is clipped to the text; the rest paint the box beneath the glyphs.
   :global(a) {
-    color: $primary-blue;
+    padding: 0 0.1em;
+    color: $content-color;
+    text-decoration: none;
+    // The text gradient starts and ends on the same colour and is twice the link's width, so shifting it
+    // by one full image width (`-200%`, see `link-flow`) loops without a seam.
+    background:
+      linear-gradient(90deg, $content-color, $primary-blue, $light-blue, $primary-blue, $content-color) 0 0 / 200% 100%,
+      linear-gradient($primary-blue, $primary-blue) 0 100% / 0 1px no-repeat,
+      linear-gradient(rgba($primary-blue, 0.35), rgba($primary-blue, 0.35)) 0 100% / 100% 1px no-repeat,
+      linear-gradient(rgba($ex-light-blue, 0.55), rgba($ex-light-blue, 0.55)) 0 100% / 100% 0 no-repeat;
+    -webkit-background-clip: text, border-box, border-box, border-box;
+    background-clip: text, border-box, border-box, border-box;
+    -webkit-text-fill-color: transparent;
+    box-decoration-break: clone;
+    animation: link-flow 3s linear infinite;
+    transition: background-size 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  :global(a:hover),
+  :global(a:focus-visible) {
+    background-size: 200% 100%, 100% 1px, 100% 1px, 100% 0.45em;
+  }
+
+  :global(a:focus-visible) {
+    outline: 1px solid rgba($primary-blue, 0.6);
+    outline-offset: 0.15rem;
+  }
+
+  // External links carry a small arrow, so readers know they leave the site. It opts out of the text
+  // gradient, which would otherwise paint it too.
+  :global(a[href^='http']::after) {
+    display: inline-block;
+    margin-left: 0.15em;
+    color: $light-blue;
+    -webkit-text-fill-color: currentColor;
+    font-size: 0.75em;
+    content: '↗';
+    transition: transform 200ms ease-out;
+  }
+
+  :global(a[href^='http']:hover::after) {
+    transform: translate(0.1em, -0.1em);
+  }
+
+  // Footnote references stay as small superscripts: gradient text only, no underline or wash.
+  :global(sup a),
+  :global(sup a:hover),
+  :global(sup a:focus-visible) {
+    padding: 0 0.15em;
+    background-size: 200% 100%, 0 0, 0 0, 0 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global(a) {
+      animation: none;
+    }
   }
 
   :global(code) {
@@ -741,6 +802,13 @@ const pagerLinks = [
     grid-auto-flow: row;
     gap: 0.75rem;
     margin-top: 1.75rem;
+  }
+}
+
+@keyframes link-flow {
+  // Only the text-gradient layer moves; the underline and wash layers keep their place at the bottom.
+  to {
+    background-position: -200% 0, 0 100%, 0 100%, 0 100%;
   }
 }
 </style>
