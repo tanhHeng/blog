@@ -409,9 +409,60 @@ const pagerLinks = [
 
   :global(code) {
     padding: 0.12rem 0.35rem;
+    border-radius: 0.2rem;
     background: rgba($ex-light-blue, 0.45);
-    font-family: ui-monospace, monospace;
-    font-size: 0.88em;
+    color: #3f4a70;
+    font-family: $font-family-code;
+    font-size: 0.86em;
+  }
+
+  // Code blocks: a pale paper panel in the site's blues, with the language as a small caption.
+  // Token colours feed Shiki's `css-variables` theme (`astro.config.mjs`).
+  :global(pre) {
+    --astro-code-foreground: #3f4a70;
+    --astro-code-background: #{rgba($ex-light-blue, 0.22)};
+    --astro-code-token-keyword: #6a5fb0;
+    --astro-code-token-string: #3f8580;
+    --astro-code-token-string-expression: #3f8580;
+    --astro-code-token-function: #3a6db0;
+    --astro-code-token-constant: #a8607a;
+    --astro-code-token-parameter: #8a6a3c;
+    --astro-code-token-comment: #{$light-blue};
+    --astro-code-token-punctuation: #{$primary-blue};
+    --astro-code-token-link: #3a6db0;
+
+    position: relative;
+    margin: 1.6rem 0 1.9rem;
+    padding: 1.15rem 1.4rem;
+    border: 1px solid rgba($primary-blue, 0.22);
+    border-left: 2px solid $primary-blue;
+    border-radius: 0 0.35rem 0.35rem 0;
+    overflow-x: auto;
+    font-size: 0.84rem;
+    line-height: 1.75;
+    tab-size: 2;
+
+    // Astro writes the fence language to `data-language`; plain fences get `plaintext` and no caption.
+    &[data-language]:not([data-language='plaintext'])::before {
+      position: absolute;
+      top: 0.45rem;
+      right: 0.75rem;
+      color: $light-blue;
+      font-family: $font-family-heading;
+      font-size: 0.68rem;
+      letter-spacing: 0.16em;
+      line-height: 1;
+      text-transform: uppercase;
+      content: attr(data-language);
+    }
+
+    :global(code) {
+      padding: 0;
+      border-radius: 0;
+      background: none;
+      color: inherit;
+      font-size: inherit;
+    }
   }
 }
 
