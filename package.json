@@ -7,7 +7,8 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "check:astro": "astro check"
+    "check:astro": "astro check",
+    "prepare": "vp config --no-agent"
   },
   "dependencies": {
     "@astrojs/react": "^7.1.0",
