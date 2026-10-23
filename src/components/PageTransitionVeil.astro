@@ -21,6 +21,13 @@
     </div>
   </div>
 </div>
+<div class="page-loader" data-transition-loader data-state="idle" transition:persist="page-transition-loader" aria-hidden="true">
+  <div class="loader-dots" transition:name="page-loader-dots" transition:animate="none">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
 
 <style lang="scss">
   @use '../styles/global.scss' as *;
@@ -114,6 +121,11 @@
     .veil-dots span {
       animation: veil-dot 760ms $ease-out both;
     }
+  }
+
+  // After the loading dots (see `withLoader`) the home arrival drops its brand dots, so only one set shows.
+  .page-veil[data-after-loader] .veil-dots {
+    visibility: hidden;
   }
 
   @keyframes veil-fade-late {
@@ -240,6 +252,84 @@
     font-family: $font-family-default;
     font-size: 1rem;
     letter-spacing: 0.12em;
+  }
+
+  // Loading dots, shown over the outgoing page only when the next page takes longer than the coordinator's
+  // threshold, on a full-page cover (30% white plus a backdrop blur) that eases in over 500ms and out over
+  // 700ms. The dots' exit (the home veil dots' scale-up and fade) is driven by the coordinator.
+  // The cover is left out of the view transition on purpose: inside the root snapshots its blur is captured
+  // with the page (a separately named layer would lose the backdrop and vanish at the home iris). The dots
+  // get their own name so the outgoing root snapshot does not freeze a second copy of them.
+  .page-loader {
+    position: fixed;
+    inset: 0;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    visibility: hidden;
+    background: rgba(#fff, 0);
+    backdrop-filter: blur(0);
+  }
+
+  .loader-dots {
+    display: flex;
+    gap: 0.85rem;
+
+    span {
+      width: 0.85rem;
+      height: 0.85rem;
+      border-radius: 50%;
+      background: $ex-light-blue;
+
+      &:nth-child(2) {
+        background: $light-blue;
+      }
+
+      &:nth-child(3) {
+        background: $primary-blue;
+      }
+    }
+  }
+
+  .page-loader[data-state='loading'],
+  .page-loader[data-state='leaving'] {
+    visibility: visible;
+  }
+
+  // Fade-in only; the 700ms fade-out runs through the Web Animations API (see `withLoader`), which keeps
+  // running while the persisted loader is moved into the incoming document, where CSS transitions are cancelled.
+  .page-loader[data-state='loading'] {
+    background: rgba(#fff, 0.3);
+    backdrop-filter: blur(4px);
+    transition: background-color 500ms ease-out, backdrop-filter 500ms ease-out;
+
+    span {
+      animation: loader-pulse 1480ms ease-in-out infinite both;
+
+      &:nth-child(2) {
+        animation-delay: 160ms;
+      }
+
+      &:nth-child(3) {
+        animation-delay: 320ms;
+      }
+    }
+  }
+
+  // Each pulse takes 880ms (rise to 30%, fall to 59%); the remaining ~600ms of the cycle is the pause.
+  @keyframes loader-pulse {
+    0%,
+    59%,
+    100% {
+      opacity: 0.35;
+      transform: scale(0.55);
+    }
+    30% {
+      opacity: 1;
+      transform: scale(1);
+    }
   }
 
   .veil-novel {

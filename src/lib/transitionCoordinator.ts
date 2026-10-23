@@ -15,6 +15,64 @@ interface Transition {
 
 const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
 let current: Transition | undefined;
+// Loads faster than this show no loading dots and go straight to the page transition.
+const loaderDelay = 200;
+
+function loaderElement() {
+  return document.querySelector<HTMLElement>('[data-transition-loader]');
+}
+
+function hideLoader() {
+  const loader = loaderElement();
+  if (!loader) return;
+  loader.getAnimations({ subtree: true }).forEach((animation) => animation.cancel());
+  loader.dataset.state = 'idle';
+}
+
+// Resolves when `loading` settles. Past `loaderDelay` the loading dots loop meanwhile; once loading
+// finishes they start leaving and this resolves at once, so the page transition plays alongside the exit.
+async function withLoader(transition: Transition, loading: Promise<void>) {
+  const loader = loaderElement();
+  let shown = false;
+  const timer = window.setTimeout(() => {
+    if (!loader || current !== transition) return;
+    shown = true;
+    loader.dataset.state = 'loading';
+  }, loaderDelay);
+  try {
+    await loading;
+  } finally {
+    window.clearTimeout(timer);
+  }
+  if (!shown || !loader || current !== transition) return;
+  // Each dot leaves from wherever its pulse is, so the exit never jumps in size. The motion is the home
+  // veil dots' `veil-dot` burst (scale to 1.6 and fade over its last 40%: 304ms, ease-out, 70ms stagger).
+  const dots = Array.from(loader.querySelectorAll<HTMLElement>('.loader-dots span'));
+  const from = dots.map((dot) => {
+    const style = getComputedStyle(dot);
+    return { opacity: style.opacity, transform: style.transform === 'none' ? 'scale(1)' : style.transform };
+  });
+  // Read before `leaving` drops the loading styles, so the cover fades from where its fade-in got to.
+  const cover = getComputedStyle(loader);
+  const coverFrom = { backgroundColor: cover.backgroundColor, backdropFilter: cover.backdropFilter };
+  // The home arrival brings its own brand dots; after the loading dots they would be a second set.
+  if (transition.variant === 'home') transition.veil.dataset.afterLoader = '';
+  loader.dataset.state = 'leaving';
+  const exits = dots.map((dot, index) => dot.animate([
+    from[index],
+    { opacity: 0, transform: 'scale(1.6)' },
+  ], { duration: 760 * 0.4, delay: index * 70, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'both' }).finished);
+  // The cover fades with the Web Animations API: unlike a CSS transition it survives the persisted loader
+  // being moved into the incoming document, which for the homepage happens right away.
+  const coverFade = loader.animate([
+    coverFrom,
+    { backgroundColor: 'rgba(255, 255, 255, 0)', backdropFilter: 'blur(0px)' },
+  ], { duration: 700, easing: 'ease-out', fill: 'forwards' }).finished;
+  // A newer navigation cancels these and shows its own dots; only clear the loader if it is still ours.
+  void Promise.all([...exits, coverFade]).then(() => {
+    if (loader.dataset.state === 'leaving') hideLoader();
+  }, () => undefined);
+}
 
 function variantFor(url: URL): Variant {
   const path = url.pathname.replace(/\/$/, '') || '/';
@@ -34,6 +92,8 @@ function reset(transition: Transition) {
     transition.veil.style.removeProperty('opacity');
     transition.veil.style.removeProperty('filter');
     current = undefined;
+    hideLoader();
+    delete transition.veil.dataset.afterLoader;
   }
 }
 
@@ -105,29 +165,35 @@ document.addEventListener('astro:before-preparation', (event: TransitionBeforePr
   veil.dataset.direction = transition.direction;
   event.signal.addEventListener('abort', () => { if (current === transition) reset(transition); }, { once: true });
 
-  // Home opens through the root view-transition iris (`homeRootTransition`); swap as soon as it loads.
-  if (transition.variant === 'home') return;
-
-  veil.dataset.phase = 'covering';
-  veil.querySelectorAll<HTMLElement>('[data-veil-kicker], [data-veil-numeral], [data-veil-caption], [data-veil-line]').forEach((element) => { element.textContent = ''; });
-
-  // Fetch and cover concurrently; never swap an uncovered page, even when loading is cached.
+  // Loading runs first (with the loading dots past the threshold); the page transition starts once the
+  // next document is ready, so the cover never sits on screen while the network is still pending.
   const loader = event.loader;
   event.loader = async () => {
     try {
+      await withLoader(transition, loader());
+      if (current !== transition || event.signal.aborted) return;
+      if (event.defaultPrevented) {
+        reset(transition);
+        return;
+      }
+      // Home opens through the root view-transition iris (`homeRootTransition`); swap right away.
+      if (transition.variant === 'home') return;
+
+      // Filled before the cover so its text and digit animations play with it; never swap an uncovered page.
+      populate(transition, event.newDocument);
+      veil.dataset.phase = 'covering';
       transition.entering = play(transition, true);
-      await Promise.all([
-        loader().then(() => {
-          if (current === transition && !event.defaultPrevented) populate(transition, event.newDocument);
-        }),
-        transition.entering,
-      ]);
-      if (event.defaultPrevented || event.signal.aborted) reset(transition);
+      await transition.entering;
+      if (event.signal.aborted) reset(transition);
     } catch (error) {
       if (current === transition) reset(transition);
       throw error;
     }
   };
+
+  if (transition.variant !== 'home') {
+    veil.querySelectorAll<HTMLElement>('[data-veil-kicker], [data-veil-numeral], [data-veil-caption], [data-veil-line]').forEach((element) => { element.textContent = ''; });
+  }
 });
 
 onBeforeSwap((event) => {
