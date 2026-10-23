@@ -464,6 +464,22 @@ const pagerLinks = [
       font-size: inherit;
     }
   }
+
+  // Images never exceed the column, and tall ones are capped at 70% of the viewport so a portrait
+  // illustration cannot fill several screens; the aspect ratio is kept and the image is centred.
+  :global(img) {
+    display: block;
+    max-width: 100%;
+    max-height: 70vh;
+    height: auto;
+    margin: 1.8rem auto;
+    object-fit: contain;
+  }
+
+  // Markdown wraps a standalone image in a paragraph; drop that paragraph's own margin.
+  :global(p:has(> img:only-child)) {
+    margin: 0;
+  }
 }
 
 .article-end {
