@@ -21,17 +21,12 @@ const motion = window.matchMedia("(prefers-reduced-motion: reduce)")
 let current: Transition | undefined
 // Minimum time the veil text stays readable before the reveal starts.
 const textHold = 450
+// Loads that finish within this long after the click (ms) show no loading dots.
+const dotsThreshold = 500
 
 const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms))
 const easeInOut = "cubic-bezier(0.65, 0, 0.35, 1)"
 const easeOut = "cubic-bezier(0.22, 1, 0.36, 1)"
-// The dots' burst when the page is already loaded: pop in, hold, then scale up and fade.
-const burst: Keyframe[] = [
-  { opacity: 0, transform: "scale(0)" },
-  { opacity: 1, transform: "scale(1)", offset: 0.35 },
-  { opacity: 1, transform: "scale(1)", offset: 0.6 },
-  { opacity: 0, transform: "scale(1.6)" },
-]
 const rise = (blur: string, offset: string): Keyframe[] => [
   { opacity: 0, filter: `blur(${blur})`, transform: `translateY(${offset})` },
   { opacity: 1, filter: "blur(0)", transform: "translateY(0)" },
@@ -170,24 +165,14 @@ function populate(transition: Transition, data: PageTransition | undefined) {
   enterText(transition)
 }
 
-// The variant's one group of dots, below its text. From `start` they either burst once (the document is
-// already loaded) or pulse until it arrives and then burst from their current pulse size.
-async function withDots(transition: Transition, start: Promise<void>, loading: Promise<void>) {
+// The variant's one group of dots, below its text: a loading indicator only. Once `start` settles, if the
+// document is still loading they pulse until it arrives and then burst from their current pulse size;
+// otherwise they never show.
+async function withDots(transition: Transition, start: Promise<unknown>, loading: Promise<void>) {
   const { veil, scope } = transition
   let loaded = false
   void start.then(() => {
-    if (current !== transition) return
-    if (loaded) {
-      animateEach(
-        scope,
-        "[data-veil-dots] span",
-        burst,
-        { duration: 760, easing: easeOut, fill: "both" },
-        70,
-      )
-    } else {
-      veil.dataset.loading = "active"
-    }
+    if (!loaded && current === transition) veil.dataset.loading = "active"
   })
   try {
     await loading
@@ -304,7 +289,7 @@ document.addEventListener("astro:before-preparation", (event: TransitionBeforePr
   const loader = event.loader
   event.loader = async () => {
     try {
-      await withDots(transition, content, loader())
+      await withDots(transition, Promise.all([content, wait(dotsThreshold)]), loader())
       if (current !== transition || event.signal.aborted) return
       if (event.defaultPrevented) {
         reset(transition)
