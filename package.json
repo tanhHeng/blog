@@ -24,7 +24,7 @@
     "@astrojs/check": "^0.9.11",
     "@astrojs/ts-content-mapper": "^0.2.0",
     "@emnapi/runtime": "^1.11.3",
-    "typescript": "6.0.3",
+    "typescript": "7.0.2",
     "vite-plus": "catalog:"
   },
   "resolutions": {
