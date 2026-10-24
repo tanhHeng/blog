@@ -19,6 +19,10 @@ const motion = window.matchMedia("(prefers-reduced-motion: reduce)")
 let current: Transition | undefined
 // Loads that finish within this long after the click (ms) show no loading dots.
 const dotsThreshold = 500
+// The veil numeral's characters start `min(numeralStagger, numeralStaggerBudget / count)` ms apart, so a
+// long numeral spreads its entrance over at most the budget.
+const numeralStagger = 45
+const numeralStaggerBudget = 250
 
 const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms))
 const easeInOut = "cubic-bezier(0.65, 0, 0.35, 1)"
@@ -60,7 +64,7 @@ function enterText({ scope, variant }: Transition): Animation[] {
         { opacity: 0, filter: "blur(6px)", transform: "translate(-50%, calc(-50% + 0.75rem))" },
         { opacity: 1, filter: "blur(0)", transform: "translate(-50%, -50%)" },
       ],
-      { duration: 620, easing: "ease", fill: "backwards" },
+      { duration: 500, easing: "ease", fill: "backwards" },
     )
   }
   if (variant === "novel") {
@@ -68,7 +72,7 @@ function enterText({ scope, variant }: Transition): Animation[] {
       scope,
       "[data-veil-line]:not([hidden])",
       rise("8px", "0.5rem"),
-      { duration: 900, easing: "ease", fill: "backwards" },
+      { duration: 500, easing: "ease", fill: "backwards" },
       160,
     )
   }
@@ -77,7 +81,7 @@ function enterText({ scope, variant }: Transition): Animation[] {
       scope,
       "[data-veil-kicker], [data-veil-line]:not([hidden])",
       rise("6px", "0.5rem"),
-      { duration: 900, easing: "ease", fill: "backwards" },
+      { duration: 500, easing: "ease", fill: "backwards" },
       140,
     )
   }
@@ -142,24 +146,27 @@ async function populate(transition: Transition, data: PageTransition | undefined
   if (kicker) kicker.textContent = data?.kicker ?? ""
   const caption = scope.querySelector<HTMLElement>("[data-veil-caption]")
   if (caption) caption.textContent = data?.caption ?? ""
+  const digits = Array.from(
+    new Intl.Segmenter().segment(data?.numeral ?? ""),
+    ({ segment }) => segment,
+  )
+  const stagger = Math.min(numeralStagger, numeralStaggerBudget / Math.max(digits.length, 1))
   scope.querySelector<HTMLElement>("[data-veil-numeral]")?.replaceChildren(
-    ...Array.from(new Intl.Segmenter().segment(data?.numeral ?? ""), ({ segment }) => segment).map(
-      (char, index) => {
-        const digit = document.createElement("span")
-        digit.textContent = char
-        const offset = transition.direction === "back" ? "-0.45em" : "0.45em"
-        entrance.push(
-          digit.animate(
-            [
-              { opacity: 0, transform: `translateY(${offset})` },
-              { opacity: 1, transform: "translateY(0)" },
-            ],
-            { duration: 620, delay: index * 45, easing: easeOut, fill: "backwards" },
-          ),
-        )
-        return digit
-      },
-    ),
+    ...digits.map((char, index) => {
+      const digit = document.createElement("span")
+      digit.textContent = char
+      const offset = transition.direction === "back" ? "-0.45em" : "0.45em"
+      entrance.push(
+        digit.animate(
+          [
+            { opacity: 0, transform: `translateY(${offset})` },
+            { opacity: 1, transform: "translateY(0)" },
+          ],
+          { duration: 500, delay: index * stagger, easing: easeOut, fill: "backwards" },
+        ),
+      )
+      return digit
+    }),
   )
   const lines = data?.lines ?? []
   scope.querySelectorAll<HTMLElement>("[data-veil-line]").forEach((line, index) => {
@@ -233,10 +240,10 @@ function frames(variant: Variant, direction: string, entering: boolean): Keyfram
 }
 
 const durations: Record<Variant, [entering: number, leaving: number]> = {
-  home: [520, 1100],
-  article: [520, 780],
-  novel: [620, 1100],
-  plain: [240, 240],
+  home: [312, 1100],
+  article: [312, 780],
+  novel: [372, 1100],
+  plain: [144, 240],
 }
 // The text and dots start this far into the cover (as a fraction of its duration), slightly behind the
 // cover's leading edge.
