@@ -17,10 +17,6 @@ interface Transition {
 
 const motion = window.matchMedia("(prefers-reduced-motion: reduce)")
 let current: Transition | undefined
-// After the cover completes, wait `swapDelay` before swapping in the new page; after the new page has
-// loaded, wait `revealDelay` before the reveal plays (ms).
-const swapDelay = 50
-const revealDelay = 100
 // Loads that finish within this long after the click (ms) show no loading dots.
 const dotsThreshold = 500
 
@@ -50,14 +46,14 @@ function animateEach(
   options: KeyframeAnimationOptions & { delay?: number },
   stagger = 0,
 ) {
-  scope.querySelectorAll<HTMLElement>(selector).forEach((element, index) => {
-    element.animate(keyframes, { ...options, delay: (options.delay ?? 0) + index * stagger })
-  })
+  return Array.from(scope.querySelectorAll<HTMLElement>(selector), (element, index) =>
+    element.animate(keyframes, { ...options, delay: (options.delay ?? 0) + index * stagger }),
+  )
 }
 
-function enterText({ scope, variant }: Transition) {
+function enterText({ scope, variant }: Transition): Animation[] {
   if (variant === "article") {
-    animateEach(
+    return animateEach(
       scope,
       ".veil-band",
       [
@@ -66,23 +62,26 @@ function enterText({ scope, variant }: Transition) {
       ],
       { duration: 620, easing: "ease", fill: "backwards" },
     )
-  } else if (variant === "novel") {
-    animateEach(
+  }
+  if (variant === "novel") {
+    return animateEach(
       scope,
-      "[data-veil-line]",
+      "[data-veil-line]:not([hidden])",
       rise("8px", "0.5rem"),
       { duration: 900, easing: "ease", fill: "backwards" },
       160,
     )
-  } else if (variant === "home") {
-    animateEach(
+  }
+  if (variant === "home") {
+    return animateEach(
       scope,
-      "[data-veil-kicker], [data-veil-line]",
+      "[data-veil-kicker], [data-veil-line]:not([hidden])",
       rise("6px", "0.5rem"),
       { duration: 900, easing: "ease", fill: "backwards" },
       140,
     )
   }
+  return []
 }
 
 // Home reveal companions: the brand text lifts away as the centre hole starts to open, and the rings ripple
@@ -134,8 +133,11 @@ function clearText(veil: HTMLElement) {
 
 // Fills the active variant's text and plays its entrance. Called shortly after the cover starts, together
 // with the dots; the veil's clip-path (or opacity) keeps them hidden wherever the cover has not reached yet.
-function populate(transition: Transition, data: PageTransition | undefined) {
+// Resolves once every entrance animation has finished: the swap must wait for it, because Chromium stops
+// painting while Astro swaps inside `startViewTransition` and the running text would visibly jump.
+async function populate(transition: Transition, data: PageTransition | undefined) {
   const { scope } = transition
+  const entrance: Animation[] = []
   const kicker = scope.querySelector<HTMLElement>("[data-veil-kicker]")
   if (kicker) kicker.textContent = data?.kicker ?? ""
   const caption = scope.querySelector<HTMLElement>("[data-veil-caption]")
@@ -146,12 +148,14 @@ function populate(transition: Transition, data: PageTransition | undefined) {
         const digit = document.createElement("span")
         digit.textContent = char
         const offset = transition.direction === "back" ? "-0.45em" : "0.45em"
-        digit.animate(
-          [
-            { opacity: 0, transform: `translateY(${offset})` },
-            { opacity: 1, transform: "translateY(0)" },
-          ],
-          { duration: 620, delay: index * 45, easing: easeOut, fill: "backwards" },
+        entrance.push(
+          digit.animate(
+            [
+              { opacity: 0, transform: `translateY(${offset})` },
+              { opacity: 1, transform: "translateY(0)" },
+            ],
+            { duration: 620, delay: index * 45, easing: easeOut, fill: "backwards" },
+          ),
         )
         return digit
       },
@@ -162,7 +166,8 @@ function populate(transition: Transition, data: PageTransition | undefined) {
     line.hidden = index >= lines.length
     line.textContent = lines[index] ?? ""
   })
-  enterText(transition)
+  entrance.push(...enterText(transition))
+  await Promise.all(entrance.map((animation) => animation.finished.catch(() => undefined)))
 }
 
 // The variant's one group of dots, below its text: a loading indicator only. Once `start` settles, if the
@@ -274,9 +279,11 @@ document.addEventListener("astro:before-preparation", (event: TransitionBeforePr
   veil.dataset.direction = transition.direction
   veil.dataset.phase = "covering"
   void play(transition, true).then(cover.resolve)
-  const content = wait(durations[variant][0] * contentLag).then(() => {
-    if (current === transition) populate(transition, route)
-  })
+  // The text and dots start together; `content` settles once the text entrance has finished.
+  const contentStart = wait(durations[variant][0] * contentLag)
+  const content = contentStart.then(() =>
+    current === transition ? populate(transition, route) : undefined,
+  )
   event.signal.addEventListener(
     "abort",
     () => {
@@ -288,15 +295,14 @@ document.addEventListener("astro:before-preparation", (event: TransitionBeforePr
   const loader = event.loader
   event.loader = async () => {
     try {
-      await withDots(transition, Promise.all([content, wait(dotsThreshold)]), loader())
+      await withDots(transition, Promise.all([contentStart, wait(dotsThreshold)]), loader())
       if (current !== transition || event.signal.aborted) return
       if (event.defaultPrevented) {
         reset(transition)
         return
       }
-      // Never swap an uncovered page.
-      await cover.promise
-      await wait(swapDelay)
+      // Never swap an uncovered page, nor one whose centre text is still entering.
+      await Promise.all([cover.promise, content])
       if (event.signal.aborted) reset(transition)
     } catch (error) {
       if (current === transition) reset(transition)
@@ -323,14 +329,9 @@ document.addEventListener("astro:page-load", () => {
   }
   if (transition.arriving) return
   transition.arriving = true
-  void wait(revealDelay)
-    .then(() => {
-      if (current !== transition || transition.signal.aborted) return
-      transition.veil.dataset.phase = "revealing"
-      if (transition.variant === "home") leaveHome(transition)
-      return play(transition, false)
-    })
-    .then(() => {
-      if (current === transition) reset(transition)
-    })
+  transition.veil.dataset.phase = "revealing"
+  if (transition.variant === "home") leaveHome(transition)
+  void play(transition, false).then(() => {
+    if (current === transition) reset(transition)
+  })
 })
