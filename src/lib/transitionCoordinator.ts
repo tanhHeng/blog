@@ -11,16 +11,16 @@ interface Transition {
   /** The active variant's layer inside the veil (`.veil-home`, `.veil-article`, …). */
   scope: HTMLElement
   animation?: Animation
-  /** Settles when the cover has finished and its text has been on screen for at least `textHold`. */
-  covered: Promise<void>
   arriving?: boolean
   signal: AbortSignal
 }
 
 const motion = window.matchMedia("(prefers-reduced-motion: reduce)")
 let current: Transition | undefined
-// Minimum time the veil text stays readable before the reveal starts.
-const textHold = 450
+// After the cover completes, wait `swapDelay` before swapping in the new page; after the new page has
+// loaded, wait `revealDelay` before the reveal plays (ms).
+const swapDelay = 50
+const revealDelay = 100
 // Loads that finish within this long after the click (ms) show no loading dots.
 const dotsThreshold = 500
 
@@ -266,7 +266,6 @@ document.addEventListener("astro:before-preparation", (event: TransitionBeforePr
     direction: event.direction,
     veil,
     scope: veil.querySelector<HTMLElement>(`.veil-${variant}`)!,
-    covered: cover.promise.then(() => wait(textHold)),
     signal: event.signal,
   }
   current = transition
@@ -297,6 +296,7 @@ document.addEventListener("astro:before-preparation", (event: TransitionBeforePr
       }
       // Never swap an uncovered page.
       await cover.promise
+      await wait(swapDelay)
       if (event.signal.aborted) reset(transition)
     } catch (error) {
       if (current === transition) reset(transition)
@@ -323,7 +323,7 @@ document.addEventListener("astro:page-load", () => {
   }
   if (transition.arriving) return
   transition.arriving = true
-  void transition.covered
+  void wait(revealDelay)
     .then(() => {
       if (current !== transition || transition.signal.aborted) return
       transition.veil.dataset.phase = "revealing"
