@@ -137,8 +137,8 @@ function clearText(veil: HTMLElement) {
     })
 }
 
-// Fills the active variant's text and plays its entrance. Called once the cover is complete, together with
-// the dots, so the text never rides in on the moving cover.
+// Fills the active variant's text and plays its entrance. Called shortly after the cover starts, together
+// with the dots; the veil's clip-path (or opacity) keeps them hidden wherever the cover has not reached yet.
 function populate(transition: Transition, data: PageTransition | undefined) {
   const { scope } = transition
   const kicker = scope.querySelector<HTMLElement>("[data-veil-kicker]")
@@ -170,12 +170,12 @@ function populate(transition: Transition, data: PageTransition | undefined) {
   enterText(transition)
 }
 
-// The variant's one group of dots, below its text. Once the cover is complete they either burst once (the
-// document is already loaded) or pulse until it arrives and then burst from their current pulse size.
-async function withDots(transition: Transition, cover: Promise<void>, loading: Promise<void>) {
+// The variant's one group of dots, below its text. From `start` they either burst once (the document is
+// already loaded) or pulse until it arrives and then burst from their current pulse size.
+async function withDots(transition: Transition, start: Promise<void>, loading: Promise<void>) {
   const { veil, scope } = transition
   let loaded = false
-  void cover.then(() => {
+  void start.then(() => {
     if (current !== transition) return
     if (loaded) {
       animateEach(
@@ -248,6 +248,9 @@ const durations: Record<Variant, [entering: number, leaving: number]> = {
   novel: [620, 1100],
   plain: [240, 240],
 }
+// The text and dots start this far into the cover (as a fraction of its duration), slightly behind the
+// cover's leading edge.
+const contentLag = 0.3
 
 async function play(transition: Transition, entering: boolean) {
   const { veil, variant, direction } = transition
@@ -262,9 +265,9 @@ async function play(transition: Transition, entering: boolean) {
   await animation.finished.catch(() => undefined)
 }
 
-// Each navigation is one sequence on the persisted veil: (1) the cover starts at once; (2) once it is
-// complete, the veil text and its dots enter, the dots pulsing while the document is still loading;
-// (3) the DOM swaps under the cover and the reveal plays after the new page loads.
+// Each navigation is one sequence on the persisted veil: (1) the cover starts at once; (2) just after it,
+// the veil text and its dots enter inside the cover, the dots pulsing while the document is still loading;
+// (3) the DOM swaps under the complete cover and the reveal plays after the new page loads.
 document.addEventListener("astro:before-preparation", (event: TransitionBeforePreparationEvent) => {
   if (current) reset(current)
   if (motion.matches) return
@@ -286,9 +289,9 @@ document.addEventListener("astro:before-preparation", (event: TransitionBeforePr
   veil.dataset.variant = variant
   veil.dataset.direction = transition.direction
   veil.dataset.phase = "covering"
-  void play(transition, true).then(() => {
+  void play(transition, true).then(cover.resolve)
+  const content = wait(durations[variant][0] * contentLag).then(() => {
     if (current === transition) populate(transition, route)
-    cover.resolve()
   })
   event.signal.addEventListener(
     "abort",
@@ -301,7 +304,7 @@ document.addEventListener("astro:before-preparation", (event: TransitionBeforePr
   const loader = event.loader
   event.loader = async () => {
     try {
-      await withDots(transition, cover.promise, loader())
+      await withDots(transition, content, loader())
       if (current !== transition || event.signal.aborted) return
       if (event.defaultPrevented) {
         reset(transition)
