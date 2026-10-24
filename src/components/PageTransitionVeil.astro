@@ -1,39 +1,43 @@
 <div class="page-veil" data-transition-veil data-phase="idle" data-variant="home" data-direction="forward" transition:persist="page-transition-veil" transition:name="page-veil" transition:animate="none" aria-hidden="true">
-  <div class="veil-home" aria-hidden="true">
+  <div class="veil-home">
     <span class="veil-ring"></span>
     <span class="veil-ring"></span>
     <span class="veil-ring"></span>
-    <span class="veil-dots"><span></span><span></span><span></span></span>
+    <div class="veil-stack">
+      <p class="veil-kicker" data-veil-kicker></p>
+      <p class="veil-signature"><span data-veil-line></span><span data-veil-line></span></p>
+      <span class="veil-dots" data-veil-dots><span></span><span></span><span></span></span>
+    </div>
   </div>
   <div class="veil-article">
     <span class="veil-edge"></span>
-    <div class="veil-band">
+    <div class="veil-stack veil-band">
       <p class="veil-kicker" data-veil-kicker></p>
       <p class="veil-numeral" data-veil-numeral></p>
       <p class="veil-caption" data-veil-caption></p>
+      <span class="veil-dots" data-veil-dots><span></span><span></span><span></span></span>
     </div>
   </div>
   <div class="veil-novel">
-    <div class="veil-verse">
-      <p class="veil-line" data-veil-line="0"></p>
-      <p class="veil-line" data-veil-line="1"></p>
-      <div class="veil-rule"><span></span><span></span><span></span></div>
+    <div class="veil-stack veil-verse">
+      <p class="veil-line" data-veil-line></p>
+      <p class="veil-line" data-veil-line></p>
+      <span class="veil-dots" data-veil-dots><span></span><span></span><span></span></span>
     </div>
   </div>
-</div>
-<div class="page-loader" data-transition-loader data-state="idle" transition:persist="page-transition-loader" aria-hidden="true">
-  <div class="loader-dots" transition:name="page-loader-dots" transition:animate="none">
-    <span></span>
-    <span></span>
-    <span></span>
+  <div class="veil-plain">
+    <div class="veil-stack">
+      <span class="veil-dots" data-veil-dots><span></span><span></span><span></span></span>
+    </div>
   </div>
 </div>
 
 <style lang="scss">
   @use '../styles/global.scss' as *;
 
-  $ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-  $ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  // Every veil animation (cover, text entrances, dots, rings) runs in `transitionCoordinator.ts` through the
+  // Web Animations API: the persisted veil is re-inserted at swap, which would restart CSS animations. The
+  // only CSS animation is the loading pulse, which stops before the swap.
 
   .page-veil {
     position: fixed;
@@ -53,7 +57,8 @@
 
   .veil-home,
   .veil-article,
-  .veil-novel {
+  .veil-novel,
+  .veil-plain {
     position: absolute;
     inset: 0;
     display: none;
@@ -62,12 +67,95 @@
 
   .page-veil[data-variant='home'] .veil-home,
   .page-veil[data-variant='article'] .veil-article,
-  .page-veil[data-variant='novel'] .veil-novel {
+  .page-veil[data-variant='novel'] .veil-novel,
+  .page-veil[data-variant='plain'] .veil-plain {
     display: block;
   }
 
+  // Each variant's text and its one group of dots, centred together.
+  .veil-stack {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: min(40rem, 88vw);
+    text-align: center;
+    transform: translate(-50%, -50%);
+  }
+
+  .veil-kicker {
+    margin: 0;
+    color: $light-blue;
+    font-family: $font-family-heading;
+    font-size: 0.9rem;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+  }
+
+  // The brand dots, also the loading indicator. Hidden at rest: the coordinator pops them in once the cover is
+  // complete, and `data-loading='active'` pulses them while the next page is still loading.
+  .veil-dots {
+    display: flex;
+    gap: 0.85rem;
+    margin-top: 1.75rem;
+
+    span {
+      width: 0.85rem;
+      height: 0.85rem;
+      border-radius: 50%;
+      background: $ex-light-blue;
+      opacity: 0;
+
+      &:nth-child(2) {
+        background: $light-blue;
+      }
+
+      &:nth-child(3) {
+        background: $primary-blue;
+      }
+    }
+  }
+
+  .veil-plain .veil-dots {
+    margin-top: 0;
+  }
+
+  .page-veil[data-loading='active'] .veil-dots span {
+    animation: loader-pulse 1480ms ease-in-out infinite both;
+
+    &:nth-child(2) {
+      animation-delay: 160ms;
+    }
+
+    &:nth-child(3) {
+      animation-delay: 320ms;
+    }
+  }
+
+  // Each pulse takes 880ms (rise to 30%, fall to 59%); the remaining ~600ms of the cycle is the pause.
+  @keyframes loader-pulse {
+    0%,
+    59%,
+    100% {
+      opacity: 0.35;
+      transform: scale(0.55);
+    }
+    30% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  // Home: a white circle grows from the centre; the brand and signature sit in it. The reveal opens a hole
+  // from the centre (the coordinator grows `--veil-hole`) with the rings rippling just ahead of its edge.
   .veil-home {
     background: #fff;
+  }
+
+  .page-veil[data-phase='revealing'][data-variant='home'] {
+    mask: radial-gradient(circle at 50% 50%, transparent var(--veil-hole), #000 calc(var(--veil-hole) + 1px));
   }
 
   .veil-ring {
@@ -89,85 +177,29 @@
     }
   }
 
-  .page-veil[data-phase='covering'][data-variant='home'] .veil-ring {
-    animation: veil-ring-grow 900ms $ease-in-out both;
-  }
-
-  // Home arrival: the page itself opens through the root `vt-iris`; the veil is transparent and only
-  // carries rings riding the iris edge (same 200ms delay, 1100ms, 75vmax radius) and the brand dots.
-  .page-veil[data-phase='iris'] {
-    visibility: visible;
-    opacity: 1;
-    background: transparent;
-
-    .veil-home {
-      background: transparent;
-    }
-
-    .veil-ring {
-      animation:
-        veil-ring-grow 1100ms $ease-in-out 200ms both,
-        veil-fade-late 1100ms linear 200ms both;
-
-      &:nth-child(2) {
-        animation-delay: 290ms;
-      }
-
-      &:nth-child(3) {
-        animation-delay: 380ms;
-      }
-    }
-
-    .veil-dots span {
-      animation: veil-dot 760ms $ease-out both;
-    }
-  }
-
-  // After the loading dots (see `withLoader`) the home arrival drops its brand dots, so only one set shows.
-  .page-veil[data-after-loader] .veil-dots {
-    visibility: hidden;
-  }
-
-  @keyframes veil-fade-late {
-    0%,
-    75% {
-      opacity: 1;
-    }
-    100% {
-      opacity: 0;
-    }
-  }
-
-  .veil-dots {
-    position: absolute;
-    top: 50%;
-    left: 50%;
+  .veil-signature {
     display: flex;
-    gap: 0.85rem;
-    transform: translate(-50%, -50%);
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0 0.6rem;
+    margin: 0.6rem 0 0;
+    font-family: $font-family-special;
+    font-size: clamp(2.5rem, 7vw, 4.5rem);
+    line-height: 1;
+    white-space: nowrap;
 
     span {
-      width: 0.85rem;
-      height: 0.85rem;
-      border-radius: 50%;
-      background: $ex-light-blue;
-      animation: none;
+      color: $content-color;
+    }
 
-      &:nth-child(2) {
-        background: $light-blue;
-        animation-delay: 70ms;
-      }
-
-      &:nth-child(3) {
-        background: $primary-blue;
-        animation-delay: 140ms;
-      }
+    span + span {
+      color: $primary-blue;
     }
   }
 
+  // Article: a directional wipe carrying the archive/title text.
   .veil-article {
     background: #fff;
-
   }
 
   .veil-edge {
@@ -201,41 +233,6 @@
     }
   }
 
-  .veil-band {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: min(40rem, 84vw);
-    text-align: center;
-    transform: translate(-50%, -50%);
-    animation: none;
-  }
-
-  .page-veil[data-phase='covering'] .veil-dots span {
-    animation: veil-dot 760ms $ease-out both;
-  }
-
-  .page-veil[data-phase='covering'] .veil-band {
-    animation: veil-band 1300ms ease both;
-  }
-
-  .veil-numeral :global(span) {
-    display: inline-block;
-  }
-
-  .veil-kicker,
-  .veil-caption {
-    margin: 0;
-    font-family: $font-family-heading;
-  }
-
-  .veil-kicker {
-    color: $light-blue;
-    font-size: 0.9rem;
-    letter-spacing: 0.32em;
-    text-transform: uppercase;
-  }
-
   .veil-numeral {
     margin: 0.4rem 0 0;
     color: $content-color;
@@ -244,109 +241,37 @@
     letter-spacing: 0.06em;
     line-height: 1.1;
     white-space: nowrap;
+
+    :global(span) {
+      display: inline-block;
+    }
   }
 
   .veil-caption {
-    margin-top: 0.75rem;
+    margin: 0.75rem 0 0;
     color: $primary-blue;
     font-family: $font-family-default;
     font-size: 1rem;
     letter-spacing: 0.12em;
   }
 
-  // Loading dots, shown over the outgoing page only when the next page takes longer than the coordinator's
-  // threshold, on a full-page cover (30% white plus a backdrop blur) that eases in over 500ms and out over
-  // 700ms. The dots' exit (the home veil dots' scale-up and fade) is driven by the coordinator.
-  // The cover is left out of the view transition on purpose: inside the root snapshots its blur is captured
-  // with the page (a separately named layer would lose the backdrop and vanish at the home iris). The dots
-  // get their own name so the outgoing root snapshot does not freeze a second copy of them.
-  .page-loader {
-    position: fixed;
-    inset: 0;
-    z-index: 6;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    pointer-events: none;
-    visibility: hidden;
-    background: rgba(#fff, 0);
-    backdrop-filter: blur(0);
-  }
-
-  .loader-dots {
-    display: flex;
-    gap: 0.85rem;
-
-    span {
-      width: 0.85rem;
-      height: 0.85rem;
-      border-radius: 50%;
-      background: $ex-light-blue;
-
-      &:nth-child(2) {
-        background: $light-blue;
-      }
-
-      &:nth-child(3) {
-        background: $primary-blue;
-      }
-    }
-  }
-
-  .page-loader[data-state='loading'],
-  .page-loader[data-state='leaving'] {
-    visibility: visible;
-  }
-
-  // Fade-in only; the 700ms fade-out runs through the Web Animations API (see `withLoader`), which keeps
-  // running while the persisted loader is moved into the incoming document, where CSS transitions are cancelled.
-  .page-loader[data-state='loading'] {
-    background: rgba(#fff, 0.3);
-    backdrop-filter: blur(4px);
-    transition: background-color 500ms ease-out, backdrop-filter 500ms ease-out;
-
-    span {
-      animation: loader-pulse 1480ms ease-in-out infinite both;
-
-      &:nth-child(2) {
-        animation-delay: 160ms;
-      }
-
-      &:nth-child(3) {
-        animation-delay: 320ms;
-      }
-    }
-  }
-
-  // Each pulse takes 880ms (rise to 30%, fall to 59%); the remaining ~600ms of the cycle is the pause.
-  @keyframes loader-pulse {
-    0%,
-    59%,
-    100% {
-      opacity: 0.35;
-      transform: scale(0.55);
-    }
-    30% {
-      opacity: 1;
-      transform: scale(1);
-    }
-  }
-
+  // Novel: white mist and the tagline, with the dots as its small closing rule.
   .veil-novel {
     background: radial-gradient(ellipse 60% 55% at 50% 48%, #fff 0%, $mist 70%);
   }
 
   .veil-verse {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
     gap: 0.5rem;
-    width: min(40rem, 88vw);
-    text-align: center;
-    transform: translate(-50%, -50%);
+
+    .veil-dots {
+      gap: 0.6rem;
+      margin-top: 1.25rem;
+
+      span {
+        width: 0.6rem;
+        height: 0.6rem;
+      }
+    }
   }
 
   .veil-line {
@@ -360,125 +285,13 @@
       color: $primary-blue;
     }
   }
-
-  .veil-rule {
-    display: flex;
-    gap: 0.6rem;
-    margin-top: 1.25rem;
-
-    span {
-      width: 0.6rem;
-      height: 0.6rem;
-      border-radius: 50%;
-      background: $ex-light-blue;
-
-      &:nth-child(2) {
-        background: $light-blue;
-      }
-
-      &:nth-child(3) {
-        background: $primary-blue;
-      }
-    }
-  }
-
-  .page-veil[data-phase='covering'][data-variant='novel'] .veil-line {
-    animation: veil-line 900ms ease both;
-  }
-
-  .page-veil[data-phase='covering'][data-variant='novel'] .veil-line + .veil-line {
-    animation-delay: 160ms;
-  }
-
-  .page-veil[data-phase='covering'][data-variant='novel'] .veil-rule span {
-    animation: veil-dot 900ms $ease-out 180ms both;
-  }
-
-  .page-veil[data-phase='covering'][data-variant='novel'] .veil-rule span:nth-child(2) {
-    animation-delay: 260ms;
-  }
-
-  .page-veil[data-phase='covering'][data-variant='novel'] .veil-rule span:nth-child(3) {
-    animation-delay: 340ms;
-  }
-
-  @keyframes veil-ring-grow {
-    to {
-      width: 150vmax;
-      height: 150vmax;
-    }
-  }
-
-  @keyframes veil-dot {
-    0% {
-      opacity: 0;
-      transform: scale(0);
-    }
-    35%,
-    60% {
-      opacity: 1;
-      transform: scale(1);
-    }
-    100% {
-      opacity: 0;
-      transform: scale(1.6);
-    }
-  }
-
-  @keyframes veil-band {
-    0% {
-      opacity: 0;
-      filter: blur(6px);
-    }
-    22%,
-    52% {
-      opacity: 1;
-      filter: blur(0);
-      transform: translate(-50%, -50%);
-    }
-    74%,
-    100% {
-      opacity: 0;
-      filter: blur(6px);
-      transform: translate(-50%, calc(-50% - 1.5rem));
-    }
-  }
-
-  @keyframes veil-line {
-    from {
-      opacity: 0;
-      filter: blur(8px);
-      transform: translateY(0.5rem);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .page-veil * {
-      animation-duration: 1ms !important;
-    }
-  }
 </style>
 
 <style is:global>
-  /* Root keyframes referenced by `homeRootTransition` in `lib/pageTransitions.ts`. */
-  ::view-transition-old(root),
-  ::view-transition-new(root) {
-    mix-blend-mode: normal;
-  }
-
-  @keyframes vt-recede {
-    to {
-      opacity: 0;
-      transform: scale(0.96);
-    }
-  }
-
-  @keyframes vt-iris {
-    from {
-      clip-path: circle(0 at 50% 50%);
-    }
-    to {
-      clip-path: circle(75vmax at 50% 50%);
-    }
+  /* Registered so the coordinator can animate the home reveal's hole radius with the Web Animations API. */
+  @property --veil-hole {
+    syntax: '<length>';
+    inherits: false;
+    initial-value: 0px;
   }
 </style>

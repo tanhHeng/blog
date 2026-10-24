@@ -1,129 +1,153 @@
 import type { TransitionBeforePreparationEvent } from "astro:transitions/client"
 
 import { onBeforeSwap } from "./pageLifecycle"
-import type { PageTransitionVariant } from "./pageTransitions"
+import { routePath, type PageTransition, type PageTransitionVariant } from "./pageTransitions"
 
 type Variant = PageTransitionVariant | "plain"
 interface Transition {
   variant: Variant
   direction: string
   veil: HTMLElement
+  /** The active variant's layer inside the veil (`.veil-home`, `.veil-article`, …). */
+  scope: HTMLElement
   animation?: Animation
-  entering?: Promise<void>
+  /** Settles when the cover has finished and its text has been on screen for at least `textHold`. */
+  covered: Promise<void>
   arriving?: boolean
   signal: AbortSignal
 }
 
 const motion = window.matchMedia("(prefers-reduced-motion: reduce)")
 let current: Transition | undefined
-// Loads faster than this show no loading dots and go straight to the page transition.
-const loaderDelay = 200
+// Minimum time the veil text stays readable before the reveal starts.
+const textHold = 450
 
-function loaderElement() {
-  return document.querySelector<HTMLElement>("[data-transition-loader]")
+const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms))
+const easeInOut = "cubic-bezier(0.65, 0, 0.35, 1)"
+const easeOut = "cubic-bezier(0.22, 1, 0.36, 1)"
+// The dots' burst when the page is already loaded: pop in, hold, then scale up and fade.
+const burst: Keyframe[] = [
+  { opacity: 0, transform: "scale(0)" },
+  { opacity: 1, transform: "scale(1)", offset: 0.35 },
+  { opacity: 1, transform: "scale(1)", offset: 0.6 },
+  { opacity: 0, transform: "scale(1.6)" },
+]
+const rise = (blur: string, offset: string): Keyframe[] => [
+  { opacity: 0, filter: `blur(${blur})`, transform: `translateY(${offset})` },
+  { opacity: 1, filter: "blur(0)", transform: "translateY(0)" },
+]
+
+// The cover starts before the next document is fetched, so its variant and text come from the route
+// table `BaseLayout` serializes into every page (see `routeTransitions`).
+function routeFor(url: URL): PageTransition | undefined {
+  const table = document.querySelector("[data-transition-routes]")?.textContent
+  if (!table) return undefined
+  const routes: Record<string, PageTransition> = JSON.parse(table)
+  return routes[routePath(url.pathname)]
 }
 
-function hideLoader() {
-  const loader = loaderElement()
-  if (!loader) return
-  loader.getAnimations({ subtree: true }).forEach((animation) => animation.cancel())
-  loader.dataset.state = "idle"
-}
-
-// Resolves when `loading` settles. Past `loaderDelay` the loading dots loop meanwhile; once loading
-// finishes they start leaving and this resolves at once, so the page transition plays alongside the exit.
-async function withLoader(transition: Transition, loading: Promise<void>) {
-  const loader = loaderElement()
-  let shown = false
-  const timer = window.setTimeout(() => {
-    if (!loader || current !== transition) return
-    shown = true
-    loader.dataset.state = "loading"
-  }, loaderDelay)
-  try {
-    await loading
-  } finally {
-    window.clearTimeout(timer)
-  }
-  if (!shown || !loader || current !== transition) return
-  // Each dot leaves from wherever its pulse is, so the exit never jumps in size. The motion is the home
-  // veil dots' `veil-dot` burst (scale to 1.6 and fade over its last 40%: 304ms, ease-out, 70ms stagger).
-  const dots = Array.from(loader.querySelectorAll<HTMLElement>(".loader-dots span"))
-  const from = dots.map((dot) => {
-    const style = getComputedStyle(dot)
-    return {
-      opacity: style.opacity,
-      transform: style.transform === "none" ? "scale(1)" : style.transform,
-    }
+// Veil animations run through the Web Animations API rather than CSS: Astro re-inserts the persisted veil
+// into the incoming document at swap, which restarts CSS animations and would replay them mid-transition.
+function animateEach(
+  scope: ParentNode,
+  selector: string,
+  keyframes: Keyframe[],
+  options: KeyframeAnimationOptions & { delay?: number },
+  stagger = 0,
+) {
+  scope.querySelectorAll<HTMLElement>(selector).forEach((element, index) => {
+    element.animate(keyframes, { ...options, delay: (options.delay ?? 0) + index * stagger })
   })
-  // Read before `leaving` drops the loading styles, so the cover fades from where its fade-in got to.
-  const cover = getComputedStyle(loader)
-  const coverFrom = { backgroundColor: cover.backgroundColor, backdropFilter: cover.backdropFilter }
-  // The home arrival brings its own brand dots; after the loading dots they would be a second set.
-  if (transition.variant === "home") transition.veil.dataset.afterLoader = ""
-  loader.dataset.state = "leaving"
-  const exits = dots.map(
-    (dot, index) =>
-      dot.animate([from[index], { opacity: 0, transform: "scale(1.6)" }], {
-        duration: 760 * 0.4,
-        delay: index * 70,
-        easing: "cubic-bezier(0.22, 1, 0.36, 1)",
-        fill: "both",
-      }).finished,
-  )
-  // The cover fades with the Web Animations API: unlike a CSS transition it survives the persisted loader
-  // being moved into the incoming document, which for the homepage happens right away.
-  const coverFade = loader.animate(
-    [coverFrom, { backgroundColor: "rgba(255, 255, 255, 0)", backdropFilter: "blur(0px)" }],
-    { duration: 700, easing: "ease-out", fill: "forwards" },
-  ).finished
-  // A newer navigation cancels these and shows its own dots; only clear the loader if it is still ours.
-  void Promise.all([...exits, coverFade]).then(
-    () => {
-      if (loader.dataset.state === "leaving") hideLoader()
-    },
-    () => undefined,
-  )
 }
 
-function variantFor(url: URL): Variant {
-  const path = url.pathname.replace(/\/$/, "") || "/"
-  if (path === "/") return "home"
-  if (path === "/novel") return "novel"
-  if (path === "/articles" || path.startsWith("/articles/")) return "article"
-  return "plain"
+function enterText({ scope, variant }: Transition) {
+  if (variant === "article") {
+    animateEach(
+      scope,
+      ".veil-band",
+      [
+        { opacity: 0, filter: "blur(6px)", transform: "translate(-50%, calc(-50% + 0.75rem))" },
+        { opacity: 1, filter: "blur(0)", transform: "translate(-50%, -50%)" },
+      ],
+      { duration: 620, easing: "ease", fill: "backwards" },
+    )
+  } else if (variant === "novel") {
+    animateEach(
+      scope,
+      "[data-veil-line]",
+      rise("8px", "0.5rem"),
+      { duration: 900, easing: "ease", fill: "backwards" },
+      160,
+    )
+  } else if (variant === "home") {
+    animateEach(
+      scope,
+      "[data-veil-kicker], [data-veil-line]",
+      rise("6px", "0.5rem"),
+      { duration: 900, easing: "ease", fill: "backwards" },
+      140,
+    )
+  }
+}
+
+// Home reveal companions: the brand text lifts away as the centre hole starts to open, and the rings ripple
+// out just ahead of the hole's edge (negative delays put each ring further along the hole's own curve).
+function leaveHome({ scope }: Transition) {
+  animateEach(
+    scope,
+    ".veil-stack",
+    [
+      { opacity: 1, filter: "blur(0)", transform: "translate(-50%, -50%)" },
+      { opacity: 0, filter: "blur(6px)", transform: "translate(-50%, calc(-50% - 0.75rem))" },
+    ],
+    { duration: 360, easing: "ease-in", fill: "forwards" },
+  )
+  animateEach(
+    scope,
+    ".veil-ring",
+    [
+      { width: "0", height: "0", opacity: 1 },
+      { opacity: 1, offset: 0.7 },
+      { width: "150vmax", height: "150vmax", opacity: 0 },
+    ],
+    { duration: durations.home[1], delay: -90, easing: easeInOut, fill: "both" },
+    -90,
+  )
 }
 
 function reset(transition: Transition) {
   const isCurrent = current === transition
   transition.animation?.cancel()
   if (isCurrent) {
-    transition.veil.getAnimations().forEach((animation) => animation.cancel())
-    transition.veil.dataset.phase = "idle"
-    transition.veil.style.removeProperty("clip-path")
-    transition.veil.style.removeProperty("opacity")
-    transition.veil.style.removeProperty("filter")
+    const { veil } = transition
+    veil.getAnimations({ subtree: true }).forEach((animation) => animation.cancel())
+    veil.dataset.phase = "idle"
+    delete veil.dataset.loading
     current = undefined
-    hideLoader()
-    delete transition.veil.dataset.afterLoader
   }
 }
 
-function populate(transition: Transition, incoming: Document) {
-  const { veil } = transition
-  const data = incoming.documentElement.dataset
-  const variant = data.transitionVariant
-  transition.variant =
-    variant === "home" || variant === "article" || variant === "novel" ? variant : "plain"
-  veil.dataset.variant = transition.variant
-  veil.querySelector<HTMLElement>("[data-veil-kicker]")!.textContent = data.transitionKicker ?? ""
-  const numeral = veil.querySelector<HTMLElement>("[data-veil-numeral]")!
-  if (numeral.textContent !== (data.transitionNumeral ?? "")) {
-    numeral.replaceChildren(
-      ...Array.from(
-        new Intl.Segmenter().segment(data.transitionNumeral ?? ""),
-        ({ segment }) => segment,
-      ).map((char, index) => {
+function clearText(veil: HTMLElement) {
+  veil
+    .querySelectorAll<HTMLElement>(
+      "[data-veil-kicker], [data-veil-numeral], [data-veil-caption], [data-veil-line]",
+    )
+    .forEach((element) => {
+      element.textContent = ""
+    })
+}
+
+// Fills the active variant's text and plays its entrance. Called once the cover is complete, together with
+// the dots, so the text never rides in on the moving cover.
+function populate(transition: Transition, data: PageTransition | undefined) {
+  const { scope } = transition
+  const kicker = scope.querySelector<HTMLElement>("[data-veil-kicker]")
+  if (kicker) kicker.textContent = data?.kicker ?? ""
+  const caption = scope.querySelector<HTMLElement>("[data-veil-caption]")
+  if (caption) caption.textContent = data?.caption ?? ""
+  scope.querySelector<HTMLElement>("[data-veil-numeral]")?.replaceChildren(
+    ...Array.from(new Intl.Segmenter().segment(data?.numeral ?? ""), ({ segment }) => segment).map(
+      (char, index) => {
         const digit = document.createElement("span")
         digit.textContent = char
         const offset = transition.direction === "back" ? "-0.45em" : "0.45em"
@@ -132,66 +156,105 @@ function populate(transition: Transition, incoming: Document) {
             { opacity: 0, transform: `translateY(${offset})` },
             { opacity: 1, transform: "translateY(0)" },
           ],
-          {
-            duration: 620,
-            delay: index * 45,
-            easing: "cubic-bezier(0.22, 1, 0.36, 1)",
-            fill: "backwards",
-          },
+          { duration: 620, delay: index * 45, easing: easeOut, fill: "backwards" },
         )
         return digit
-      }),
-    )
-  }
-  veil.querySelector<HTMLElement>("[data-veil-caption]")!.textContent = data.transitionCaption ?? ""
-  const lines: string[] = JSON.parse(data.transitionLines ?? "[]")
-  veil.querySelectorAll<HTMLElement>("[data-veil-line]").forEach((line, index) => {
+      },
+    ),
+  )
+  const lines = data?.lines ?? []
+  scope.querySelectorAll<HTMLElement>("[data-veil-line]").forEach((line, index) => {
     line.hidden = index >= lines.length
     line.textContent = lines[index] ?? ""
+  })
+  enterText(transition)
+}
+
+// The variant's one group of dots, below its text. Once the cover is complete they either burst once (the
+// document is already loaded) or pulse until it arrives and then burst from their current pulse size.
+async function withDots(transition: Transition, cover: Promise<void>, loading: Promise<void>) {
+  const { veil, scope } = transition
+  let loaded = false
+  void cover.then(() => {
+    if (current !== transition) return
+    if (loaded) {
+      animateEach(
+        scope,
+        "[data-veil-dots] span",
+        burst,
+        { duration: 760, easing: easeOut, fill: "both" },
+        70,
+      )
+    } else {
+      veil.dataset.loading = "active"
+    }
+  })
+  try {
+    await loading
+  } finally {
+    loaded = true
+  }
+  if (veil.dataset.loading !== "active" || current !== transition) return
+  const dots = Array.from(scope.querySelectorAll<HTMLElement>("[data-veil-dots] span"))
+  const from = dots.map((dot) => {
+    const style = getComputedStyle(dot)
+    return {
+      opacity: style.opacity,
+      transform: style.transform === "none" ? "scale(1)" : style.transform,
+    }
+  })
+  // Dropping the pulse leaves the dots at their hidden rest state; the exit holds `from` until it starts.
+  delete veil.dataset.loading
+  dots.forEach((dot, index) => {
+    dot.animate([from[index], { opacity: 0, transform: "scale(1.6)" }], {
+      duration: 304,
+      delay: index * 70,
+      easing: easeOut,
+      fill: "both",
+    })
   })
 }
 
 // Novel and plain veils animate opacity only, which stays on the compositor; animating `filter`
 // repaints the full-screen mist every frame over the novel's video and stutters as the reveal ends.
+// Home covers with a growing circle and reveals through a growing hole (`--veil-hole`, a registered
+// property masked in `PageTransitionVeil.astro`), so the new page opens from the centre.
 function frames(variant: Variant, direction: string, entering: boolean): Keyframe[] {
   if (variant === "novel" || variant === "plain") {
     return entering ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 1 }, { opacity: 0 }]
   }
-  const hidden =
-    variant === "home"
-      ? { opacity: 1, clipPath: "circle(0 at 50% 50%)" }
-      : {
-          opacity: 1,
-          clipPath: (direction === "back") !== entering ? "inset(100% 0 0)" : "inset(0 0 100% 0)",
-        }
-  const covered =
-    variant === "home"
-      ? { opacity: 1, clipPath: "circle(75vmax at 50% 50%)" }
-      : { opacity: 1, clipPath: "inset(0)" }
+  if (variant === "home") {
+    return entering
+      ? [
+          { opacity: 1, clipPath: "circle(0 at 50% 50%)" },
+          { opacity: 1, clipPath: "circle(75vmax at 50% 50%)" },
+        ]
+      : [
+          { opacity: 1, clipPath: "circle(75vmax at 50% 50%)", "--veil-hole": "0vmax" },
+          { opacity: 1, clipPath: "circle(75vmax at 50% 50%)", "--veil-hole": "75vmax" },
+        ]
+  }
+  const hidden = {
+    opacity: 1,
+    clipPath: (direction === "back") !== entering ? "inset(100% 0 0)" : "inset(0 0 100% 0)",
+  }
+  const covered = { opacity: 1, clipPath: "inset(0)" }
   return entering ? [hidden, covered] : [covered, hidden]
+}
+
+const durations: Record<Variant, [entering: number, leaving: number]> = {
+  home: [520, 1100],
+  article: [520, 780],
+  novel: [620, 1100],
+  plain: [240, 240],
 }
 
 async function play(transition: Transition, entering: boolean) {
   const { veil, variant, direction } = transition
-  const duration = entering
-    ? variant === "novel"
-      ? 620
-      : variant === "article"
-        ? 520
-        : variant === "home"
-          ? 460
-          : 240
-    : variant === "novel"
-      ? 1100
-      : variant === "article"
-        ? 780
-        : variant === "home"
-          ? 760
-          : 240
   const previous = transition.animation
   const animation = veil.animate(frames(variant, direction, entering), {
-    duration,
-    easing: "cubic-bezier(0.65, 0, 0.35, 1)",
+    duration: durations[variant][entering ? 0 : 1],
+    easing: easeInOut,
     fill: "forwards",
   })
   transition.animation = animation
@@ -199,20 +262,34 @@ async function play(transition: Transition, entering: boolean) {
   await animation.finished.catch(() => undefined)
 }
 
+// Each navigation is one sequence on the persisted veil: (1) the cover starts at once; (2) once it is
+// complete, the veil text and its dots enter, the dots pulsing while the document is still loading;
+// (3) the DOM swaps under the cover and the reveal plays after the new page loads.
 document.addEventListener("astro:before-preparation", (event: TransitionBeforePreparationEvent) => {
   if (current) reset(current)
   if (motion.matches) return
   const veil = document.querySelector<HTMLElement>("[data-transition-veil]")
   if (!veil) return
+  const route = routeFor(event.to)
+  const variant: Variant = route?.variant ?? "plain"
+  const cover = Promise.withResolvers<void>()
   const transition: Transition = {
-    variant: variantFor(event.to),
+    variant,
     direction: event.direction,
     veil,
+    scope: veil.querySelector<HTMLElement>(`.veil-${variant}`)!,
+    covered: cover.promise.then(() => wait(textHold)),
     signal: event.signal,
   }
   current = transition
-  veil.dataset.variant = transition.variant
+  clearText(veil)
+  veil.dataset.variant = variant
   veil.dataset.direction = transition.direction
+  veil.dataset.phase = "covering"
+  void play(transition, true).then(() => {
+    if (current === transition) populate(transition, route)
+    cover.resolve()
+  })
   event.signal.addEventListener(
     "abort",
     () => {
@@ -221,40 +298,22 @@ document.addEventListener("astro:before-preparation", (event: TransitionBeforePr
     { once: true },
   )
 
-  // Loading runs first (with the loading dots past the threshold); the page transition starts once the
-  // next document is ready, so the cover never sits on screen while the network is still pending.
   const loader = event.loader
   event.loader = async () => {
     try {
-      await withLoader(transition, loader())
+      await withDots(transition, cover.promise, loader())
       if (current !== transition || event.signal.aborted) return
       if (event.defaultPrevented) {
         reset(transition)
         return
       }
-      // Home opens through the root view-transition iris (`homeRootTransition`); swap right away.
-      if (transition.variant === "home") return
-
-      // Filled before the cover so its text and digit animations play with it; never swap an uncovered page.
-      populate(transition, event.newDocument)
-      veil.dataset.phase = "covering"
-      transition.entering = play(transition, true)
-      await transition.entering
+      // Never swap an uncovered page.
+      await cover.promise
       if (event.signal.aborted) reset(transition)
     } catch (error) {
       if (current === transition) reset(transition)
       throw error
     }
-  }
-
-  if (transition.variant !== "home") {
-    veil
-      .querySelectorAll<HTMLElement>(
-        "[data-veil-kicker], [data-veil-numeral], [data-veil-caption], [data-veil-line]",
-      )
-      .forEach((element) => {
-        element.textContent = ""
-      })
   }
 })
 
@@ -265,16 +324,6 @@ onBeforeSwap((event) => {
   document.querySelectorAll<HTMLAnchorElement>("#site-navbar .nav-link").forEach((link) => {
     link.classList.toggle("active", link.getAttribute("href") === activeHref)
   })
-  if (!current) return
-  if (current.variant === "home") {
-    const transition = current
-    transition.veil.dataset.phase = "iris"
-    window.setTimeout(() => {
-      if (current === transition) reset(transition)
-    }, 1500)
-    return
-  }
-  populate(current, event.newDocument)
 })
 
 document.addEventListener("astro:page-load", () => {
@@ -284,12 +333,13 @@ document.addEventListener("astro:page-load", () => {
     reset(transition)
     return
   }
-  if (transition.arriving || transition.variant === "home") return
+  if (transition.arriving) return
   transition.arriving = true
-  transition.veil.dataset.phase = "revealing"
-  void transition.entering
-    ?.then(() => {
+  void transition.covered
+    .then(() => {
       if (current !== transition || transition.signal.aborted) return
+      transition.veil.dataset.phase = "revealing"
+      if (transition.variant === "home") leaveHome(transition)
       return play(transition, false)
     })
     .then(() => {

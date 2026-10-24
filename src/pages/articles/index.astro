@@ -33,7 +33,7 @@ articles.forEach((article, index) => {
 const pluralArticles = (count: number) => `${count} ${count === 1 ? 'article' : 'articles'}`;
 ---
 
-<BaseLayout activePage="Article" title="Articles | TANH.MOE" description={description} transition={{ variant: 'article', kicker: 'Archive', numeral: formatIndex(articles.length), caption: pluralArticles(articles.length) }}>
+<BaseLayout activePage="Article" title="Articles | TANH.MOE" description={description}>
   <div class="archive-decoration" aria-hidden="true">
     <RotatingCircles />
     <p class="archive-edge-words">math<br />physics<br />geography</p>

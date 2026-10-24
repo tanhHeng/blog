@@ -1,9 +1,9 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import RotatingCircles from '../components/RotatingCircles.astro';
+import { motto } from '../lib/pageTransitions';
 
 // Profile copy follows the GitHub profile README (github.com/tanhHeng/tanhHeng); keep both in sync.
-const motto = '风雪拂枕，北星饮尘。';
 const description = '在深度学习、软件开发、Minecraft 工具与平面设计之间探索，把想象做成实用的系统、清晰的解释，以及认真打磨的界面。';
 
 const profile = [
@@ -45,7 +45,7 @@ const formatIndex = (index: number) => String(index).padStart(2, '0');
 const isExternal = (href: string) => href.startsWith('http');
 ---
 
-<BaseLayout activePage="About" lang="zh-CN" title="关于 | TANH.MOE" description={description} transition={{ variant: 'article', kicker: '关于', numeral: 'tanh丶桁', caption: motto }}>
+<BaseLayout activePage="About" lang="zh-CN" title="关于 | TANH.MOE" description={description}>
   <div class="about-decoration" aria-hidden="true">
     <RotatingCircles />
   </div>

@@ -1,5 +1,3 @@
-import type { TransitionDirectionalAnimations } from "astro"
-
 export type PageTransitionVariant = "home" | "article" | "novel"
 
 export interface PageTransition {
@@ -10,28 +8,43 @@ export interface PageTransition {
   lines?: string[]
 }
 
-const homePair = {
-  old: {
-    name: "vt-recede",
-    duration: "600ms",
-    easing: "cubic-bezier(0.55, 0, 0.75, 0.2)",
-    fillMode: "both",
-  },
-  new: {
-    name: "vt-iris",
-    duration: "1100ms",
-    delay: "200ms",
-    easing: "cubic-bezier(0.65, 0, 0.35, 1)",
-    fillMode: "both",
-  },
+/** The About page's motto, shown on the page and on its transition veil. */
+export const motto = "风雪拂枕，北星饮尘。"
+
+/** Route key for the table below: the pathname without a trailing slash (`/` for the root). */
+export function routePath(pathname: string) {
+  return pathname.replace(/\/+$/, "") || "/"
 }
 
 /**
- * Root animation used by ClientRouter when the Home page is entered: the old page recedes while the
- * new page opens through a circular iris. Keyframes live in `PageTransitionVeil.astro`; the veil's
- * `iris` phase ring timings match these durations.
+ * Veil variant and text for every route, keyed by `routePath`. The coordinator starts the cover before
+ * the next page is fetched, so the veil text comes from this table (serialized into every page by
+ * `BaseLayout`) rather than from the incoming document. Routes not listed get the plain fade.
+ * Takes the article list as an argument: importing `lib/articles` here would evaluate every article
+ * module from `BaseLayout`, which articles themselves import.
  */
-export const homeRootTransition: TransitionDirectionalAnimations = {
-  forwards: homePair,
-  backwards: homePair,
+export function routeTransitions(
+  articles: readonly { url: string; date: string; title: string }[],
+): Record<string, PageTransition> {
+  const count = articles.length
+  const routes: Record<string, PageTransition> = {
+    "/": { variant: "home", kicker: "TANH.MOE", lines: ["Life is Piano.", "You are Pianist."] },
+    "/about": { variant: "article", kicker: "关于", numeral: "tanh丶桁", caption: motto },
+    "/articles": {
+      variant: "article",
+      kicker: "Archive",
+      numeral: String(count).padStart(2, "0"),
+      caption: `${count} ${count === 1 ? "article" : "articles"}`,
+    },
+    "/novel": { variant: "novel", lines: ["星与月交响的诗篇，", "书写、兴与落轮转的流连"] },
+  }
+  for (const article of articles) {
+    routes[routePath(article.url)] = {
+      variant: "article",
+      kicker: "Article",
+      numeral: article.date.replaceAll("-", "."),
+      caption: article.title,
+    }
+  }
+  return routes
 }

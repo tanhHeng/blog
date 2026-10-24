@@ -7,7 +7,7 @@ import MouseCircle from '../components/MouseCircle.astro';
 import PageTransitionVeil from '../components/PageTransitionVeil.astro';
 import '../styles/global.scss';
 import 'animate.css';
-import { homeRootTransition, type PageTransition } from '../lib/pageTransitions';
+import { routeTransitions } from '../lib/pageTransitions';
 import { friendLinks } from '../lib/friends';
 
 interface Props {
@@ -16,7 +16,6 @@ interface Props {
   description?: string;
   lang?: string;
   showFootnote?: boolean;
-  transition?: PageTransition;
 }
 
 const {
@@ -25,12 +24,14 @@ const {
   description,
   lang = 'en',
   showFootnote = true,
-  transition,
 } = Astro.props;
-const variant = transition?.variant ?? (Astro.url.pathname === '/' ? 'home' : activePage === 'Novel' ? 'novel' : activePage === 'Article' ? 'article' : 'plain');
+// Dynamic like in `ArticleLayout`: article modules import this layout, and `lib/articles` imports them.
+const { articles } = await import('../lib/articles');
+// `<` is escaped so a title can never close the JSON script early.
+const transitionRoutes = JSON.stringify(routeTransitions(articles)).replaceAll('<', '\\u003c');
 ---
 
-<html lang={lang} data-transition-variant={variant} data-transition-kicker={transition?.kicker} data-transition-numeral={transition?.numeral} data-transition-caption={transition?.caption} data-transition-lines={transition?.lines ? JSON.stringify(transition.lines) : undefined} transition:name="root" transition:animate={variant === 'home' ? homeRootTransition : 'none'}>
+<html lang={lang} transition:name="root" transition:animate="none">
   <head>
     <meta charset="utf-8" />
     <link rel="icon" href="/favicon.svg" />
@@ -46,6 +47,7 @@ const variant = transition?.variant ?? (Astro.url.pathname === '/' ? 'home' : ac
     <MouseCircle />
     <Navbar activePage={activePage} />
     <PageTransitionVeil />
+    <script type="application/json" is:inline data-transition-routes set:html={transitionRoutes}></script>
     <div class="page-content">
       <slot />
     </div>
