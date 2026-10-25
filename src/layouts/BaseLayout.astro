@@ -37,6 +37,11 @@ const transitionRoutes = JSON.stringify(routeTransitions(articles)).replaceAll('
     <link rel="icon" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
+    <!-- Loaded once here, not from `global.scss`: every component `@use`s that file, so an `@import` there is
+    copied into each stylesheet, and the ClientRouter head swap re-registers its thousands of font faces. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700&family=Playfair+Display+SC:wght@400;700&family=Playfair+Display:wght@400;700&family=Italianno&display=swap" />
     {title && <title>{title}</title>}
     {description && <meta name="description" content={description} />}
     <ClientRouter />

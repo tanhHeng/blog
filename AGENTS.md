@@ -115,7 +115,7 @@ Page-specific scripts register through `src/lib/pageLifecycle.ts`. Use `onPageLo
 
 ### Styling and visual conventions
 
-`src/styles/global.scss` defines the site palette, typography, font imports, and base document rules. `src/styles/Navbar.scss` contains the navbar Sass variables and its responsive breakpoint at `900px`. Most page/layout styles are colocated in their `.astro` files. Prefer existing Sass variables, component styles, and layout conventions over introducing duplicate colors, fonts, or global selectors. Use `.design/` screenshots as visual references when making UI changes, and verify responsive behavior because the composition intentionally differs between desktop and mobile.
+`src/styles/global.scss` defines the site palette, typography, and base document rules. Web fonts load once through a `<link>` in `BaseLayout.astro`'s head; never `@import` them in `global.scss`, which every component `@use`s: the import is then copied into each bundled stylesheet, and every ClientRouter head swap re-registers thousands of font faces and stalls the first layout of the new page. `src/styles/Navbar.scss` contains the navbar Sass variables and its responsive breakpoint at `900px`. Most page/layout styles are colocated in their `.astro` files. Prefer existing Sass variables, component styles, and layout conventions over introducing duplicate colors, fonts, or global selectors. Use `.design/` screenshots as visual references when making UI changes, and verify responsive behavior because the composition intentionally differs between desktop and mobile.
 
 ### Content and implementation guidance
 
