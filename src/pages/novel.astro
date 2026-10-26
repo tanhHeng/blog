@@ -696,17 +696,24 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
       chapterTurning = true;
       const bodyRect = body.getBoundingClientRect();
       const leavingRect = leaving.getBoundingClientRect();
+      // Lifted out of flow, the reader starts its own formatting context, so its first child's top margin no
+      // longer collapses through it and the content would drop by that margin; the anchor's measured shift
+      // corrects for it (and for anything else that moved).
+      const anchor = leaving.firstElementChild ?? leaving;
+      const anchorTop = anchor.getBoundingClientRect().top;
       swapChapter(panel, id);
       const timing = { duration: 480, easing: 'linear' };
+      const top = leavingRect.top - bodyRect.top - body.clientTop;
       Object.assign(leaving.style, {
         position: 'absolute',
-        top: `${leavingRect.top - bodyRect.top - body.clientTop}px`,
+        top: `${top}px`,
         left: `${leavingRect.left - bodyRect.left - body.clientLeft}px`,
         width: `${leavingRect.width}px`,
         pointerEvents: 'none',
       });
       leaving.inert = true;
       leaving.hidden = false;
+      leaving.style.top = `${top - (anchor.getBoundingClientRect().top - anchorTop)}px`;
       const fades = [leaving.animate([{ opacity: 1, filter: 'blur(0)' }, { opacity: 0, filter: 'blur(6px)' }], { ...timing, fill: 'forwards' }).finished];
       const arriving = panel.querySelector<HTMLElement>(`[data-chapter="${id}"]`);
       if (arriving) fades.push(arriving.animate([{ opacity: 0, filter: 'blur(6px)' }, { opacity: 1, filter: 'blur(0)' }], timing).finished);
