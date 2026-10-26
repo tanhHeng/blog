@@ -635,7 +635,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     };
 
     // `id` undefined returns to the chapter list and restores focus to the chapter just read.
-    const showChapter = (panel: HTMLDialogElement, id?: string) => {
+    const swapChapter = (panel: HTMLDialogElement, id?: string) => {
       const list = panel.querySelector<HTMLElement>('[data-chapter-list]');
       const body = panel.querySelector<HTMLElement>('[data-panel-body]');
       if (!list || !body) return;
@@ -647,6 +647,53 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
       body.scrollTop = 0;
       if (id) panel.querySelector<HTMLElement>(`[data-chapter="${id}"] .reader-title`)?.focus();
       else if (previous) panel.querySelector<HTMLElement>(`[data-chapter-open="${previous}"]`)?.focus();
+    };
+
+    // Chapter changes cross-fade the reading content only (linear blur and opacity, no movement); the sheet
+    // header and the chapter list never animate. The leaving reader is lifted out of flow at the spot it was
+    // showing, so it fades out over the arriving content while that fades in. Clicks while it runs are dropped.
+    let chapterTurning = false;
+    const showChapter = async (panel: HTMLDialogElement, id?: string) => {
+      const body = panel.querySelector<HTMLElement>('[data-panel-body]');
+      if (reducedMotion.matches || !body) {
+        swapChapter(panel, id);
+        return;
+      }
+      if (chapterTurning) return;
+      chapterTurning = true;
+      const leaving = panel.querySelector<HTMLElement>('[data-chapter]:not([hidden])');
+      const bodyRect = body.getBoundingClientRect();
+      const leavingRect = leaving?.getBoundingClientRect();
+      swapChapter(panel, id);
+      const timing = { duration: 480, easing: 'linear' };
+      const fades: Promise<unknown>[] = [];
+      if (leaving && leavingRect) {
+        Object.assign(leaving.style, {
+          position: 'absolute',
+          top: `${leavingRect.top - bodyRect.top - body.clientTop}px`,
+          left: `${leavingRect.left - bodyRect.left - body.clientLeft}px`,
+          width: `${leavingRect.width}px`,
+          pointerEvents: 'none',
+        });
+        leaving.inert = true;
+        leaving.hidden = false;
+        fades.push(leaving.animate([{ opacity: 1, filter: 'blur(0)' }, { opacity: 0, filter: 'blur(6px)' }], { ...timing, fill: 'forwards' }).finished);
+      }
+      const arriving = id ? panel.querySelector<HTMLElement>(`[data-chapter="${id}"]`) : null;
+      if (arriving) fades.push(arriving.animate([{ opacity: 0, filter: 'blur(6px)' }, { opacity: 1, filter: 'blur(0)' }], timing).finished);
+      try {
+        await Promise.all(fades);
+      } catch {
+        // Cancelled (the page is leaving); the cleanup below still restores the reader.
+      } finally {
+        if (leaving) {
+          leaving.getAnimations().forEach((animation) => animation.cancel());
+          leaving.removeAttribute('style');
+          leaving.inert = false;
+          leaving.hidden = leaving.dataset.chapter !== id;
+        }
+        chapterTurning = false;
+      }
     };
 
     const selectTab = (tab: HTMLElement) => {
@@ -1600,6 +1647,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
   }
 
   .panel-body {
+    position: relative;
     flex: 1 1 auto;
     min-height: 0;
     padding: 2rem 3rem 4rem;
