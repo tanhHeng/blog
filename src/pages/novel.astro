@@ -1959,10 +1959,9 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     width: 2.4rem;
     height: 2.4rem;
     padding: 0;
-    border: 1px solid rgba($primary-blue, 0.55);
-    background: #fff;
+    border: 0;
+    background: none;
     cursor: pointer;
-    transition: background-color 180ms ease-out;
 
     &::before,
     &::after {
@@ -1973,17 +1972,25 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
       height: 1px;
       background: $primary-blue;
       content: '';
+      opacity: 0.7;
       transform: translate(-50%, -50%) rotate(45deg);
+      transition: opacity 180ms ease-out;
     }
 
     &::after {
       transform: translate(-50%, -50%) rotate(-45deg);
     }
 
-    &:hover,
+    &:hover::before,
+    &:hover::after,
+    &:focus-visible::before,
+    &:focus-visible::after {
+      opacity: 1;
+    }
+
     &:focus-visible {
-      background: $ex-light-blue;
-      outline: none;
+      outline: 1px solid rgba($primary-blue, 0.55);
+      outline-offset: -0.35rem;
     }
   }
 
