@@ -159,27 +159,6 @@ import LoadingDots from './LoadingDots.astro';
     height: 1px;
     background: $primary-blue;
     box-shadow: 0 0 1.2rem rgba($primary-blue, 0.24);
-
-    &::before,
-    &::after {
-      position: absolute;
-      top: 50%;
-      width: 0.45rem;
-      height: 0.45rem;
-      box-sizing: border-box;
-      border: 1px solid $primary-blue;
-      background: #fff;
-      content: '';
-      transform: translateY(-50%) rotate(45deg);
-    }
-
-    &::before {
-      left: 2rem;
-    }
-
-    &::after {
-      right: 2rem;
-    }
   }
 
   .veil-numeral {
