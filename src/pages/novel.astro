@@ -641,19 +641,55 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
 
     const contents = root.querySelector<HTMLElement>('[data-contents]');
 
+    const crossFade = { duration: 480, easing: 'linear' };
+    const fadeOut: Keyframe[] = [{ opacity: 1, filter: 'blur(0)' }, { opacity: 0, filter: 'blur(6px)' }];
+    const fadeIn: Keyframe[] = [{ opacity: 0, filter: 'blur(6px)' }, { opacity: 1, filter: 'blur(0)' }];
+
+    // Copies of a panel's header and body pinned where they stand, so they can fade out over the next panel
+    // after their own dialog closes (only one modal can be shown). Ids are stripped to keep them unique.
+    const ghostsOf = (panel: HTMLDialogElement) => {
+      const panelRect = panel.getBoundingClientRect();
+      return Array.from(panel.querySelectorAll<HTMLElement>(':scope > .panel-header, :scope > [data-panel-body]')).map((part) => {
+        const rect = part.getBoundingClientRect();
+        const ghost = part.cloneNode(true) as HTMLElement;
+        ghost.removeAttribute('data-panel-body');
+        ghost.querySelectorAll('[id]').forEach((element) => element.removeAttribute('id'));
+        ghost.querySelector('.panel-close')?.remove();
+        Object.assign(ghost.style, {
+          position: 'absolute',
+          top: `${rect.top - panelRect.top}px`,
+          left: `${rect.left - panelRect.left}px`,
+          // The measured rect is the border box, scrollbar included, and the copy keeps the body's own
+          // `overflow-y: auto` (its content is just as tall) so the scrollbar keeps its room. Otherwise the text
+          // reflows wider and centred lines (the reader title) slide sideways.
+          boxSizing: 'border-box',
+          width: `${rect.width}px`,
+          height: `${rect.height}px`,
+          margin: '0',
+          pointerEvents: 'none',
+        });
+        ghost.inert = true;
+        ghost.setAttribute('aria-hidden', 'true');
+        return { ghost, scrollTop: part.scrollTop };
+      });
+    };
+
     // Switching panels closes the current one and opens the next in place, without the slide, so only the
-    // first sheet ever slides. The contents list moves into whichever panel is open (modal dialogs make the
+    // first sheet ever slides; the old header and body cross-fade into the new ones like a chapter turn (the
+    // close button stays put). The contents list moves into whichever panel is open (modal dialogs make the
     // rest of the page inert, so it must live inside the open one).
-    const openPanel = (id: string) => {
+    const openPanel = async (id: string) => {
       const panel = document.getElementById(`panel-${id}`);
       if (!(panel instanceof HTMLDialogElement)) return;
+      const previous = panels.find((other) => other !== panel && other.open);
+      // Measured before the contents list leaves it, which reflows a narrow sheet.
+      const ghosts = previous && !reducedMotion.matches ? ghostsOf(previous) : [];
       if (contents) panel.append(contents);
-      const switching = panels.some((other) => other !== panel && other.open);
       for (const other of panels) {
         if (other !== panel && other.open) other.close();
       }
       if (!panel.open) {
-        panel.classList.toggle('is-switching', switching);
+        panel.classList.toggle('is-switching', previous !== undefined);
         panel.showModal();
       }
       // Marked only after the list is laid out in the open panel, so the chapters' collapse transitions from
@@ -664,6 +700,24 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
           if (entry.dataset.contentsPanel === id) entry.setAttribute('aria-current', 'true');
           else entry.removeAttribute('aria-current');
         });
+      }
+      if (ghosts.length === 0) return;
+      // The arriving parts are picked before the ghosts go in: a ghost header is also a `.panel-header`, and
+      // its children would otherwise fade in from nothing while the ghost fades out.
+      const arriving = Array.from(panel.querySelectorAll<HTMLElement>(':scope > .panel-header > :not(.panel-close), :scope > [data-panel-body]'));
+      const fades: Promise<unknown>[] = [];
+      for (const { ghost, scrollTop } of ghosts) {
+        panel.append(ghost);
+        ghost.scrollTop = scrollTop;
+        fades.push(ghost.animate(fadeOut, { ...crossFade, fill: 'forwards' }).finished);
+      }
+      for (const part of arriving) fades.push(part.animate(fadeIn, crossFade).finished);
+      try {
+        await Promise.all(fades);
+      } catch {
+        // Cancelled (the page is leaving); the ghosts are removed below either way.
+      } finally {
+        ghosts.forEach(({ ghost }) => ghost.remove());
       }
     };
 
@@ -702,7 +756,6 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
       const anchor = leaving.firstElementChild ?? leaving;
       const anchorTop = anchor.getBoundingClientRect().top;
       swapChapter(panel, id);
-      const timing = { duration: 480, easing: 'linear' };
       const top = leavingRect.top - bodyRect.top - body.clientTop;
       Object.assign(leaving.style, {
         position: 'absolute',
@@ -714,9 +767,9 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
       leaving.inert = true;
       leaving.hidden = false;
       leaving.style.top = `${top - (anchor.getBoundingClientRect().top - anchorTop)}px`;
-      const fades = [leaving.animate([{ opacity: 1, filter: 'blur(0)' }, { opacity: 0, filter: 'blur(6px)' }], { ...timing, fill: 'forwards' }).finished];
+      const fades = [leaving.animate(fadeOut, { ...crossFade, fill: 'forwards' }).finished];
       const arriving = panel.querySelector<HTMLElement>(`[data-chapter="${id}"]`);
-      if (arriving) fades.push(arriving.animate([{ opacity: 0, filter: 'blur(6px)' }, { opacity: 1, filter: 'blur(0)' }], timing).finished);
+      if (arriving) fades.push(arriving.animate(fadeIn, crossFade).finished);
       try {
         await Promise.all(fades);
       } catch {
