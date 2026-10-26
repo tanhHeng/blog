@@ -69,7 +69,6 @@ const scenes: Scene[] = [
 const restartCue = { label: '回到最初', hover: '又一个30年', x: 29, y: 79, panel: undefined };
 
 const title = 'Flowe_orld';
-const formatCount = new Intl.NumberFormat('zh-CN');
 
 // World diagram: the draft's 60-year night-phase cycle, moon peaking at years 0/60 and stars at year 30.
 const cycle = { left: 56, right: 524, middle: 96, amplitude: 52 };
@@ -217,24 +216,8 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
         <button class="panel-close" type="button" data-panel-close aria-label="关闭"></button>
       </header>
       <div class="panel-body" data-panel-body>
-        <ol class="chapter-list" data-chapter-list>
-          {chapters.map((chapter, index) => (
-            <li>
-              <button class="chapter-entry" type="button" data-chapter-open={chapter.id}>
-                <span class="chapter-index">{String(index + 1).padStart(2, '0')}</span>
-                <span class="chapter-copy">
-                  <span class="chapter-number">{chapter.volume} · {chapter.number}</span>
-                  <span class="chapter-name">{chapter.name}</span>
-                  <span class="chapter-meta">{chapter.sections.length} 节 · 约 {formatCount.format(chapter.characterCount)} 字</span>
-                </span>
-                <span class="chapter-arrow" aria-hidden="true"></span>
-              </button>
-            </li>
-          ))}
-        </ol>
         {chapters.map((chapter, index) => (
-          <article class="chapter-reader" data-chapter={chapter.id} aria-labelledby={`${chapter.id}-title`} hidden>
-            <button class="reader-back" type="button" data-chapter-back>篇章目录</button>
+          <article class="chapter-reader" data-chapter={chapter.id} aria-labelledby={`${chapter.id}-title`} hidden={index > 0}>
             <header class="reader-header">
               <p class="reader-number">{chapter.volume} · {chapter.number}</p>
               <h3 class="reader-title" id={`${chapter.id}-title`} tabindex="-1">{chapter.name}</h3>
@@ -261,14 +244,46 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
                   <span>Next</span>{chapters[index + 1].name}
                 </button>
               ) : (
-                <button type="button" data-chapter-back>
-                  <span>Fin.</span>未完待续 · 返回目录
+                <button type="button" data-panel-close>
+                  <span>Fin.</span>未完待续 · 合上书页
                 </button>
               )}
             </nav>
           </article>
         ))}
       </div>
+      <!-- The book's contents, shared by every panel: the script moves this one node into whichever panel
+      opens. Top level mirrors the panels (01–04, as their kickers); the volume's chapters sit beneath it. -->
+      <nav class="chapter-aside" data-contents aria-label="目录">
+        <ol>
+          {[
+            { panel: 'prologue', label: '序章' },
+            { panel: 'chapters', label: chapters[0].volume },
+            { panel: 'codex', label: codex.title },
+            { panel: 'world', label: world.label },
+          ].map((entry) => (
+            <li>
+              <button type="button" data-open-panel={entry.panel} data-contents-panel={entry.panel}>
+                <span class="rail-title">{entry.label}</span>
+              </button>
+              {entry.panel === 'chapters' && (
+                <div class="chapter-aside-fold">
+                  <ol class="chapter-aside-chapters">
+                    {chapters.map((chapter, chapterIndex) => (
+                      <li>
+                        <button type="button" data-chapter-open={chapter.id} aria-current={chapterIndex === 0 ? 'true' : undefined}>
+                          <span class="rail-numeral">{String(chapterIndex + 1).padStart(2, '0')}</span>
+                          <span class="rail-title">{chapter.name}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+            </li>
+          ))}
+        </ol>
+      </nav>
     </dialog>
 
     <dialog class="novel-panel" id="panel-codex" aria-labelledby="panel-codex-title">
@@ -624,74 +639,86 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
       });
     };
 
-    // Switching panels closes the current one without animation so only one sheet ever slides.
+    const contents = root.querySelector<HTMLElement>('[data-contents]');
+
+    // Switching panels closes the current one and opens the next in place, without the slide, so only the
+    // first sheet ever slides. The contents list moves into whichever panel is open (modal dialogs make the
+    // rest of the page inert, so it must live inside the open one).
     const openPanel = (id: string) => {
       const panel = document.getElementById(`panel-${id}`);
       if (!(panel instanceof HTMLDialogElement)) return;
+      if (contents) panel.append(contents);
+      const switching = panels.some((other) => other !== panel && other.open);
       for (const other of panels) {
         if (other !== panel && other.open) other.close();
       }
-      if (!panel.open) panel.showModal();
+      if (!panel.open) {
+        panel.classList.toggle('is-switching', switching);
+        panel.showModal();
+      }
+      // Marked only after the list is laid out in the open panel, so the chapters' collapse transitions from
+      // the previous state rather than starting at the new one.
+      if (contents) {
+        void contents.offsetHeight;
+        contents.querySelectorAll<HTMLElement>('[data-contents-panel]').forEach((entry) => {
+          if (entry.dataset.contentsPanel === id) entry.setAttribute('aria-current', 'true');
+          else entry.removeAttribute('aria-current');
+        });
+      }
     };
 
-    // `id` undefined returns to the chapter list and restores focus to the chapter just read.
-    const swapChapter = (panel: HTMLDialogElement, id?: string) => {
-      const list = panel.querySelector<HTMLElement>('[data-chapter-list]');
+    const swapChapter = (panel: HTMLDialogElement, id: string) => {
       const body = panel.querySelector<HTMLElement>('[data-panel-body]');
-      if (!list || !body) return;
-      const previous = panel.querySelector<HTMLElement>('[data-chapter]:not([hidden])')?.dataset.chapter;
-      list.hidden = id !== undefined;
+      if (!body) return;
       panel.querySelectorAll<HTMLElement>('[data-chapter]').forEach((reader) => {
         reader.hidden = reader.dataset.chapter !== id;
       });
+      contents?.querySelectorAll<HTMLElement>('[data-chapter-open]').forEach((entry) => {
+        if (entry.dataset.chapterOpen === id) entry.setAttribute('aria-current', 'true');
+        else entry.removeAttribute('aria-current');
+      });
       body.scrollTop = 0;
-      if (id) panel.querySelector<HTMLElement>(`[data-chapter="${id}"] .reader-title`)?.focus();
-      else if (previous) panel.querySelector<HTMLElement>(`[data-chapter-open="${previous}"]`)?.focus();
+      panel.querySelector<HTMLElement>(`[data-chapter="${id}"] .reader-title`)?.focus();
     };
 
     // Chapter changes cross-fade the reading content only (linear blur and opacity, no movement); the sheet
     // header and the chapter list never animate. The leaving reader is lifted out of flow at the spot it was
     // showing, so it fades out over the arriving content while that fades in. Clicks while it runs are dropped.
     let chapterTurning = false;
-    const showChapter = async (panel: HTMLDialogElement, id?: string) => {
+    const showChapter = async (panel: HTMLDialogElement, id: string) => {
       const body = panel.querySelector<HTMLElement>('[data-panel-body]');
-      if (reducedMotion.matches || !body) {
+      const leaving = panel.querySelector<HTMLElement>('[data-chapter]:not([hidden])');
+      if (chapterTurning || leaving?.dataset.chapter === id) return;
+      if (reducedMotion.matches || !body || !leaving) {
         swapChapter(panel, id);
         return;
       }
-      if (chapterTurning) return;
       chapterTurning = true;
-      const leaving = panel.querySelector<HTMLElement>('[data-chapter]:not([hidden])');
       const bodyRect = body.getBoundingClientRect();
-      const leavingRect = leaving?.getBoundingClientRect();
+      const leavingRect = leaving.getBoundingClientRect();
       swapChapter(panel, id);
       const timing = { duration: 480, easing: 'linear' };
-      const fades: Promise<unknown>[] = [];
-      if (leaving && leavingRect) {
-        Object.assign(leaving.style, {
-          position: 'absolute',
-          top: `${leavingRect.top - bodyRect.top - body.clientTop}px`,
-          left: `${leavingRect.left - bodyRect.left - body.clientLeft}px`,
-          width: `${leavingRect.width}px`,
-          pointerEvents: 'none',
-        });
-        leaving.inert = true;
-        leaving.hidden = false;
-        fades.push(leaving.animate([{ opacity: 1, filter: 'blur(0)' }, { opacity: 0, filter: 'blur(6px)' }], { ...timing, fill: 'forwards' }).finished);
-      }
-      const arriving = id ? panel.querySelector<HTMLElement>(`[data-chapter="${id}"]`) : null;
+      Object.assign(leaving.style, {
+        position: 'absolute',
+        top: `${leavingRect.top - bodyRect.top - body.clientTop}px`,
+        left: `${leavingRect.left - bodyRect.left - body.clientLeft}px`,
+        width: `${leavingRect.width}px`,
+        pointerEvents: 'none',
+      });
+      leaving.inert = true;
+      leaving.hidden = false;
+      const fades = [leaving.animate([{ opacity: 1, filter: 'blur(0)' }, { opacity: 0, filter: 'blur(6px)' }], { ...timing, fill: 'forwards' }).finished];
+      const arriving = panel.querySelector<HTMLElement>(`[data-chapter="${id}"]`);
       if (arriving) fades.push(arriving.animate([{ opacity: 0, filter: 'blur(6px)' }, { opacity: 1, filter: 'blur(0)' }], timing).finished);
       try {
         await Promise.all(fades);
       } catch {
         // Cancelled (the page is leaving); the cleanup below still restores the reader.
       } finally {
-        if (leaving) {
-          leaving.getAnimations().forEach((animation) => animation.cancel());
-          leaving.removeAttribute('style');
-          leaving.inert = false;
-          leaving.hidden = leaving.dataset.chapter !== id;
-        }
+        leaving.getAnimations().forEach((animation) => animation.cancel());
+        leaving.removeAttribute('style');
+        leaving.inert = false;
+        leaving.hidden = true;
         chapterTurning = false;
       }
     };
@@ -728,9 +755,13 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
         closePanel(panel);
         return;
       }
-      const chapterButton = target.closest<HTMLElement>('[data-chapter-open]');
-      if (chapterButton) showChapter(panel, chapterButton.dataset.chapterOpen);
-      else if (target.closest('[data-chapter-back]')) showChapter(panel);
+      const chapterId = target.closest<HTMLElement>('[data-chapter-open]')?.dataset.chapterOpen;
+      if (chapterId && panel.id === 'panel-chapters') showChapter(panel, chapterId);
+      else if (chapterId) {
+        openPanel('chapters');
+        const chaptersPanel = document.getElementById('panel-chapters');
+        if (chaptersPanel instanceof HTMLDialogElement) swapChapter(chaptersPanel, chapterId);
+      }
       const tab = target.closest<HTMLElement>('[data-codex-tab]');
       if (tab) selectTab(tab);
     });
@@ -750,7 +781,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
         event.preventDefault();
         closePanel(panel);
       });
-      scope.listen(panel, 'close', () => panel.classList.remove('is-closing'));
+      scope.listen(panel, 'close', () => panel.classList.remove('is-closing', 'is-switching'));
     }
 
     const setPlaying = (playing: boolean) => {
@@ -1413,6 +1444,172 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     letter-spacing: 0.2em;
   }
 
+  // Chapter aside ---------------------------------------------------------
+  // The book's contents (`data-contents`), shared by every panel. From 1100px it stands at the left edge of
+  // the page, vertically centred over the dimmed backdrop, in the page rail's look. Narrower, the sheet covers
+  // the page, so the list becomes a row of tabs under the sheet header.
+
+  .chapter-aside button {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  @media (min-width: 1100px) {
+    .chapter-aside {
+      position: fixed;
+      top: 50%;
+      left: 2.5rem;
+      display: none;
+      max-width: calc(100vw - 44rem - 5rem);
+      transform: translateY(-50%);
+
+      ol {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 1.4rem;
+        margin: 0;
+        padding: 0 0 0 1.1rem;
+        list-style: none;
+
+        &::before {
+          position: absolute;
+          top: 0.3rem;
+          bottom: 0.3rem;
+          left: 0.25rem;
+          width: 1px;
+          background: rgba($moon, 0.3);
+          content: '';
+        }
+      }
+
+      button {
+        position: relative;
+        display: flex;
+        align-items: baseline;
+        gap: 0.65rem;
+        color: rgba($moon, 0.55);
+        transition: color 300ms ease;
+
+        &::before {
+          position: absolute;
+          top: 50%;
+          left: calc(-0.85rem - 0.5px);
+          width: 0.42rem;
+          height: 0.42rem;
+          box-sizing: border-box;
+          border: 1px solid rgba($moon, 0.55);
+          background: $night;
+          content: '';
+          transform: translate(-50%, -50%) rotate(45deg);
+          transition: background-color 300ms ease, border-color 300ms ease;
+        }
+
+        &:hover,
+        &:focus-visible,
+        &[aria-current] {
+          color: $moon;
+          outline: none;
+        }
+
+        &[aria-current]::before {
+          border-color: $moon;
+          background: $moon;
+          box-shadow: 0 0 0.6rem $glow;
+        }
+      }
+    }
+
+    // Chapters hang off the main rail line by a short tick instead of their own line and diamonds.
+    .chapter-aside .chapter-aside-chapters {
+      gap: 0.9rem;
+      // Spacing above is the first chapter's margin, inside the clip, so it folds away with the chapters;
+      // padding on the list would stay as its minimum height when folded.
+      > li:first-child {
+        margin-top: 1rem;
+      }
+
+      // Widened by the overhang of the ticks so the collapse clip (`overflow: hidden`) keeps them.
+      margin-left: -0.85rem;
+      padding-left: 1.95rem;
+
+      &::before {
+        content: none;
+      }
+
+      button {
+        font-size: 0.9em;
+
+        &::before {
+          // From the main line (`0.85rem` before the parent titles, plus this list's `1.1rem` indent).
+          left: calc(-1.95rem + 0.5px);
+          width: 1.1rem;
+          height: 1px;
+          border: 0;
+          background: rgba($moon, 0.3);
+          transform: translateY(-50%);
+        }
+
+        &[aria-current]::before {
+          background: $moon;
+          box-shadow: none;
+        }
+      }
+    }
+
+    .novel-panel[open] .chapter-aside {
+      display: block;
+    }
+  }
+
+  @media (max-width: 1099px) {
+    .chapter-aside {
+      order: 1;
+      flex: 0 0 auto;
+      padding: 0.9rem 3rem;
+      border-bottom: 1px solid rgba($primary-blue, 0.3);
+
+      ol {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem 1.5rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      button {
+        display: flex;
+        align-items: baseline;
+        gap: 0.5rem;
+        color: $light-blue;
+        transition: color 180ms ease-out;
+
+        &:hover,
+        &:focus-visible,
+        &[aria-current] {
+          color: $primary-blue;
+          outline: none;
+        }
+      }
+    }
+
+    .chapter-aside li:has(> .chapter-aside-fold) {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0.5rem 1.5rem;
+    }
+
+    .novel-panel .panel-body {
+      order: 2;
+    }
+  }
+
   // Motion toggle ---------------------------------------------------------
 
   .motion-toggle {
@@ -1502,12 +1699,23 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     padding: 0;
     box-sizing: border-box;
     border: 0;
-    border-left: 1px solid rgba($primary-blue, 0.78);
-    background: rgba(#fff, 0.95);
-    backdrop-filter: blur(18px);
+    background: none;
     color: $content-color;
     font-family: $font-family-default;
     overflow: hidden;
+
+    // The sheet's frosted glass and edge sit on a pseudo-element: `backdrop-filter` on the dialog itself would
+    // make it the containing block of `position: fixed` children, trapping the contents aside inside the sheet.
+    &::before {
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      box-sizing: border-box;
+      border-left: 1px solid rgba($primary-blue, 0.78);
+      background: rgba(#fff, 0.95);
+      backdrop-filter: blur(18px);
+      content: '';
+    }
 
     &[open] {
       display: flex;
@@ -1527,6 +1735,78 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
 
     &.is-closing::backdrop {
       animation: fade-out 420ms ease forwards;
+    }
+  }
+
+  // Wide screens slide the sheet's parts rather than the dialog: a `transform` on the dialog would trap the
+  // fixed contents aside, which instead fades in and out with the backdrop. `closePanel` still sees the
+  // slide end, as `::before`'s `animationend` fires on the dialog.
+  @media (min-width: 1100px) {
+    .novel-panel {
+      &[open],
+      &.is-closing {
+        animation: none;
+      }
+
+      &[open]::before,
+      &[open] > :not(.chapter-aside) {
+        animation: panel-in 700ms $ease-out;
+      }
+
+      &.is-closing::before,
+      &.is-closing > :not(.chapter-aside) {
+        animation: panel-out 420ms ease-in forwards;
+      }
+
+      &[open] > .chapter-aside {
+        animation: fade-in 600ms ease;
+      }
+
+      &.is-closing > .chapter-aside {
+        animation: fade-out 420ms ease forwards;
+      }
+    }
+  }
+
+  // Switching from one panel to another swaps the sheet in place, the contents list included. `[open]` and
+  // the second class outrank the wide-screen slide and fade rules above.
+  .novel-panel[open].is-switching {
+    &,
+    &::before,
+    &::backdrop,
+    & > *,
+    & > .chapter-aside {
+      animation: none;
+    }
+  }
+
+  // The volume's chapters show only while its panel is the open one. The fold's grid row animates from the
+  // content's real height (`1fr`) to `0fr`, so it moves at one speed. In sequence: opening, the space opens
+  // first and then the chapters come into focus; closing, they blur away first and then the space closes.
+  .chapter-aside-fold {
+    display: grid;
+    grid-template-rows: 1fr;
+    filter: blur(0);
+    transition: grid-template-rows 420ms ease, opacity 320ms ease 420ms, filter 320ms ease 420ms, visibility 0s;
+
+    > .chapter-aside-chapters {
+      min-height: 0;
+      overflow: hidden;
+    }
+  }
+
+  .chapter-aside [data-contents-panel]:not([aria-current]) + .chapter-aside-fold {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    filter: blur(6px);
+    visibility: hidden;
+    transition: opacity 320ms ease, filter 320ms ease, grid-template-rows 420ms ease 320ms, visibility 0s 740ms;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .chapter-aside-fold,
+    .chapter-aside [data-contents-panel]:not([aria-current]) + .chapter-aside-fold {
+      transition: none;
     }
   }
 
@@ -1725,56 +2005,6 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     }
   }
 
-  .chapter-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.85rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .chapter-entry {
-    display: grid;
-    grid-template-columns: 3.25rem minmax(0, 1fr) 1.25rem;
-    align-items: center;
-    gap: 1rem;
-    width: 100%;
-    padding: 1.1rem 1.25rem;
-    border: 1px solid rgba($primary-blue, 0.45);
-    background: rgba(#fff, 0.6);
-    color: inherit;
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-    transition: background-color 180ms ease-out, border-color 180ms ease-out;
-
-    &:hover,
-    &:focus-visible {
-      border-color: $primary-blue;
-      background: rgba($ex-light-blue, 0.35);
-      outline: none;
-
-      .chapter-arrow {
-        transform: translateX(0.25rem) rotate(45deg);
-      }
-    }
-  }
-
-  .chapter-index {
-    color: $light-blue;
-    font-family: $font-family-heading;
-    font-size: 1.75rem;
-    letter-spacing: 0.06em;
-  }
-
-  .chapter-copy {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-  }
-
-  .chapter-number,
   .reader-number {
     margin: 0;
     color: $light-blue;
@@ -1782,47 +2012,6 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     letter-spacing: 0.2em;
   }
 
-  .chapter-name {
-    font-size: 1.2rem;
-    letter-spacing: 0.1em;
-  }
-
-  .chapter-meta {
-    color: $light-blue;
-    font-size: 0.8rem;
-    letter-spacing: 0.06em;
-  }
-
-  .chapter-arrow {
-    width: 0.55rem;
-    height: 0.55rem;
-    border-top: 1px solid $primary-blue;
-    border-right: 1px solid $primary-blue;
-    transform: rotate(45deg);
-    transition: transform 220ms $ease-out;
-  }
-
-  .reader-back {
-    padding: 0;
-    border: 0;
-    background: none;
-    color: $light-blue;
-    font: inherit;
-    font-size: 0.85rem;
-    letter-spacing: 0.16em;
-    cursor: pointer;
-    transition: color 180ms ease-out;
-
-    &::before {
-      content: '← ';
-    }
-
-    &:hover,
-    &:focus-visible {
-      color: $primary-blue;
-      outline: none;
-    }
-  }
 
   .reader-header {
     margin: 1.5rem 0 2rem;
@@ -2254,11 +2443,6 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
       line-height: 1.95;
     }
 
-    .chapter-entry {
-      grid-template-columns: 2.5rem minmax(0, 1fr) 1rem;
-      padding: 0.9rem 1rem;
-    }
-
     .reader-pager {
       grid-template-columns: 1fr;
     }
@@ -2320,6 +2504,8 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     .hotspot-ring::after,
     .scroll-cue::after,
     .novel-panel,
+    .novel-panel::before,
+    .novel-panel > *,
     .novel-panel::backdrop,
     .character-card,
     .novel-panel[open] path.cycle-moon {

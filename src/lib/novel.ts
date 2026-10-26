@@ -19,7 +19,6 @@ export interface Chapter {
   name: string
   html: string
   sections: ChapterSection[]
-  characterCount: number
 }
 
 export interface CharacterField {
@@ -55,13 +54,6 @@ const textOf = (html: string) =>
     .replace(/<[^>]+>/g, "")
     .replace(/&(amp|lt|gt|quot|#39|#x27);/g, (_, name: string) => entities[name])
     .trim()
-
-const countCharacters = (html: string) => {
-  const text = textOf(html)
-  const cjk = text.match(/[\p{Script=Han}]/gu)?.length ?? 0
-  const words = text.match(/[A-Za-z]+/g)?.length ?? 0
-  return cjk + words
-}
 
 /** Nests the compiled draft by heading level (h1 → h3); text before a heading belongs to its parent. */
 function outline(html: string) {
@@ -145,7 +137,6 @@ export const chapters: Chapter[] = sections
       .filter((child) => /^Chapter\b/i.test(child.title))
       .map((chapter) => {
         const [number, name] = splitTitle(chapter.title)
-        const html = chapter.html + chapter.children.map((section) => section.html).join("")
         return {
           id: `chapter-${number.match(/\d+/)?.[0] ?? chapter.title}`,
           volume: volume.title,
@@ -156,7 +147,6 @@ export const chapters: Chapter[] = sections
             title: section.title,
             html: section.html,
           })),
-          characterCount: countCharacters(html),
         }
       }),
   )
