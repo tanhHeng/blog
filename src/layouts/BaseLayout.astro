@@ -5,6 +5,7 @@ import DynamicCircles from '../components/DynamicCircles.astro';
 import GridMarks from '../components/GridMarks.astro';
 import MouseCircle from '../components/MouseCircle.astro';
 import PageTransitionVeil from '../components/PageTransitionVeil.astro';
+import SiteLoader from '../components/SiteLoader.astro';
 import '../styles/global.scss';
 import 'animate.css';
 import { routeTransitions } from '../lib/pageTransitions';
@@ -47,6 +48,7 @@ const transitionRoutes = JSON.stringify(routeTransitions(articles)).replaceAll('
     <ClientRouter />
   </head>
   <body>
+    <SiteLoader />
     <DynamicCircles />
     <GridMarks />
     <MouseCircle />

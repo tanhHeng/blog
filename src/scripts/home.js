@@ -1,4 +1,5 @@
 import { onPageLoad } from "../lib/pageLifecycle"
+import { siteLoaderLifting } from "../lib/siteLoader"
 
 onPageLoad((scope) => {
   const snapSections = Array.from(document.querySelectorAll(".scroll-snap-section"))
@@ -310,8 +311,14 @@ onPageLoad((scope) => {
   // During a ClientRouter arrival the iris already reveals a snapshot of the finished page; replaying
   // the reveal on the live DOM underneath would jump back to half-hidden rows when the snapshot ends.
   const arrivingThroughTransition = document.documentElement.hasAttribute("data-astro-transition")
-  if (!reducedMotion.matches && !arrivingThroughTransition)
-    revealIn(contentSections[initialIndex], "down")
+  if (!reducedMotion.matches && !arrivingThroughTransition) {
+    // On a first visit the reveal waits for the loader to lift; beneath it the reveal would play unseen.
+    let live = true
+    scope.cleanup(() => (live = false))
+    void siteLoaderLifting.then(() => {
+      if (live) revealIn(contentSections[initialIndex], "down")
+    })
+  }
 })
 
 onPageLoad((scope) => {

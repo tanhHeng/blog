@@ -1,0 +1,43 @@
+---
+// The three loading dots; `src/lib/loadingDots.ts` animates them. Hidden at rest. A parent positions the group
+// through `class`; the rest props carry the parent's scope attribute so its scoped styles reach the root.
+interface Props {
+  size?: 'regular' | 'small';
+  class?: string;
+  [attribute: string]: unknown;
+}
+
+const { size = 'regular', class: className, ...rest } = Astro.props;
+---
+
+<span class:list={['loading-dots', className, { 'is-small': size === 'small' }]} data-loading-dots aria-hidden="true" {...rest}><span></span><span></span><span></span></span>
+
+<style lang="scss">
+  @use '../styles/global.scss' as *;
+
+  .loading-dots {
+    --dot-size: 0.85rem;
+    display: flex;
+    gap: var(--dot-size);
+
+    &.is-small {
+      --dot-size: 0.6rem;
+    }
+
+    span {
+      width: var(--dot-size);
+      height: var(--dot-size);
+      border-radius: 50%;
+      background: $ex-light-blue;
+      opacity: 0;
+
+      &:nth-child(2) {
+        background: $light-blue;
+      }
+
+      &:nth-child(3) {
+        background: $primary-blue;
+      }
+    }
+  }
+</style>

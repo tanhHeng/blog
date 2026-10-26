@@ -1,5 +1,6 @@
 import type { TransitionBeforePreparationEvent } from "astro:transitions/client"
 
+import { burstDots, loadingDots, pulseDots } from "./loadingDots"
 import { onBeforeSwap } from "./pageLifecycle"
 import { routePath, type PageTransition, type PageTransitionVariant } from "./pageTransitions"
 
@@ -120,7 +121,6 @@ function reset(transition: Transition) {
     const { veil } = transition
     veil.getAnimations({ subtree: true }).forEach((animation) => animation.cancel())
     veil.dataset.phase = "idle"
-    delete veil.dataset.loading
     current = undefined
   }
 }
@@ -178,38 +178,22 @@ async function populate(transition: Transition, data: PageTransition | undefined
 }
 
 // The variant's one group of dots, below its text: a loading indicator only. Once `start` settles, if the
-// document is still loading they pulse until it arrives and then burst from their current pulse size;
-// otherwise they never show.
+// document is still loading they grow in and pulse; the moment it arrives they burst. Otherwise they never show.
 async function withDots(transition: Transition, start: Promise<unknown>, loading: Promise<void>) {
-  const { veil, scope } = transition
+  const dots = loadingDots(transition.scope)
   let loaded = false
+  let shown = false
   void start.then(() => {
-    if (!loaded && current === transition) veil.dataset.loading = "active"
+    if (loaded || current !== transition) return
+    shown = true
+    void pulseDots(dots)
   })
   try {
     await loading
   } finally {
     loaded = true
   }
-  if (veil.dataset.loading !== "active" || current !== transition) return
-  const dots = Array.from(scope.querySelectorAll<HTMLElement>("[data-veil-dots] span"))
-  const from = dots.map((dot) => {
-    const style = getComputedStyle(dot)
-    return {
-      opacity: style.opacity,
-      transform: style.transform === "none" ? "scale(1)" : style.transform,
-    }
-  })
-  // Dropping the pulse leaves the dots at their hidden rest state; the exit holds `from` until it starts.
-  delete veil.dataset.loading
-  dots.forEach((dot, index) => {
-    dot.animate([from[index], { opacity: 0, transform: "scale(1.6)" }], {
-      duration: 304,
-      delay: index * 70,
-      easing: easeOut,
-      fill: "both",
-    })
-  })
+  if (shown && current === transition) void burstDots(dots)
 }
 
 // Novel and plain veils animate opacity only, which stays on the compositor; animating `filter`
