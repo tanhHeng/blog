@@ -1829,8 +1829,9 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
   }
 
   // Switching from one panel to another swaps the sheet in place, the contents list included. `[open]` and
-  // the second class outrank the wide-screen slide and fade rules above.
-  .novel-panel[open].is-switching {
+  // the second class outrank the wide-screen slide and fade rules above. Closing still slides out:
+  // `closePanel` waits for that animation's end, so suppressing it would leave the panel stuck open.
+  .novel-panel[open].is-switching:not(.is-closing) {
     &,
     &::before,
     &::backdrop,
