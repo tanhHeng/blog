@@ -895,6 +895,9 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
   $glow: #9fe9f2;
   $ease-camera: cubic-bezier(0.65, 0, 0.35, 1);
   $ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  // The reading sheet's apparent colour: its 95% white frosted glass over the blurred, dimmed scene (about
+  // rgb(55 75 115)). Opaque layers on the sheet use it, since stacking the glass on itself turns whiter.
+  $sheet-surface: rgb(245, 246, 248);
 
   // Page-level overrides are gated on `.novel`, so other routes keep the white canvas.
   :global(html:has(.novel)) {
@@ -1682,6 +1685,21 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
         content: '';
       }
 
+      // Fade under the rule, like the one under the navbar on article pages: the body scrolls up into it
+      // rather than being cut at the line. Painted in the sheet's surface colour (see `.contents-fold`), and
+      // beneath the open contents.
+      &::after {
+        position: absolute;
+        top: 0.63rem;
+        right: 0;
+        left: 0;
+        z-index: -1;
+        height: 1.5rem;
+        background: linear-gradient(to bottom, rgba($sheet-surface, 0.9) 0%, rgba($sheet-surface, 0.81) 56%, rgba($sheet-surface, 0) 100%);
+        content: '';
+        pointer-events: none;
+      }
+
       // Set into the rule like a legend: centred on it (half its own `1.4em` line box up, plus half the
       // line). Its `::before` is the right segment, run past the sheet's edge, which clips it.
       .contents-toggle {
@@ -1768,7 +1786,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
       grid-template-rows: 0fr;
       padding: 0 var(--sheet-gutter);
       border-bottom: 1px solid rgba($primary-blue, 0.3);
-      background: color-mix(in srgb, #fff 95%, rgb(55 75 115));
+      background: $sheet-surface;
       box-shadow: 0 1.5rem 2rem -1.5rem rgba($night, 0.25);
       visibility: hidden;
       transition: grid-template-rows 420ms ease, visibility 0s 420ms;
