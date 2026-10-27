@@ -56,7 +56,7 @@ This repository contains `TANH.MOE`, a personal editorial blog for tanh_Heng. It
 ```text
 /
 ├── public/                 Static assets served from the site root
-│   ├── img/hero.png        Homepage hero artwork
+│   ├── img/hero.webp       Homepage hero artwork (hero-small.webp: quarter-size preview loaded first)
 │   └── svg/                Logo/decorative SVG assets
 ├── src/
 │   ├── pages/              File-based routes
@@ -125,7 +125,7 @@ Page-specific scripts register through `src/lib/pageLifecycle.ts`. Use `onPageLo
 - Keep content changes in `src/pages/articles/` and page markup changes in the relevant page/layout; do not hard-code article metadata into shared components.
 - Preserve frontmatter field names consumed by `ArticleLayout.astro` unless all producers and consumers are updated together.
 - Prefer Astro's server-rendered markup for static content. Add client-side code only for an observable interaction that cannot be achieved with HTML/CSS, and scope inline scripts to the component that owns the behavior.
-- Reuse existing assets in `public/`; reference them with root-relative URLs such as `/img/hero.png` and `/svg/X.svg`.
+- Reuse existing assets in `public/`; reference them with root-relative URLs such as `/img/hero.webp` and `/svg/X.svg`.
 - There is no implemented content collection or CMS layer at present. Do not invent one for a small content or styling change.
 - Check for missing routes before changing navbar behavior. A new navigation destination requires a corresponding page and should be verified through the built site.
 
