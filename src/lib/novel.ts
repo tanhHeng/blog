@@ -1,4 +1,16 @@
-import * as draft from "../novel/flowe-orld.md"
+import type { MarkdownInstance } from "astro"
+
+/**
+ * The novel lives in `src/novel/` as one Markdown file per part, each with a frontmatter header:
+ * `index.md` (book `title`, `tagline`), `prologue.md` (`title`), `volume-NN/chapter-NN.md` (`title`,
+ * `volume`, `chapter` number; `##` headings are its sections), `codex/index.md` (`title`; body is the
+ * note), `codex/world.md` (`title`, `label`), and `codex/characters/NN-name.md` (`name`, `affinity`;
+ * body is an optional `*epithet*` paragraph, then `label：value` fields and free remarks). File names
+ * order the characters; the `chapter` number orders chapters.
+ */
+type Part = MarkdownInstance<Record<string, unknown>>
+
+const parts = import.meta.glob<Part>("../novel/**/*.md", { eager: true })
 
 interface Block {
   level: number
@@ -73,26 +85,31 @@ function outline(html: string) {
   return root
 }
 
-/** Build-time guard: a renamed or missing draft heading must fail the build, not ship an empty panel. */
+/** Build-time guard: a missing file or header field must fail the build, not ship an empty panel. */
 function ensure<T>(value: T | undefined, description: string): T {
-  if (value === undefined)
-    throw new Error(`Novel draft src/novel/flowe-orld.md is missing ${description}.`)
+  if (value === undefined || value === "")
+    throw new Error(`Novel content in src/novel/ is missing ${description}.`)
   return value
 }
 
-/** Splits `A / B` headings; the draft uses both `A / B` and `A/ B`. */
-const splitTitle = (title: string) => {
-  const index = title.lastIndexOf("/")
-  return index < 0 ? [title, ""] : [title.slice(0, index).trim(), title.slice(index + 1).trim()]
+const part = (path: string) => ensure(parts[`../novel/${path}`], `\`${path}\``)
+
+const field = (file: Part, name: string) => {
+  const value = file.frontmatter[name]
+  return ensure(
+    value === undefined ? undefined : String(value),
+    `\`${name}\` in the header of ${file.file}`,
+  )
 }
 
-function parseCharacter(block: Block): Character {
-  const [affinity, name] = splitTitle(block.title)
+async function parseCharacter(file: Part): Promise<Character> {
+  const name = field(file, "name")
+  const affinity = field(file, "affinity")
   const fields: CharacterField[] = []
   const remarks: string[] = []
   let epithet: string | undefined
 
-  for (const [, inner] of block.html.matchAll(paragraphPattern)) {
+  for (const [, inner] of (await file.compiledContent()).matchAll(paragraphPattern)) {
     const text = textOf(inner)
     const field = text.match(/^([^：:]{1,12})[：:]\s*([\s\S]+)$/)
     if (!epithet && fields.length === 0 && /^<em>[\s\S]*<\/em>$/.test(inner.trim())) {
@@ -120,58 +137,54 @@ function parseCharacter(block: Block): Character {
   }
 }
 
-const root = outline(await draft.compiledContent())
-const sections = root.children
+const book = part("index.md")
+export const title = field(book, "title")
+export const tagline = field(book, "tagline")
 
-export const tagline = textOf(root.html)
+const prologueFile = part("prologue.md")
+export const prologue = {
+  title: field(prologueFile, "title"),
+  html: await prologueFile.compiledContent(),
+}
 
-export const prologue = ensure(
-  sections.find((block) => block.title === "序章"),
-  "the `# 序章` section",
-).html
-
-export const chapters: Chapter[] = sections
-  .filter((block) => block.children.some((child) => /^Chapter\b/i.test(child.title)))
-  .flatMap((volume) =>
-    volume.children
-      .filter((child) => /^Chapter\b/i.test(child.title))
-      .map((chapter) => {
-        const [number, name] = splitTitle(chapter.title)
-        return {
-          id: `chapter-${number.match(/\d+/)?.[0] ?? chapter.title}`,
-          volume: volume.title,
-          number,
-          name,
-          html: chapter.html,
-          sections: chapter.children.map((section) => ({
-            title: section.title,
-            html: section.html,
-          })),
-        }
-      }),
-  )
+export const chapters: Chapter[] = await Promise.all(
+  Object.entries(parts)
+    .filter(([path]) => /\/volume-[^/]+\/[^/]+\.md$/.test(path))
+    .map(([, file]) => file)
+    .sort((a, b) => Number(field(a, "chapter")) - Number(field(b, "chapter")))
+    .map(async (file) => {
+      const number = String(Number(field(file, "chapter"))).padStart(2, "0")
+      const body = outline(await file.compiledContent())
+      return {
+        id: `chapter-${number}`,
+        volume: field(file, "volume"),
+        number: `Chapter ${number}`,
+        name: field(file, "title"),
+        html: body.html,
+        sections: body.children.map((section) => ({ title: section.title, html: section.html })),
+      }
+    }),
+)
 
 if (chapters.length === 0)
-  throw new Error("Novel draft src/novel/flowe-orld.md has no `## Chapter NN / Title` heading.")
+  throw new Error("Novel content in src/novel/ has no `volume-NN/chapter-NN.md` file.")
 
-const codexBlock = ensure(
-  sections.find((block) => block.title === "谐相图鉴"),
-  "the `# 谐相图鉴` section",
-)
-const worldBlock = ensure(
-  codexBlock.children.find((block) => block.title.includes("世界观")),
-  "the `## … / 世界观` section",
-)
-const [worldTitle, worldLabel] = splitTitle(worldBlock.title)
+const codexFile = part("codex/index.md")
+const worldFile = part("codex/world.md")
 
 export const codex = {
-  title: codexBlock.title,
-  note: codexBlock.html,
-  characters: codexBlock.children.filter((block) => block !== worldBlock).map(parseCharacter),
+  title: field(codexFile, "title"),
+  note: await codexFile.compiledContent(),
+  characters: await Promise.all(
+    Object.entries(parts)
+      .filter(([path]) => path.includes("/codex/characters/"))
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([, file]) => parseCharacter(file)),
+  ),
 }
 
 export const world = {
-  title: worldTitle,
-  label: worldLabel,
-  html: worldBlock.html,
+  title: field(worldFile, "title"),
+  label: field(worldFile, "label"),
+  html: await worldFile.compiledContent(),
 }

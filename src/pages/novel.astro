@@ -1,12 +1,12 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { chapters, codex, prologue, tagline, world } from '../lib/novel';
+import { chapters, codex, prologue, tagline, title, world } from '../lib/novel';
 
 type PanelId = 'prologue' | 'chapters' | 'codex' | 'world';
 
 // Focus and hotspot coordinates are percentages of the video frame (`public/novel/meadow-poster.webp`).
 // `zoom` is the desktop camera scale for the scene; narrow viewports soften it in the client script.
-// Verse lines are excerpts of `src/novel/flowe-orld.md`. `hotspot.label` names the thing in the image and
+// Verse lines are excerpts of the novel in `src/novel/`. `hotspot.label` names the thing in the image and
 // `hotspot.hover` replaces it on hover/focus; `reveal` replaces the scene `title` while its hotspot is hovered.
 interface Scene {
   id: string;
@@ -67,8 +67,6 @@ const scenes: Scene[] = [
 // The outro gathers every hotspot in place, then closes the loop back to the opening mist from the pale
 // butterfly drifting off the lower left, the one figure in the frame no scene has claimed.
 const restartCue = { label: '回到最初', hover: '又一个30年', x: 29, y: 79, panel: undefined };
-
-const title = 'Flowe_orld';
 
 // World diagram: the draft's 60-year night-phase cycle, moon peaking at years 0/60 and stars at year 30.
 const cycle = { left: 56, right: 524, middle: 96, amplitude: 52 };
@@ -199,12 +197,12 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     <dialog class="novel-panel" id="panel-prologue" aria-labelledby="panel-prologue-title">
       <header class="panel-header">
         <p class="panel-kicker">01 <span>/</span> Prologue</p>
-        <h2 class="panel-title" id="panel-prologue-title">序章</h2>
+        <h2 class="panel-title" id="panel-prologue-title">{prologue.title}</h2>
         <button class="panel-close" type="button" data-panel-close aria-label="关闭"></button>
       </header>
       <div class="panel-body" data-panel-body>
         <p class="panel-epigraph">{tagline}</p>
-        <div class="prose prologue-prose" set:html={prologue} />
+        <div class="prose prologue-prose" set:html={prologue.html} />
         <button class="panel-next" type="button" data-open-panel="chapters">继续阅读 · {chapters[0].volume}</button>
       </div>
     </dialog>
@@ -236,7 +234,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
                 </button>
               ) : (
                 <button type="button" data-open-panel="prologue">
-                  <span>Previous</span>序章
+                  <span>Previous</span>{prologue.title}
                 </button>
               )}
               {index < chapters.length - 1 ? (
@@ -260,7 +258,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
         <div class="contents-fold" id="novel-contents">
           <ol>
             {[
-              { panel: 'prologue', label: '序章' },
+              { panel: 'prologue', label: prologue.title },
               { panel: 'chapters', label: chapters[0].volume },
               { panel: 'codex', label: codex.title },
               { panel: 'world', label: world.label },
