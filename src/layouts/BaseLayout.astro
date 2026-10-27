@@ -5,10 +5,9 @@ import DynamicCircles from '../components/DynamicCircles.astro';
 import GridMarks from '../components/GridMarks.astro';
 import MouseCircle from '../components/MouseCircle.astro';
 import PageTransitionVeil from '../components/PageTransitionVeil.astro';
-import SiteLoader from '../components/SiteLoader.astro';
 import '../styles/global.scss';
 import 'animate.css';
-import { routeTransitions } from '../lib/pageTransitions';
+import { routePath, routeTransitions } from '../lib/pageTransitions';
 import { friendLinks } from '../lib/friends';
 
 interface Props {
@@ -28,8 +27,10 @@ const {
 } = Astro.props;
 // Dynamic like in `ArticleLayout`: article modules import this layout, and `lib/articles` imports them.
 const { articles } = await import('../lib/articles');
+const routes = routeTransitions(articles);
 // `<` is escaped so a title can never close the JSON script early.
-const transitionRoutes = JSON.stringify(routeTransitions(articles)).replaceAll('<', '\\u003c');
+const transitionRoutes = JSON.stringify(routes).replaceAll('<', '\\u003c');
+const entryVariant = routes[routePath(Astro.url.pathname)]?.variant ?? 'plain';
 ---
 
 <html lang={lang} transition:name="root" transition:animate="none">
@@ -48,12 +49,12 @@ const transitionRoutes = JSON.stringify(routeTransitions(articles)).replaceAll('
     <ClientRouter />
   </head>
   <body>
-    <SiteLoader />
+    <!-- First in the body, so a full page load's entry veil is in place before anything else can paint. -->
+    <PageTransitionVeil variant={entryVariant} />
     <DynamicCircles />
     <GridMarks />
     <MouseCircle />
     <Navbar activePage={activePage} />
-    <PageTransitionVeil />
     <script type="application/json" is:inline data-transition-routes set:html={transitionRoutes}></script>
     <div class="page-content">
       <slot />

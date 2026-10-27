@@ -13,6 +13,8 @@ interface Transition {
   scope: HTMLElement
   animation?: Animation
   arriving?: boolean
+  /** The full-page-load entry, which reveals on its own schedule rather than on `astro:page-load`. */
+  entry?: boolean
   signal: AbortSignal
 }
 
@@ -123,6 +125,7 @@ function reset(transition: Transition) {
     veil.dataset.phase = "idle"
     current = undefined
   }
+  if (transition.entry) endEntry()
 }
 
 function clearText(veil: HTMLElement) {
@@ -313,16 +316,104 @@ onBeforeSwap((event) => {
 
 document.addEventListener("astro:page-load", () => {
   const transition = current
-  if (!transition) return
+  if (!transition || transition.entry) return
   if (motion.matches || transition.signal.aborted) {
     reset(transition)
     return
   }
   if (transition.arriving) return
   transition.arriving = true
+  reveal(transition)
+})
+
+function reveal(transition: Transition) {
   transition.veil.dataset.phase = "revealing"
   if (transition.variant === "home") leaveHome(transition)
   void play(transition, false).then(() => {
     if (current === transition) reset(transition)
   })
-})
+}
+
+// Full page loads (first visit, reload, typed URL): `PageTransitionVeil.astro` marks the document
+// `data-page-entering` before anything paints, which shows the route's veil complete, above everything (the
+// navbar included). From there the sequence is a navigation's after the cover: the text enters, the dots
+// show if loading outlasts `dotsThreshold`, and once everything has loaded the veil reveals the page.
+
+// What "loaded" means: the document and its eager subresources, every eager image, the fonts in use, and
+// the first frame of any video. Lazy images and `preload="none"` videos may never load, so they don't count.
+function pendingLoads(): Promise<unknown>[] {
+  const settled = (target: EventTarget, events: string[]) =>
+    new Promise<void>((resolve) => {
+      for (const type of events) target.addEventListener(type, () => resolve(), { once: true })
+    })
+  const images = Array.from(document.images)
+    .filter((image) => image.loading !== "lazy" && !image.complete)
+    .map((image) => settled(image, ["load", "error"]))
+  const videos = Array.from(document.querySelectorAll("video"))
+    .filter(
+      (video) => video.preload !== "none" && video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA,
+    )
+    .map((video) => settled(video, ["loadeddata", "error"]))
+  const page = document.readyState === "complete" ? [] : [settled(window, ["load"])]
+  return [...images, ...videos, ...page, document.fonts.ready]
+}
+// Loads still pending after this long (ms) count as done, so a stalled resource never traps the page.
+const giveUpAfter = 8000
+
+// Input would otherwise reach the page under the cover (the novel page glides on wheel, touch, and keys).
+const blockInput = (event: Event) => {
+  event.preventDefault()
+  event.stopPropagation()
+}
+const blockedInputs = ["wheel", "touchmove", "keydown"]
+
+const entryRevealing = Promise.withResolvers<void>()
+
+function endEntry() {
+  entryRevealing.resolve()
+  blockedInputs.forEach((type) => window.removeEventListener(type, blockInput, { capture: true }))
+  document.documentElement.removeAttribute("data-page-entering")
+}
+
+function enter() {
+  const veil = document.querySelector<HTMLElement>("[data-transition-veil]")
+  if (!document.documentElement.hasAttribute("data-page-entering") || !veil || motion.matches) {
+    endEntry()
+    return
+  }
+  blockedInputs.forEach((type) =>
+    window.addEventListener(type, blockInput, { capture: true, passive: false }),
+  )
+  const variant = (veil.dataset.variant ?? "plain") as Variant
+  const transition: Transition = {
+    variant,
+    direction: "forward",
+    veil,
+    scope: veil.querySelector<HTMLElement>(`.veil-${variant}`)!,
+    signal: new AbortController().signal,
+    entry: true,
+  }
+  current = transition
+  // Hold the complete cover the stylesheet shows, so it stays once the entering mark is gone.
+  transition.animation = veil.animate([frames(variant, "forward", true).at(-1)!], {
+    fill: "forwards",
+  })
+  veil.dataset.phase = "covering"
+  clearText(veil)
+  const content = populate(transition, routeFor(new URL(location.href)))
+  const loaded = Promise.race([Promise.all(pendingLoads()), wait(giveUpAfter)]).then(
+    () => undefined,
+  )
+  void Promise.all([withDots(transition, wait(dotsThreshold), loaded), content]).then(() => {
+    if (current !== transition) return
+    // The mark (and the veil's place above the navbar) stays until the reveal ends, in `reset`.
+    entryRevealing.resolve()
+    reveal(transition)
+  })
+}
+
+/** Settles when a full page load's entry veil starts revealing the page, or at once when none is shown.
+ * Entrances that play on the first `astro:page-load` wait for it, or they would finish unseen beneath it. */
+export const pageEntryRevealing = entryRevealing.promise
+
+enter()

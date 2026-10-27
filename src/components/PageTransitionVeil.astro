@@ -1,8 +1,27 @@
 ---
 import LoadingDots from './LoadingDots.astro';
+import type { PageTransitionVariant } from '../lib/pageTransitions';
+
+interface Props {
+  /** The current route's variant: the one a full page load enters through. */
+  variant: PageTransitionVariant | 'plain';
+}
+
+const { variant } = Astro.props;
 ---
 
-<div class="page-veil" data-transition-veil data-phase="idle" data-variant="home" data-direction="forward" transition:persist="page-transition-veil" transition:name="page-veil" transition:animate="none" aria-hidden="true">
+<!-- Full page loads enter through the veil: this runs before anything paints and marks the document, which
+shows the veil complete over everything; `transitionCoordinator.ts` plays the rest and removes the mark.
+ClientRouter re-runs it after each swap, when the finished document makes it a no-op. The timeout unmarks
+the page should the bundled script never run. -->
+<script is:inline>
+  (() => {
+    if (document.readyState !== 'loading' || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    document.documentElement.setAttribute('data-page-entering', '');
+    setTimeout(() => document.documentElement.removeAttribute('data-page-entering'), 12000);
+  })();
+</script>
+<div class="page-veil" data-transition-veil data-phase="idle" data-variant={variant} data-direction="forward" transition:persist="page-transition-veil" transition:name="page-veil" transition:animate="none" aria-hidden="true">
   <div class="veil-home">
     <span class="veil-ring"></span>
     <span class="veil-ring"></span>
@@ -56,6 +75,20 @@ import LoadingDots from './LoadingDots.astro';
   .page-veil[data-phase='covering'],
   .page-veil[data-phase='revealing'] {
     visibility: visible;
+  }
+
+  // A full page load's entry: the veil complete, above every other layer (the navbar included), and taking
+  // the pointer so nothing under it is reached. The root background also paints the scrollbar gutter, which
+  // the fixed veil cannot cover (the novel page keeps a stable gutter over its night body).
+  :global(html[data-page-entering]) {
+    background: #fff;
+
+    .page-veil {
+      z-index: 100;
+      opacity: 1;
+      pointer-events: auto;
+      visibility: visible;
+    }
   }
 
   .veil-home,

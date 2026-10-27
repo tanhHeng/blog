@@ -1,5 +1,5 @@
 import { onPageLoad } from "../lib/pageLifecycle"
-import { siteLoaderLifting } from "../lib/siteLoader"
+import { pageEntryRevealing } from "../lib/transitionCoordinator"
 
 onPageLoad((scope) => {
   const snapSections = Array.from(document.querySelectorAll(".scroll-snap-section"))
@@ -315,7 +315,7 @@ onPageLoad((scope) => {
     // On a first visit the reveal waits for the loader to lift; beneath it the reveal would play unseen.
     let live = true
     scope.cleanup(() => (live = false))
-    void siteLoaderLifting.then(() => {
+    void pageEntryRevealing.then(() => {
       if (live) revealIn(contentSections[initialIndex], "down")
     })
   }
