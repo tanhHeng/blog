@@ -646,8 +646,17 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     const contents = root.querySelector<HTMLElement>('[data-contents]');
     const contentsToggle = contents?.querySelector<HTMLElement>('[data-contents-toggle]');
     // Narrow screens only (the toggle is hidden wider): the contents fold under a 目录 button and close again
-    // once an entry is picked or the panel closes.
-    const setContentsOpen = (open: boolean) => contentsToggle?.setAttribute('aria-expanded', String(open));
+    // once an entry is picked or the panel closes. There, an entry with nested entries (the volume) only
+    // unfolds them (`aria-expanded`); only a leaf opens anything. Each time the contents open, the volume
+    // starts unfolded exactly when its panel is the one showing, as on wide screens.
+    const narrowContents = window.matchMedia('(max-width: 1099px)');
+    const branches = Array.from(contents?.querySelectorAll<HTMLElement>('[data-contents-panel]') ?? []).filter((entry) =>
+      entry.nextElementSibling?.classList.contains('chapter-aside-fold'),
+    );
+    const setContentsOpen = (open: boolean) => {
+      if (open) branches.forEach((entry) => entry.setAttribute('aria-expanded', String(entry.hasAttribute('aria-current'))));
+      contentsToggle?.setAttribute('aria-expanded', String(open));
+    };
 
     const crossFade = { duration: 480, easing: 'linear' };
     const fadeOut: Keyframe[] = [{ opacity: 1, filter: 'blur(0)' }, { opacity: 0, filter: 'blur(6px)' }];
@@ -813,6 +822,11 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
       }
       if (target.closest('[data-contents-toggle]')) {
         setContentsOpen(contentsToggle?.getAttribute('aria-expanded') !== 'true');
+        return;
+      }
+      const branch = narrowContents.matches ? target.closest<HTMLElement>('[data-contents-panel]') : null;
+      if (branch && branches.includes(branch)) {
+        branch.setAttribute('aria-expanded', String(branch.getAttribute('aria-expanded') !== 'true'));
         return;
       }
       // Any click outside the open contents (narrow screens) folds them away; inside, picking an entry does.
@@ -2019,9 +2033,30 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     transition: opacity 320ms ease, filter 320ms ease, grid-template-rows 420ms ease 320ms, visibility 0s 740ms;
   }
 
+  // Narrow screens: the volume's chapters follow its own unfolding (set by the script) rather than which
+  // panel is open.
+  @media (max-width: 1099px) {
+    .chapter-aside [data-contents-panel][aria-expanded='true'] + .chapter-aside-fold {
+      grid-template-rows: 1fr;
+      opacity: 1;
+      filter: blur(0);
+      visibility: visible;
+      transition: grid-template-rows 420ms ease, opacity 320ms ease 420ms, filter 320ms ease 420ms, visibility 0s;
+    }
+
+    .chapter-aside [data-contents-panel][aria-expanded='false'] + .chapter-aside-fold {
+      grid-template-rows: 0fr;
+      opacity: 0;
+      filter: blur(6px);
+      visibility: hidden;
+      transition: opacity 320ms ease, filter 320ms ease, grid-template-rows 420ms ease 320ms, visibility 0s 740ms;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .chapter-aside-fold,
     .chapter-aside [data-contents-panel]:not([aria-current]) + .chapter-aside-fold,
+    .chapter-aside [data-contents-panel][aria-expanded] + .chapter-aside-fold,
     .chapter-aside .contents-fold,
     .chapter-aside .contents-toggle::after,
     .chapter-aside .contents-toggle[aria-expanded='true'] + .contents-fold {
