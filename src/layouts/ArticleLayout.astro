@@ -544,6 +544,63 @@ const pagerLinks = [
   :global(p:has(> img:only-child)) {
     margin: 0;
   }
+
+  // Tables: open rules in the book style, no vertical lines. CJK phrases keep together (`keep-all`) and
+  // break at spaces and punctuation, so a narrow column never splits a word like 工具链 across lines; on
+  // narrow screens a table wider than the column scrolls instead (see the 720px block).
+  :global(table) {
+    width: 100%;
+    margin: 1.6rem 0 1.9rem;
+    border-collapse: collapse;
+    border-top: 1.5px solid $primary-blue;
+    border-bottom: 1.5px solid $primary-blue;
+    font-size: 0.92em;
+    line-height: 1.6;
+  }
+
+  :global(th),
+  :global(td) {
+    padding: 0.6rem 0.9rem;
+    overflow-wrap: normal;
+    word-break: keep-all;
+    vertical-align: top;
+
+    &:first-child {
+      padding-left: 0.4rem;
+    }
+
+    &:last-child {
+      padding-right: 0.4rem;
+    }
+  }
+
+  :global(th) {
+    border-bottom: 1px solid rgba($primary-blue, 0.45);
+    color: $primary-blue;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+
+  :global(td:first-child) {
+    color: $primary-blue;
+  }
+
+  :global(tbody tr + tr) {
+    border-top: 1px solid rgba($primary-blue, 0.12);
+  }
+
+  :global(tbody tr) {
+    transition: background-color 0.2s ease;
+  }
+
+  :global(tbody tr:hover) {
+    background: rgba($ex-light-blue, 0.28);
+  }
+
+  :global(td code) {
+    white-space: nowrap;
+  }
 }
 
 .article-end {
@@ -777,6 +834,27 @@ const pagerLinks = [
     font-size: 0.95rem;
     line-height: 1.85;
     overflow-wrap: anywhere;
+
+    // The table becomes its own horizontal scroller, as wide as its content up to the column. Edge
+    // shadows show which side has more: white covers (`local`) ride with the content and hide the
+    // shadows (`scroll`) once that edge is reached.
+    :global(table) {
+      display: block;
+      width: max-content;
+      max-width: 100%;
+      overflow-x: auto;
+      font-size: 0.9em;
+      background:
+        linear-gradient(90deg, #fff 40%, rgba(#fff, 0)) left / 2rem 100% no-repeat local,
+        linear-gradient(270deg, #fff 40%, rgba(#fff, 0)) right / 2rem 100% no-repeat local,
+        linear-gradient(90deg, rgba($primary-blue, 0.14), rgba($primary-blue, 0)) left / 0.75rem 100% no-repeat scroll,
+        linear-gradient(270deg, rgba($primary-blue, 0.14), rgba($primary-blue, 0)) right / 0.75rem 100% no-repeat scroll;
+    }
+
+    :global(th),
+    :global(td) {
+      padding: 0.5rem 0.65rem;
+    }
   }
 
   .article-end {
