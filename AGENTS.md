@@ -89,7 +89,7 @@ The novel text lives in `src/novel/` (not routes), one Markdown file per part, e
 The shared layout stack is:
 
 1. `BaseLayout.astro` owns the HTML document, metadata, favicon, language attribute, global styles, navbar, animated background circles, desktop mouse-following circle, and the page transition veil (first in the body, given the current route's variant for full page loads).
-2. `ArticleLayout.astro` wraps Markdown articles with article metadata, reading content, a generated table of contents, article-specific decorations, and `lang="zh-CN"` metadata.
+2. `ArticleLayout.astro` wraps Markdown articles with article metadata, reading content, a generated table of contents, article-specific decorations, and `lang="zh-CN"` metadata. Code blocks scroll horizontally inside their `code`, so the language caption stays in the top-right corner; its script adds an always-visible copy icon button right of the caption (the icon turns into a drawn check, or a cross on failure, for 1.6s).
 
 The homepage and 404 use `BaseLayout.astro` directly and place `TextDecorations` and `HeroSection` themselves. The only background grid is the site-wide `DynamicCircles` mask; pages do not draw a static grid texture of their own.
 

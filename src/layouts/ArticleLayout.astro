@@ -89,6 +89,50 @@ const pagerLinks = [
     <p class="right-decoration">math<br />physics<br />geography</p>
 </BaseLayout>
 
+<script>
+  import { onPageLoad } from '../lib/pageLifecycle';
+
+  // A copy icon button in every code block's top-right corner, sharing the language caption's spot (see the
+  // `.code-copy` styles). On click the icon turns into a check (or a cross on failure) for 1.6s; the hidden
+  // status line announces the result to screen readers.
+  const icons = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <g class="code-copy-icon"><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" /></g>
+    <path class="code-copy-done" pathLength="1" d="M5 12.5l4.5 4.5L19 7.5" />
+    <path class="code-copy-failed" pathLength="1" d="M7 7l10 10M17 7L7 17" />
+  </svg><span class="code-copy-status" role="status"></span>`;
+
+  onPageLoad((scope) => {
+    for (const pre of document.querySelectorAll<HTMLPreElement>('.article-body pre')) {
+      const code = pre.querySelector('code');
+      if (!code) continue;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'code-copy';
+      button.setAttribute('aria-label', '复制代码');
+      button.innerHTML = icons;
+      const status = button.querySelector<HTMLElement>('.code-copy-status')!;
+      let reset = 0;
+      scope.listen(button, 'click', async () => {
+        let copied = true;
+        try {
+          await navigator.clipboard.writeText(code.textContent ?? '');
+        } catch {
+          copied = false;
+        }
+        button.dataset.state = copied ? 'copied' : 'failed';
+        status.textContent = copied ? '已复制' : '复制失败';
+        scope.clearTimeout(reset);
+        reset = scope.timeout(() => {
+          delete button.dataset.state;
+          status.textContent = '';
+        }, 1600);
+      });
+      pre.append(button);
+      scope.cleanup(() => button.remove());
+    }
+  });
+</script>
+
 <style scoped lang="scss">
 @use '../styles/global.scss' as *;
 @use '../styles/Navbar.scss' as navbar;
@@ -508,7 +552,8 @@ const pagerLinks = [
     &[data-language]:not([data-language='plaintext'])::before {
       position: absolute;
       top: 0.45rem;
-      right: 0.75rem;
+      // Clear of the copy icon's left edge (1.75rem); the letter spacing trails the last letter.
+      right: 2.25rem;
       color: $light-blue;
       font-family: $font-family-heading;
       font-size: 0.68rem;
@@ -516,6 +561,98 @@ const pagerLinks = [
       line-height: 1;
       text-transform: uppercase;
       content: attr(data-language);
+    }
+
+    // Always shown, right of the caption. The 1rem icon is centred on the caption's line (0.45rem down,
+    // 0.68rem tall), its right edge 0.75rem in from the block's edge.
+    :global(.code-copy) {
+      position: absolute;
+      top: calc(0.45rem + 0.68rem / 2 - 1.4rem / 2);
+      right: calc(0.75rem - (1.4rem - 1rem) / 2);
+      display: grid;
+      place-items: center;
+      width: 1.4rem;
+      height: 1.4rem;
+      padding: 0;
+      border: 0;
+      border-radius: 0.3rem;
+      background: transparent;
+      color: $light-blue;
+      cursor: pointer;
+      transition:
+        opacity 0.2s ease,
+        color 0.2s ease,
+        background-color 0.2s ease,
+        transform 0.15s ease;
+
+      &:hover {
+        background: rgba($primary-blue, 0.08);
+        color: $primary-blue;
+      }
+
+      &:active {
+        transform: scale(0.88);
+      }
+
+      &:focus-visible {
+        outline: 1px solid rgba($primary-blue, 0.6);
+        outline-offset: 1px;
+      }
+
+      &[data-state='copied'] {
+        color: $primary-blue;
+      }
+
+      &[data-state='failed'] {
+        color: #a8607a;
+      }
+    }
+
+    :global(.code-copy svg) {
+      width: 1rem;
+      height: 1rem;
+      overflow: visible;
+      fill: none;
+      stroke: currentColor;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 1.8;
+    }
+
+    // The copy icon shrinks away while the check or cross draws itself in, and back on reset.
+    :global(.code-copy-icon) {
+      transform-origin: center;
+      transform-box: fill-box;
+      transition:
+        opacity 0.2s ease,
+        transform 0.2s ease;
+    }
+
+    :global(.code-copy-done),
+    :global(.code-copy-failed) {
+      stroke-dasharray: 1;
+      stroke-dashoffset: 1;
+      transition: stroke-dashoffset 0.15s ease;
+    }
+
+    :global(.code-copy[data-state]) :global(.code-copy-icon) {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+
+    :global(.code-copy[data-state='copied']) :global(.code-copy-done),
+    :global(.code-copy[data-state='failed']) :global(.code-copy-failed) {
+      stroke-dashoffset: 0;
+      transition: stroke-dashoffset 0.35s cubic-bezier(0.22, 1, 0.36, 1) 0.08s;
+    }
+
+    :global(.code-copy-status) {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
     }
 
     :global(code) {
