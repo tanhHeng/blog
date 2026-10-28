@@ -493,11 +493,13 @@ const pagerLinks = [
 
     position: relative;
     margin: 1.6rem 0 1.9rem;
-    padding: 1.15rem 1.4rem;
+    padding: 0;
     border: 1px solid rgba($primary-blue, 0.22);
     border-left: 2px solid $primary-blue;
     border-radius: 0 0.35rem 0.35rem 0;
-    overflow-x: auto;
+    // The `code` inside scrolls instead, so the language caption, positioned against `pre`, stays put.
+    // `!important` beats the `overflow-x: auto` Shiki writes inline.
+    overflow: visible !important;
     font-size: 0.84rem;
     line-height: 1.75;
     tab-size: 2;
@@ -517,7 +519,9 @@ const pagerLinks = [
     }
 
     :global(code) {
-      padding: 0;
+      display: block;
+      padding: 1.15rem 1.4rem;
+      overflow-x: auto;
       border-radius: 0;
       background: none;
       color: inherit;
