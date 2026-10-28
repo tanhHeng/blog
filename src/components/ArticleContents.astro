@@ -84,6 +84,14 @@ const visibleHeadings = headings.filter(({ depth }) => depth >= 2 && depth <= 4)
     let frame = 0;
     let closeTimer = 0;
 
+    // The fill is measured in pixels from the current item's box, so it is re-measured whenever that box
+    // can move: on a new current item, on resize, once web fonts arrive (they rewrap the items), and when
+    // the mobile sheet opens (while the sheet is closed its items are not laid out, and a measure taken
+    // then is stale once it opens).
+    const syncFill = () => {
+      const fill = current ? current.item.offsetTop + current.item.offsetHeight / 2 : 0;
+      list.style.setProperty('--contents-fill', `${fill}px`);
+    };
     const setCurrent = (next: typeof current) => {
       if (next === current) return;
       current?.item.classList.remove('is-current');
@@ -91,8 +99,7 @@ const visibleHeadings = headings.filter(({ depth }) => depth >= 2 && depth <= 4)
       current = next;
       current?.item.classList.add('is-current');
       current?.link.setAttribute('aria-current', 'location');
-      const fill = current ? current.item.offsetTop + current.item.offsetHeight / 2 : 0;
-      list.style.setProperty('--contents-fill', `${fill}px`);
+      syncFill();
     };
 
     const update = () => {
@@ -116,6 +123,7 @@ const visibleHeadings = headings.filter(({ depth }) => depth >= 2 && depth <= 4)
     const expand = () => {
       scope.clearTimeout(closeTimer);
       contents.open = true;
+      syncFill();
       scope.frame(() => contents.setAttribute('data-expanded', ''));
     };
     const collapse = () => {
@@ -133,11 +141,16 @@ const visibleHeadings = headings.filter(({ depth }) => depth >= 2 && depth <= 4)
       } else {
         contents.open = true;
         contents.setAttribute('data-expanded', '');
+        syncFill();
       }
     };
 
     scope.listen(window, 'scroll', requestUpdate, { passive: true });
-    scope.listen(window, 'resize', requestUpdate);
+    scope.listen(window, 'resize', () => {
+      syncFill();
+      requestUpdate();
+    });
+    scope.listen(document.fonts, 'loadingdone', syncFill);
     scope.listen(contents, 'click', ((event: MouseEvent) => {
       if (!(event.target instanceof Element)) return;
       if (event.target.closest('summary')) {
@@ -305,6 +318,8 @@ ol {
 
   &::after {
     height: var(--contents-fill);
+    // Never past the end of the rail, whatever the measure.
+    max-height: 100%;
     background: $primary-blue;
     transition: height 280ms $ease-out;
   }
