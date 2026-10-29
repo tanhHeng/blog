@@ -126,9 +126,13 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
             <p class="intro-tagline">{tagline}</p>
             <div class="intro-rule" aria-hidden="true"><span></span><span></span><span></span></div>
           </div>
-          <a class="scroll-cue" href={`#scene-${scenes[0].id}`} data-glide-to="1">
-            <span>Scroll to enter</span>
-          </a>
+          <div class="intro-cues">
+            <a class="scroll-cue" href={`#scene-${scenes[0].id}`} data-glide-to="1">
+              <span>Scroll to enter</span>
+            </a>
+            <span class="intro-cues-divider" aria-hidden="true">/</span>
+            <button class="view-all" type="button" data-open-panel="index" data-view-all aria-haspopup="dialog" aria-controls="panel-index">View all</button>
+          </div>
         </div>
       </section>
 
@@ -193,6 +197,23 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
       <span class="motion-icon" aria-hidden="true"></span>
       <span class="motion-label">Pause</span>
     </button>
+
+    <!-- View all: a blank sheet that only points to the contents, which open beside it (wide) or above it,
+    already unfolded (narrow). -->
+    <dialog class="novel-panel" id="panel-index" aria-labelledby="panel-index-title">
+      <header class="panel-header">
+        <p class="panel-kicker">00 <span>/</span> Contents</p>
+        <h2 class="panel-title" id="panel-index-title">{title}</h2>
+        <button class="panel-close" type="button" data-panel-close aria-label="关闭"></button>
+      </header>
+      <div class="panel-body index-body" data-panel-body>
+        <div class="index-prompt">
+          <p class="index-prompt-kicker">Select to begin</p>
+          <p class="index-prompt-text" data-layout="wide">从左侧目录选择篇章，开始阅读。</p>
+          <p class="index-prompt-text" data-layout="narrow">从上方目录选择篇章，开始阅读。</p>
+        </div>
+      </div>
+    </dialog>
 
     <dialog class="novel-panel" id="panel-prologue" aria-labelledby="panel-prologue-title">
       <header class="panel-header">
@@ -832,8 +853,13 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
       // re-inserted elsewhere starts from its current style without a transition, so folding first would
       // snap it shut. `openPanel` lays the list out in its new panel (still open) before its first `await`.
       const fold = !target.closest('[data-contents]') || target.closest('[data-contents] button') !== null;
+      // View all leaves only the stage behind its sheet (`is-browsing`, until the last panel closes) and, on
+      // narrow screens, opens with the contents already unfolded.
+      const viewAll = target.closest('[data-view-all]') !== null;
+      if (viewAll) root.classList.add('is-browsing');
       handlePanelClick(target);
-      if (fold) setContentsOpen(false);
+      if (viewAll) setContentsOpen(true);
+      else if (fold) setContentsOpen(false);
     });
 
     const handlePanelClick = (target: Element) => {
@@ -877,7 +903,9 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
       });
       scope.listen(panel, 'close', () => {
         panel.classList.remove('is-closing', 'is-switching');
-        if (!panels.some((other) => other.open)) setContentsOpen(false);
+        if (panels.some((other) => other.open)) return;
+        setContentsOpen(false);
+        root.classList.remove('is-browsing');
       });
     }
 
@@ -915,9 +943,8 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
   $glow: #9fe9f2;
   $ease-camera: cubic-bezier(0.65, 0, 0.35, 1);
   $ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  // The reading sheet's apparent colour: its 95% white frosted glass over the blurred, dimmed scene (about
-  // rgb(55 75 115)). Opaque layers on the sheet use it, since stacking the glass on itself turns whiter.
-  $sheet-surface: rgb(245, 246, 248);
+  // The reading sheet's paper, opaque; layers on the sheet that must hide what scrolls beneath paint it too.
+  $sheet-surface: #fAfAf5;
 
   // Page-level overrides are gated on `.novel`, so other routes keep the white canvas.
   :global(html:has(.novel)) {
@@ -1273,9 +1300,10 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     }
   }
 
-  // The pause button (fixed) centres on the scroll cue's text, so both stand on one line at the foot of the
-  // opening. The cue's text has a fixed line box (`$cue-line`) sitting its column gap and 1px line above the
-  // cue's `bottom`; `cue-aligned-bottom` turns a cue `bottom` into the button's. Keep these in step.
+  // The pause button (fixed) centres on the opening cues' text, so both stand on one line at the foot of the
+  // opening. The cues' text has a fixed line box (`$cue-line`) sitting the scroll cue's column gap and 1px
+  // line above the cues' `bottom`; `cue-aligned-bottom` turns a cues `bottom` into the button's. Keep these
+  // in step.
   $cue-bottom: 3.5rem;
   $cue-bottom-narrow: 2rem;
   $cue-gap: 0.4rem;
@@ -1286,25 +1314,56 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     @return calc(#{$bottom} + 1px + #{$cue-gap} + #{$cue-line} * 0.5 - #{$motion-toggle-height} * 0.5);
   }
 
-  .scroll-cue {
+  // "Scroll to enter / View all", top-aligned on one line; only the scroll cue draws its line below.
+  .intro-cues {
     position: absolute;
     bottom: $cue-bottom;
     left: 10vw;
-    display: inline-flex;
-    flex-direction: column;
-    gap: $cue-gap;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.9rem;
     color: $content-color;
     font-family: $font-family-heading;
     font-size: 0.9rem;
     letter-spacing: 0.18em;
-    text-decoration: none;
+    line-height: $cue-line;
     text-transform: uppercase;
     opacity: calc(1 - var(--intro) * 3);
     pointer-events: auto;
+  }
 
-    > span {
-      line-height: $cue-line;
+  .intro-cues-divider {
+    color: $light-blue;
+  }
+
+  .view-all {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    cursor: pointer;
+    transition: color 180ms ease-out;
+
+    &:hover,
+    &:focus-visible {
+      color: $primary-blue;
     }
+
+    &:focus-visible {
+      outline: 1px solid currentColor;
+      outline-offset: 0.3rem;
+    }
+  }
+
+  .scroll-cue {
+    display: inline-flex;
+    flex-direction: column;
+    gap: $cue-gap;
+    color: inherit;
+    text-decoration: none;
 
     &::after {
       align-self: flex-end;
@@ -1695,8 +1754,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
 
   @media (max-width: 1099px) {
     // The header's bottom rule is redrawn here in two segments around the 目录 toggle, so the toggle needs no
-    // background of its own (no flat colour matches the frosted sheet). The header keeps its 1px border,
-    // transparent, so nothing moves.
+    // background of its own. The header keeps its 1px border, transparent, so nothing moves.
     .novel-panel:has(> .chapter-aside) > .panel-header {
       border-bottom-color: transparent;
     }
@@ -1809,11 +1867,9 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     }
 
     // The open contents cover the top of the body rather than pushing it down: a sheet hung from the
-    // toggle's lower edge (`0.63rem`, half its line box below the rule). Its colour is the panel's own surface,
-    // opaque: the frosted glass (95% white over the blurred, dimmed scene, about rgb(55 75 115)) would turn
-    // whiter if stacked on itself, and must hide the text beneath. The scene behind moves the real surface by a
-    // level or two at most. Same fold as the volume's chapters: the grid row opens from `0fr`, and the spacing
-    // around the entries is their margin, inside the clip, so nothing remains when shut.
+    // toggle's lower edge (`0.63rem`, half its line box below the rule), painted in the sheet's paper so it
+    // hides the text beneath. Same fold as the volume's chapters: the grid row opens from `0fr`, and the
+    // spacing around the entries is their margin, inside the clip, so nothing remains when shut.
     .contents-fold {
       position: absolute;
       top: 0.63rem;
@@ -1894,6 +1950,36 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     color: rgba($moon, 0.8);
   }
 
+  // View all (`is-browsing`) leaves only the meadow behind the sheet: the opening's copy and cues, the pause
+  // button, and the opening mist fade out while a panel is up and return as the last one starts closing. The
+  // chapter rail and hotspots need nothing here: View all sits on the opening, where both are already hidden.
+  // The mist fades through `filter: opacity()`, as its `opacity` follows the scroll and must not lag.
+  .novel-flow,
+  .motion-toggle {
+    transition: opacity 420ms ease;
+  }
+
+  .stage-mist {
+    transition: filter 420ms ease;
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+
+  .novel.is-browsing:has(.novel-panel[open]:not(.is-closing)) {
+    .novel-flow,
+    .motion-toggle {
+      opacity: 0;
+      transition-duration: 600ms;
+    }
+
+    .stage-mist {
+      filter: opacity(0);
+      transition-duration: 600ms;
+    }
+  }
+
   .motion-icon {
     position: relative;
     width: 0.7rem;
@@ -1957,16 +2043,16 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     font-family: $font-family-default;
     overflow: hidden;
 
-    // The sheet's frosted glass and edge sit on a pseudo-element: `backdrop-filter` on the dialog itself would
-    // make it the containing block of `position: fixed` children, trapping the contents aside inside the sheet.
+    // The sheet's paper and edge sit on a pseudo-element, which the wide-screen slide animates: a `transform`
+    // on the dialog itself would make it the containing block of `position: fixed` children, trapping the
+    // contents aside inside the sheet.
     &::before {
       position: absolute;
       inset: 0;
       z-index: -1;
       box-sizing: border-box;
       border-left: 1px solid rgba($primary-blue, 0.78);
-      background: rgba(#fff, 0.95);
-      backdrop-filter: blur(18px);
+      background: $sheet-surface;
       content: '';
     }
 
@@ -2249,6 +2335,64 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     color: $primary-blue;
     letter-spacing: 0.08em;
     line-height: 1.9;
+  }
+
+  // View all's blank sheet: one quiet prompt, centred (wide), or low in the sheet below the unfolded
+  // contents (narrow). Each layout names where its contents stand.
+  .index-body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .index-prompt {
+    max-width: 18rem;
+    text-align: center;
+
+    &::before {
+      display: block;
+      width: 0.5rem;
+      height: 0.5rem;
+      margin: 0 auto 1.4rem;
+      border: 1px solid $light-blue;
+      content: '';
+      transform: rotate(45deg);
+    }
+  }
+
+  .index-prompt-kicker {
+    margin: 0;
+    color: $light-blue;
+    font-family: $font-family-heading;
+    font-size: 0.75rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+  }
+
+  .index-prompt-text {
+    margin: 0.8rem 0 0;
+    color: $content-color;
+    letter-spacing: 0.12em;
+    line-height: 1.9;
+  }
+
+  .index-prompt-text[data-layout='narrow'] {
+    display: none;
+  }
+
+  @media (max-width: 1099px) {
+    .panel-body.index-body {
+      align-items: flex-end;
+      padding-bottom: 5rem;
+    }
+
+    .index-prompt-text[data-layout='wide'] {
+      display: none;
+    }
+
+    .index-prompt-text[data-layout='narrow'] {
+      display: block;
+    }
   }
 
   // Shared bordered link style for in-panel navigation, mirroring the article pager.
@@ -2631,14 +2775,23 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
       background: radial-gradient(ellipse 80% 45% at 50% 40%, rgba($mist, 0.6) 0%, rgba($mist, 0.92) 65%, $mist 100%);
     }
 
+    // The title is one long Latin word that cannot wrap: below about 370px its 3rem would run past the
+    // screen's edge, widening the page so the browser zooms out and the bottom-anchored opening slides up
+    // off the fixed pause button. It shrinks with the width instead.
     .intro-copy h1 {
+      font-size: min(3rem, 13vw);
       letter-spacing: 0.16em;
     }
 
-    .scroll-cue {
+    // Letter spacing and gap tighten below 350px so "Scroll to enter / View all" stays on one line, clear
+    // of the pause button (0.18em at 350px down to 0.04em at 300px).
+    .intro-cues {
       bottom: $cue-bottom-narrow;
       left: 1.5rem;
+      gap: clamp(0.4rem, (100vw - 270px) * 0.12, 0.6rem);
       font-size: 0.78rem;
+      letter-spacing: clamp(0.04em, (100vw - 286px) * 0.035, 0.18em);
+      white-space: nowrap;
     }
 
     .verse {
@@ -2801,7 +2954,9 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
       animation: none;
     }
 
-    .swap > span {
+    .swap > span,
+    .novel-flow,
+    .motion-toggle {
       transition: none;
     }
 
