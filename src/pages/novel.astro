@@ -828,7 +828,15 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
         return;
       }
       // Any click outside the open contents (narrow screens) folds them away; inside, picking an entry does.
-      if (!target.closest('[data-contents]') || target.closest('[data-contents] button')) setContentsOpen(false);
+      // The fold comes after the click's action: opening another panel moves the list into it, and a node
+      // re-inserted elsewhere starts from its current style without a transition, so folding first would
+      // snap it shut. `openPanel` lays the list out in its new panel (still open) before its first `await`.
+      const fold = !target.closest('[data-contents]') || target.closest('[data-contents] button') !== null;
+      handlePanelClick(target);
+      if (fold) setContentsOpen(false);
+    });
+
+    const handlePanelClick = (target: Element) => {
       const opener = target.closest<HTMLElement>('[data-open-panel]');
       if (opener?.dataset.openPanel) {
         openPanel(opener.dataset.openPanel);
@@ -850,7 +858,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
       }
       const tab = target.closest<HTMLElement>('[data-codex-tab]');
       if (tab) selectTab(tab);
-    });
+    };
 
     scope.listen(root, 'keydown', (event) => {
       if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
