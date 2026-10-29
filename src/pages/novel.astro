@@ -1273,13 +1273,26 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     }
   }
 
+  // The pause button (fixed) centres on the scroll cue's text, so both stand on one line at the foot of the
+  // opening. The cue's text has a fixed line box (`$cue-line`) sitting its column gap and 1px line above the
+  // cue's `bottom`; `cue-aligned-bottom` turns a cue `bottom` into the button's. Keep these in step.
+  $cue-bottom: 3.5rem;
+  $cue-bottom-narrow: 2rem;
+  $cue-gap: 0.4rem;
+  $cue-line: 1.5rem;
+  $motion-toggle-height: 2.5rem;
+
+  @function cue-aligned-bottom($bottom) {
+    @return calc(#{$bottom} + 1px + #{$cue-gap} + #{$cue-line} * 0.5 - #{$motion-toggle-height} * 0.5);
+  }
+
   .scroll-cue {
     position: absolute;
-    bottom: 3.5rem;
+    bottom: $cue-bottom;
     left: 10vw;
     display: inline-flex;
     flex-direction: column;
-    gap: 0.4rem;
+    gap: $cue-gap;
     color: $content-color;
     font-family: $font-family-heading;
     font-size: 0.9rem;
@@ -1288,6 +1301,10 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     text-transform: uppercase;
     opacity: calc(1 - var(--intro) * 3);
     pointer-events: auto;
+
+    > span {
+      line-height: $cue-line;
+    }
 
     &::after {
       align-self: flex-end;
@@ -1850,12 +1867,13 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
   .motion-toggle {
     position: fixed;
     right: 2.5rem;
-    bottom: 2.25rem;
+    bottom: cue-aligned-bottom($cue-bottom);
     z-index: 3;
     display: flex;
     align-items: center;
     gap: 0.6rem;
-    padding: 0.4rem 0;
+    height: $motion-toggle-height;
+    padding: 0;
     border: 0;
     background: none;
     color: $content-color;
@@ -2618,7 +2636,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     }
 
     .scroll-cue {
-      bottom: 2.5rem;
+      bottom: $cue-bottom-narrow;
       left: 1.5rem;
       font-size: 0.78rem;
     }
@@ -2750,7 +2768,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
 
     .motion-toggle {
       right: 1.5rem;
-      bottom: 1.5rem;
+      bottom: cue-aligned-bottom($cue-bottom-narrow);
 
       .motion-label {
         display: none;
