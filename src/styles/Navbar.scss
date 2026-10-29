@@ -72,21 +72,51 @@ $navbar-actual-height: $title-font-size + 2 * $navbar-margin-vertical;
     text-decoration: none;
   }
 
+  // Hover lays a light-blue stripe behind the lower 60% of the text, flush with the bottom of the box,
+  // drawn in from the left; on leave it is wiped away towards the right. The origin flips with the state,
+  // and `transform-origin` changes instantly since only `transform` transitions.
   .nav-link {
+    position: relative;
+    isolation: isolate;
     font-family: "Playfair Display", serif;
     font-size: $content-font-size;
     color: $light-blue;
     text-decoration: none;
     white-space: nowrap;
-    transition: 300ms ease-out;
+    transition: color 240ms ease-out;
+
+    &::before {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      z-index: -1;
+      height: 0.6em;
+      background: $ex-light-blue;
+      content: "";
+      transform: scaleX(0);
+      transform-origin: right;
+      transition: transform 240ms ease-out;
+    }
 
     &:hover {
       color: $primary-blue;
-      margin: 0 0.5rem;
+
+      &::before {
+        transform: scaleX(1);
+        transform-origin: left;
+      }
     }
 
     &.active {
       color: $primary-blue;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      &,
+      &::before {
+        transition: none;
+      }
     }
   }
 
@@ -133,10 +163,6 @@ $navbar-actual-height: $title-font-size + 2 * $navbar-margin-vertical;
 
     .nav-link {
       font-size: 1rem;
-
-      &:hover {
-        margin: 0;
-      }
     }
 
     .circles {
