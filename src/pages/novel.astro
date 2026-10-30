@@ -490,6 +490,9 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
       if (!frame) frame = scope.frame(updateScroll);
     }, { passive: true });
     scope.listen(narrow, 'change', placeCamera);
+    // Leaving the page hands the navbar back its default colours while the transition veil covers the scene,
+    // so the bar already matches the next page.
+    scope.listen(document, 'astro:before-preparation', () => root.classList.add('is-leaving'));
 
     // Scene navigation --------------------------------------------------------
     // Native snapping runs at a browser-fixed speed, so whole-scene moves are glided here instead:
@@ -961,6 +964,37 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
   // The fixed stage covers the site-wide circle textures and grid marks; they would only add noise behind the video.
   :global(body:has(.novel) :is(.dynamic-circles-container, .grid-marks)) {
     display: none;
+  }
+
+  // Navbar over the night: the site's ink tones fade into the dark scenes, so once a chapter takes the stage
+  // (or View all clears the opening mist) the bar turns to moonlight, and the hover stripe to a translucent
+  // blue the moonlit text stays legible on. The brand circles keep their palette. Without a script-set
+  // scene (before the first page load), the bar stays dark on the opening mist; once a navigation away
+  // starts (`is-leaving`), it returns to its default colours for the next page.
+  $night-navbar: "html:has(.novel[data-active-scene]:not([data-active-scene='intro'], .is-leaving), .novel.is-browsing:not(.is-leaving) .novel-panel[open]:not(.is-closing)) .navbar";
+
+  :global(html:has(.novel) .navbar :is(.title, .divider)) {
+    transition: color 240ms ease-out;
+  }
+
+  :global(#{$night-navbar} .title) {
+    color: rgba($moon, 0.92);
+  }
+
+  :global(#{$night-navbar} .divider) {
+    color: rgba($moon, 0.3);
+  }
+
+  :global(#{$night-navbar} .nav-link) {
+    color: rgba($moon, 0.6);
+  }
+
+  :global(#{$night-navbar} .nav-link:is(:hover, .active)) {
+    color: $moon;
+  }
+
+  :global(#{$night-navbar} .nav-link::before) {
+    background: rgba($light-blue, 0.4);
   }
 
   .novel {
