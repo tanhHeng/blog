@@ -6,6 +6,7 @@ import GridMarks from '../components/GridMarks.astro';
 import MouseCircle from '../components/MouseCircle.astro';
 import PageTransitionVeil from '../components/PageTransitionVeil.astro';
 import '../styles/global.scss';
+import '../styles/cursors.scss';
 import 'animate.css';
 import { routePath, routeTransitions } from '../lib/pageTransitions';
 import { friendLinks } from '../lib/friends';
@@ -81,6 +82,7 @@ const entryVariant = routes[routePath(Astro.url.pathname)]?.variant ?? 'plain';
 <script>
   import '../lib/transitionCoordinator';
   import '../scripts/friendRotator';
+  import '../scripts/textCursor';
   import { onPageLoad } from '../lib/pageLifecycle';
   // The footnote is fixed to the viewport bottom; an in-flow spacer of the same height lets the reader scroll
   // past the content end. `--reveal` (0–1) drives the footnote's opacity over the last `fadeDistance` of scroll,

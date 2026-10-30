@@ -1074,7 +1074,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     background: none;
     color: $moon;
     font: inherit;
-    cursor: pointer;
+    cursor: var(--cursor-pointer);
     pointer-events: auto;
 
     &:focus-visible {
@@ -1344,7 +1344,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     font: inherit;
     letter-spacing: inherit;
     text-transform: inherit;
-    cursor: pointer;
+    cursor: var(--cursor-pointer);
     transition: color 180ms ease-out;
 
     &:hover,
@@ -1631,7 +1631,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     background: none;
     font: inherit;
     text-align: left;
-    cursor: pointer;
+    cursor: var(--cursor-pointer);
   }
 
   // Outranks the wide-screen `.chapter-aside button` rule; the narrow-screen rule, later and as specific,
@@ -1937,7 +1937,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     font-size: 0.8rem;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    cursor: pointer;
+    cursor: var(--cursor-pointer);
 
     &:focus-visible {
       outline: 1px solid currentColor;
@@ -2264,7 +2264,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     padding: 0;
     border: 0;
     background: none;
-    cursor: pointer;
+    cursor: var(--cursor-pointer);
 
     &::before,
     &::after {
@@ -2409,7 +2409,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     font: inherit;
     letter-spacing: 0.08em;
     text-align: left;
-    cursor: pointer;
+    cursor: var(--cursor-pointer);
     transition: background-color 180ms ease-out, border-color 180ms ease-out;
 
     &:hover,
@@ -2532,7 +2532,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     background: none;
     color: $light-blue;
     font: inherit;
-    cursor: pointer;
+    cursor: var(--cursor-pointer);
     transition: color 220ms ease;
 
     &::after {

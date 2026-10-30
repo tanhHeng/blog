@@ -39,7 +39,7 @@
     display: none !important;
   }
   button:disabled {
-    cursor: default;
+    cursor: var(--cursor-disabled);
     opacity: 0.55;
   }
   :is(button, a):focus-visible {
@@ -309,7 +309,7 @@
   color: $content-color;
   transform: translate(-50%, -50%);
   pointer-events: auto;
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
   &[aria-pressed="true"] {
     // Selection is carried by the sector, not a separate node background.
     color: #fff;
@@ -421,7 +421,7 @@
   line-height: 1.4;
   text-align: left;
   overflow-wrap: anywhere;
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
   transition:
     background-color 220ms ease-out,
     border-color 220ms ease-out,
@@ -474,7 +474,7 @@
   color: $content-color;
   font-size: 0.8rem;
   line-height: 1.5;
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
   transition:
     background-color 180ms ease-out,
     border-color 180ms ease-out;

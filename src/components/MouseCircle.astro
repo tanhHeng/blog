@@ -1,67 +1,231 @@
 ---
-// Mouse-following circle component
+// Desktop pointer companion. The site cursor (`src/styles/cursors.scss`) stays the real pointer; this soft circle
+// trails it, stretches slightly along fast strokes, turns into a ring around anything clickable, and shrinks a
+// little under a press. Every change eases out without overshoot.
+// Shown only for a mouse on fine-pointer, hover-capable screens wider than 900px.
 ---
 
-<div class="mouse-circle" id="mouse-circle" transition:persist="mouse-circle" hidden aria-hidden="true" style="--x: 50vw; --y: 50vh"></div>
+<div class="mouse-circle" id="mouse-circle" transition:persist="mouse-circle" aria-hidden="true"></div>
 
 <script>
   import { onPageLoad } from '../lib/pageLifecycle';
 
+  // The site cursors (`src/styles/cursors.scss`) end in a fallback keyword: `pointer` over clickable targets,
+  // `text` over readable or editable text.
+  const cursorOf = (target: EventTarget | null) => (target instanceof Element ? getComputedStyle(target).cursor : '');
+
   onPageLoad((scope) => {
-    const mouseCircle = document.getElementById('mouse-circle');
-    if (!mouseCircle) return;
-    const coarsePointer = window.matchMedia('(pointer: coarse)');
-    const narrowViewport = window.matchMedia('(max-width: 900px)');
-    const isMobileDevice = () => coarsePointer.matches || narrowViewport.matches || navigator.maxTouchPoints > 0;
-    const hideMouseCircle = () => {
-      mouseCircle.hidden = true;
-      mouseCircle.setAttribute('aria-hidden', 'true');
+    const circle = document.getElementById('mouse-circle');
+    if (!circle) return;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let frame = 0;
+    let relaxTimer = 0;
+    let x = 0;
+    let y = 0;
+    let lastX = 0;
+    let lastY = 0;
+    let lastTime = 0;
+    let speed = 0;
+    let angle = 0;
+    let target: EventTarget | null = null;
+
+    const hide = () => {
+      circle.classList.remove('is-visible', 'is-pressed');
     };
-    const showMouseCircle = () => {
-      if (!isMobileDevice() && document.hasFocus()) {
-        mouseCircle.hidden = false;
-        mouseCircle.setAttribute('aria-hidden', 'false');
-      }
+
+    const render = () => {
+      frame = 0;
+      // Appearing (first move, or back from outside the window) places the circle at once rather than
+      // gliding in from where it was last seen.
+      const appearing = !circle.classList.contains('is-visible');
+      circle.classList.toggle('is-placing', appearing);
+      if (appearing) scope.frame(() => circle.classList.remove('is-placing'));
+      circle.style.setProperty('--x', `${x}px`);
+      circle.style.setProperty('--y', `${y}px`);
+      // Read every frame: the text cursor turns on and off within one element (`src/scripts/textCursor.ts`).
+      const cursor = cursorOf(target);
+      circle.classList.toggle('is-link', cursor.endsWith('pointer'));
+      circle.classList.toggle('is-text', cursor.endsWith('text'));
+      // Over text the disc stands upright as a highlighter behind the caret: no stretch, and the heading
+      // settles on the nearest upright turn so it never spins back.
+      const upright = circle.classList.contains('is-text');
+      if (upright) angle = Math.round(angle / 180) * 180;
+      // Up to 20% longer along the stroke at about 4px/ms, narrower across it; it relaxes once the pointer rests.
+      const stretch = reducedMotion.matches || upright ? 0 : Math.min(speed / 4, 1) * 0.2;
+      circle.style.setProperty('--stretch', stretch.toFixed(3));
+      circle.style.setProperty('--angle', `${angle.toFixed(1)}deg`);
+      circle.classList.add('is-visible');
     };
-    const updateMouseCircle = (event: MouseEvent) => {
-      if (isMobileDevice() || !document.hasFocus()) {
-        hideMouseCircle();
+
+    scope.listen(document, 'pointermove', (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse' || !document.hasFocus()) {
+        hide();
         return;
       }
-      mouseCircle.style.setProperty('--x', `${(event.clientX / window.innerWidth) * 100}vw`);
-      mouseCircle.style.setProperty('--y', `${(event.clientY / window.innerHeight) * 100}vh`);
-      showMouseCircle();
-    };
-    scope.listen(document, 'mousemove', updateMouseCircle as EventListener);
-    scope.listen(document, 'mouseleave', hideMouseCircle);
-    scope.listen(window, 'blur', hideMouseCircle);
+      const dx = event.clientX - lastX;
+      const dy = event.clientY - lastY;
+      const dt = event.timeStamp - lastTime;
+      const distance = Math.hypot(dx, dy);
+      if (dt > 0 && dt < 100) speed = speed * 0.5 + (distance / dt) * 0.5;
+      else speed = 0;
+      // The stretch is symmetric, so the heading only matters modulo 180°; take the turn nearest the last
+      // heading so the rotation never spins the long way round.
+      if (distance > 2 && !circle.classList.contains('is-text')) {
+        const heading = (Math.atan2(dy, dx) * 180) / Math.PI;
+        angle = heading + Math.round((angle - heading) / 180) * 180;
+      }
+      x = lastX = event.clientX;
+      y = lastY = event.clientY;
+      lastTime = event.timeStamp;
+      target = event.target;
+      if (!frame) frame = scope.frame(render);
+      scope.clearTimeout(relaxTimer);
+      relaxTimer = scope.timeout(() => {
+        speed = 0;
+        circle.style.setProperty('--stretch', '0');
+      }, 80);
+    });
+
+    scope.listen(document, 'pointerdown', (event: PointerEvent) => {
+      if (event.pointerType === 'mouse') circle.classList.add('is-pressed');
+    });
+    const release = () => circle.classList.remove('is-pressed');
+    scope.listen(window, 'pointerup', release);
+    scope.listen(window, 'pointercancel', release);
+    scope.listen(document, 'mouseout', (event: MouseEvent) => {
+      if (!event.relatedTarget) hide();
+    });
+    scope.listen(window, 'blur', hide);
     scope.listen(document, 'visibilitychange', () => {
-      if (document.visibilityState !== 'visible') hideMouseCircle();
+      if (document.visibilityState !== 'visible') hide();
     });
-    scope.listen(coarsePointer, 'change', hideMouseCircle);
-    scope.listen(narrowViewport, 'change', hideMouseCircle);
-    scope.listen(window, 'resize', () => {
-      if (isMobileDevice()) hideMouseCircle();
+    // The element persists across navigation; the next page re-reads its own target.
+    scope.cleanup(() => {
+      circle.classList.remove('is-link', 'is-text', 'is-pressed');
+      circle.style.setProperty('--stretch', '0');
     });
-    scope.cleanup(hideMouseCircle);
   });
 </script>
 
 <style lang="scss">
   @use '../styles/global.scss' as *;
 
+  $ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  // `--x/--y` is the pointer in px, `--stretch` the stroke stretch (0–0.2), `--angle` the stroke heading.
+  // The element only moves; `::before` is the soft disc (stretched along the stroke) and `::after` the ring
+  // shown over clickable targets.
   .mouse-circle {
+    --x: -100px;
+    --y: -100px;
+    --stretch: 0;
+    --angle: 0deg;
     position: fixed;
-    left: var(--x);
-    top: var(--y);
-    width: 1.6rem;
-    height: 1.6rem;
-    border-radius: 50%;
-    background-color: rgba($light-blue, 0.25);
-    transform: translate(-50%, -50%);
-    pointer-events: none;
+    top: 0;
+    left: 0;
     z-index: 9999;
-    transition: left top 0.1s ease-out, top 0.1s ease-out;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+    opacity: 0;
+    translate: var(--x) var(--y);
+    transition:
+      translate 120ms $ease,
+      opacity 240ms ease-out;
+
+    &.is-visible {
+      opacity: 1;
+    }
+
+    &.is-placing {
+      transition: opacity 240ms ease-out;
+    }
+
+    &::before,
+    &::after {
+      position: absolute;
+      top: 0;
+      left: 0;
+      border-radius: 50%;
+      content: '';
+      translate: -50% -50%;
+    }
+
+    // Corner radii clamp to half the shorter side, so the disc stays round and the text bar a pill.
+    &::before {
+      width: 1.6rem;
+      height: 1.6rem;
+      border-radius: 999px;
+      background: rgba($light-blue, 0.25);
+      rotate: var(--angle);
+      scale: calc(1 + var(--stretch)) calc(1 - var(--stretch) * 0.5);
+      transition:
+        width 360ms $ease,
+        height 360ms $ease,
+        background-color 300ms ease-out,
+        opacity 300ms ease-out,
+        rotate 160ms ease-out,
+        scale 240ms ease-out;
+    }
+
+    &::after {
+      width: 2.6rem;
+      height: 2.6rem;
+      border: 1.5px solid rgba($primary-blue, 0.55);
+      box-sizing: border-box;
+      opacity: 0;
+      scale: 0.75;
+      transition:
+        opacity 300ms ease-out,
+        scale 360ms $ease;
+    }
+
+    // Over a clickable target the disc tightens away to nothing and a ring opens around the cursor.
+    &.is-link {
+      &::before {
+        width: 0.45rem;
+        height: 0.45rem;
+        opacity: 0;
+        scale: 1;
+      }
+
+      &::after {
+        opacity: 1;
+        scale: 1;
+      }
+    }
+
+    // Over text the disc narrows into an upright highlighter stroke behind the caret.
+    &.is-text::before {
+      width: 0.55rem;
+      height: 1.5rem;
+      background: rgba($light-blue, 0.3);
+    }
+
+    &.is-pressed {
+      &::before {
+        scale: 0.88;
+        transition-duration: 360ms, 360ms, 300ms, 300ms, 160ms, 160ms;
+      }
+
+      &::after {
+        scale: 0.94;
+        transition-duration: 300ms, 160ms;
+      }
+    }
+  }
+
+  @media not ((hover: hover) and (pointer: fine) and (min-width: 901px)) {
+    .mouse-circle {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mouse-circle,
+    .mouse-circle::before,
+    .mouse-circle::after {
+      transition: none;
+    }
   }
 </style>
-

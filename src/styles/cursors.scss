@@ -1,0 +1,87 @@
+// Site cursors: native CSS cursors drawn in $light-blue (`rgb(162,169,211)`), with no halo.
+// Loaded once by `BaseLayout.astro`; do not `@use` this file from components, or the data URIs are copied
+// into every stylesheet (it does not `@use` global.scss either, for the same reason, so palette colours are
+// written out). Components pick a cursor with `cursor: var(--cursor-pointer)` and the like, never a bare
+// keyword: `MouseCircle` reads the computed `pointer`/`text` fallback to choose its shape. Colours use `rgb()`
+// because `#` would end the data URI.
+
+@function cursor($size, $body, $fallback) {
+  $half: $size * 0.5;
+  @return url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='#{$size}' height='#{$size}' viewBox='0 0 #{$size} #{$size}'>#{$body}</svg>")
+      $half $half,
+    $fallback;
+}
+
+:root {
+  // A small solid dot.
+  --cursor-default: #{cursor(16, "<circle cx='8' cy='8' r='4' fill='rgb(162,169,211)'/>", default)};
+  // A bare diamond outline, echoing the page's diamond markers.
+  --cursor-pointer: #{cursor(
+      24,
+      "<rect x='7' y='7' width='10' height='10' transform='rotate(45 12 12)' fill='none' stroke='rgb(162,169,211)' stroke-width='1.5'/>",
+      pointer
+    )};
+  // A slim outlined upright rectangle for readable and editable text.
+  --cursor-text: #{cursor(
+      24,
+      "<rect x='10.5' y='3.5' width='3' height='17' fill='none' stroke='rgb(162,169,211)' stroke-width='1'/>",
+      text
+    )};
+  // A struck-through ring for disabled controls.
+  --cursor-disabled: #{cursor(
+      24,
+      "<g fill='none' stroke='rgb(162,169,211)' stroke-width='1.5'><circle cx='12' cy='12' r='6'/><path d='M7.8 16.2l8.4-8.4'/></g>",
+      not-allowed
+    )};
+}
+
+html {
+  cursor: var(--cursor-default);
+}
+
+// Over the glyph lines of selectable text (`src/scripts/textCursor.ts` sets the mark); everything without a
+// cursor of its own inherits it, while links and controls keep theirs.
+html[data-over-text] {
+  cursor: var(--cursor-text);
+}
+
+// Zero specificity, so a component's own `cursor` always wins.
+:where(
+  a:any-link,
+  button,
+  summary,
+  select,
+  label[for],
+  [role="button"],
+  input:is([type="checkbox"], [type="radio"], [type="button"], [type="submit"], [type="reset"])
+) {
+  cursor: var(--cursor-pointer);
+}
+
+:where(
+  textarea,
+  [contenteditable]:not([contenteditable="false"]),
+  input:not(
+    [type="checkbox"],
+    [type="radio"],
+    [type="button"],
+    [type="submit"],
+    [type="reset"],
+    [type="range"],
+    [type="color"],
+    [type="file"]
+  )
+) {
+  cursor: var(--cursor-text);
+}
+
+// Selected text is marked in the palette; the text colour is set too, so it stays legible on the novel's
+// night scene, where the copy is pale.
+::selection {
+  background: rgb(212, 229, 245);
+  color: rgb(80, 91, 130);
+}
+
+:where(:disabled, [aria-disabled="true"]) {
+  cursor: var(--cursor-disabled);
+}

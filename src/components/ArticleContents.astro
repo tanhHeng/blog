@@ -207,7 +207,7 @@ $rail-offset: $rail-x - $list-inset;
   display: flex;
   align-items: center;
   gap: 0.45rem;
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
   list-style: none;
   white-space: nowrap;
   color: $primary-blue;
@@ -560,7 +560,7 @@ ol {
     padding: 0;
     border: 1px solid rgba($primary-blue, 0.55);
     background: #fff;
-    cursor: pointer;
+    cursor: var(--cursor-pointer);
     transition: background-color 180ms ease-out;
 
     &::before,
