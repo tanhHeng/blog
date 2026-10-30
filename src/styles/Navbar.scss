@@ -99,7 +99,9 @@ $navbar-actual-height: $title-font-size + 2 * $navbar-margin-vertical;
       transition: transform 240ms ease-out;
     }
 
-    &:hover {
+    // No hover while the page transition veil is covering or revealing (`data-phase` other than `idle`):
+    // the clicked link's stripe wipes away as the next page is prepared.
+    :global(body:not(:has([data-transition-veil]:not([data-phase="idle"])))) &:hover {
       color: $primary-blue;
 
       &::before {
