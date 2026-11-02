@@ -60,11 +60,6 @@ const codaKeys = pianoKeys.map((black, index) => {
 						))}
 					</div>
 				</div>
-				<a class="prologue-link" href="/articles" data-reveal>
-					<span class="prologue-link-rule" aria-hidden="true"></span>
-					<span class="prologue-link-text">Enter the archive</span>
-					<span class="prologue-link-count">{formatIndex(articles.length)} {articles.length === 1 ? 'article' : 'articles'}</span>
-				</a>
 			</section>
 			<section class="aboutme-content" hidden>
 				<h2 class="title" data-reveal>About Me</h2>
@@ -442,42 +437,6 @@ p {
 			margin-left: 2rem;
 			margin-top: -0.5rem;
 		}
-	}
-}
-
-.prologue-link {
-	display: inline-flex;
-	align-self: flex-start;
-	align-items: baseline;
-	gap: 0.9rem;
-	margin-top: 2.75rem;
-	color: $primary-blue;
-	font-family: $font-family-heading;
-	font-size: 0.9rem;
-	letter-spacing: 0.12em;
-	text-decoration: none;
-
-	.prologue-link-rule {
-		align-self: center;
-		width: 2.5rem;
-		height: 1px;
-		background: currentColor;
-		transition: width 420ms cubic-bezier(0.16, 1, 0.3, 1);
-	}
-
-	.prologue-link-count {
-		color: $light-blue;
-		font-size: 0.72rem;
-	}
-
-	&:hover .prologue-link-rule,
-	&:focus-visible .prologue-link-rule {
-		width: 4.5rem;
-	}
-
-	&:focus-visible {
-		outline: 1px solid currentColor;
-		outline-offset: 0.4rem;
 	}
 }
 
@@ -986,11 +945,6 @@ p {
 				text-align: right;
 			}
 		}
-	}
-
-	.prologue-link {
-		margin-top: 0.5rem;
-		font-size: 0.8rem;
 	}
 
 	.aboutme-content {
