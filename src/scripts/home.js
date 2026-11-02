@@ -356,6 +356,7 @@ onPageLoad((scope) => {
     distance: 0,
     edgeDistance: Infinity,
     proximity: 0,
+    glow: 0,
     attracted: false,
     lineEligible: false,
   }))
@@ -566,6 +567,15 @@ onPageLoad((scope) => {
       }
 
       if (!settled) animationOngoing = true
+
+      // Nearby dots swell and deepen towards $light-blue (`--glow`, 0–1), easing like the pull.
+      const targetGlow = state.attracted ? state.proximity : 0
+      state.glow +=
+        (targetGlow - state.glow) * (targetGlow > state.glow ? attractionBlend : returnBlend)
+      if (Math.abs(state.glow - targetGlow) < 0.005) state.glow = targetGlow
+      else animationOngoing = true
+      if (state.glow === 0) state.element.style.removeProperty("--glow")
+      else state.element.style.setProperty("--glow", state.glow.toFixed(3))
     }
 
     for (const slot of lineSlots) {
@@ -654,6 +664,165 @@ onPageLoad((scope) => {
   attractionObserver.observe(mainContent, {
     attributes: true,
     attributeFilter: ["class", "hidden"],
+  })
+})
+
+// Signature dots, beyond the pull and lines above: a press on the grid sends a ripple out from the nearest
+// dot, and while the pointer stays away a faint wave crosses the columns now and then, like the coda keys.
+// The section ignores pointer events (see the attraction above), so presses are matched against the
+// dots' boxes.
+onPageLoad((scope) => {
+  const mainContent = document.querySelector(".main-content")
+  const grid = mainContent?.querySelector(".circles-grid")
+  const circles = Array.from(grid?.querySelectorAll(".circle") ?? [])
+  if (!mainContent || !grid || circles.length === 0) return
+  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)")
+  const idleInterval = 7000
+  const idleAfter = 4000 // ms since the pointer was last near the grid
+  const waves = []
+  let frame = 0
+  let lastNear = -Infinity
+
+  const showing = () =>
+    !reducedMotion.matches &&
+    !document.hidden &&
+    !mainContent.hidden &&
+    mainContent.classList.contains("is-active")
+
+  const dots = () =>
+    circles
+      .filter((element) => !element.hidden)
+      .map((element) => {
+        const box = element.getBoundingClientRect()
+        return { element, x: box.left + box.width / 2, y: box.top + box.height / 2 }
+      })
+
+  const nearGrid = (x, y, margin) => {
+    const box = grid.getBoundingClientRect()
+    return (
+      x >= box.left - margin &&
+      x <= box.right + margin &&
+      y >= box.top - margin &&
+      y <= box.bottom + margin
+    )
+  }
+
+  // Centre-to-centre distance between neighbouring dots, the unit for ripple and wave delays.
+  const spacingOf = (list) => {
+    const [first, second] = list
+    return second ? Math.max(1, Math.hypot(second.x - first.x, second.y - first.y)) : 1
+  }
+
+  const ease = (t) => (1 - Math.cos(Math.PI * t)) / 2
+  // A dot's swell over its own run (0–1): up for the first 30%, then back down.
+  const swell = (t) => (t < 0.3 ? ease(t / 0.3) : 1 - ease((t - 0.3) / 0.7))
+
+  // Each wave keeps its own clock, so a new press never restarts the waves still crossing the grid. A dot
+  // takes the strongest tint among the waves passing it (`--wave`) and the strongest swell among the waves
+  // that swell (`--wave-scale`; ripples do not), both added to the glow in `index.astro`, and shows every
+  // wave's ring at once (`box-shadow`, $light-blue).
+  const render = (now) => {
+    frame = 0
+    for (const element of circles) {
+      let tint = 0
+      let swellPeak = 0
+      const rings = []
+      for (const wave of waves) {
+        const step = wave.steps.get(element)
+        if (!step) continue
+        const t = (now - wave.start - step.delay) / wave.duration
+        if (t <= 0 || t >= 1) continue
+        const shape = swell(t)
+        tint = Math.max(tint, step.tint * shape)
+        if (wave.scales) swellPeak = Math.max(swellPeak, step.strength * shape)
+        const spread = ease(t)
+        rings.push(
+          `0 0 0 ${(step.strength * 10 * spread).toFixed(2)}px rgba(162, 169, 211, ${(0.5 * step.strength * (1 - spread)).toFixed(3)})`,
+        )
+      }
+      if (tint > 0) element.style.setProperty("--wave", tint.toFixed(3))
+      else element.style.removeProperty("--wave")
+      if (swellPeak > 0) element.style.setProperty("--wave-scale", swellPeak.toFixed(3))
+      else element.style.removeProperty("--wave-scale")
+      if (rings.length) element.style.boxShadow = rings.join(", ")
+      else element.style.removeProperty("box-shadow")
+    }
+    for (let index = waves.length - 1; index >= 0; index--) {
+      if (now >= waves[index].end) waves.splice(index, 1)
+    }
+    if (waves.length) frame = scope.frame(render)
+  }
+
+  // `steps` maps each dot to its delay (ms), strength (0–1: swell and ring), and tint (0–1: how far its
+  // colour runs to $light-blue) in this wave; `scales` lets it swell the dots.
+  const launch = (steps, duration, scales) => {
+    const start = performance.now()
+    const longest = Math.max(...Array.from(steps.values(), (step) => step.delay))
+    waves.push({ steps, duration, scales, start, end: start + longest + duration })
+    if (!frame) frame = scope.frame(render)
+  }
+
+  scope.listen(
+    document,
+    "pointermove",
+    (event) => {
+      if (nearGrid(event.clientX, event.clientY, 48)) lastNear = performance.now()
+    },
+    { passive: true },
+  )
+
+  // Slow and soft: 120ms per dot of distance, 1.6s per dot, fading from 0.5 at the origin to 0.12.
+  scope.listen(document, "pointerdown", (event) => {
+    if (event.button !== 0 || !showing() || !nearGrid(event.clientX, event.clientY, 24)) return
+    lastNear = performance.now()
+    const list = dots()
+    if (list.length === 0) return
+    const spacing = spacingOf(list)
+    const origin = list.reduce((best, dot) =>
+      Math.hypot(dot.x - event.clientX, dot.y - event.clientY) <
+      Math.hypot(best.x - event.clientX, best.y - event.clientY)
+        ? dot
+        : best,
+    )
+    const steps = new Map()
+    for (const dot of list) {
+      const distance = Math.hypot(dot.x - origin.x, dot.y - origin.y) / spacing
+      steps.set(dot.element, {
+        delay: distance * 120,
+        strength: Math.max(0.12, 0.5 - distance * 0.06),
+        tint: Math.max(0.45, 1 - distance * 0.08),
+      })
+    }
+    launch(steps, 1600, false)
+  })
+
+  const idleWave = () => {
+    if (showing() && performance.now() - lastNear > idleAfter) {
+      const list = dots()
+      if (list.length > 0) {
+        const spacing = spacingOf(list)
+        const left = Math.min(...list.map((dot) => dot.x))
+        const top = Math.min(...list.map((dot) => dot.y))
+        const steps = new Map()
+        for (const dot of list) {
+          const column = Math.round((dot.x - left) / spacing)
+          const row = Math.round((dot.y - top) / spacing)
+          steps.set(dot.element, { delay: column * 150 + row * 70, strength: 0.18, tint: 0.6 })
+        }
+        launch(steps, 1800, true)
+      }
+    }
+    scope.timeout(idleWave, idleInterval)
+  }
+  void pageEntryRevealing.then(() => scope.timeout(idleWave, idleInterval / 2))
+
+  scope.cleanup(() => {
+    waves.length = 0
+    for (const element of circles) {
+      element.style.removeProperty("--wave")
+      element.style.removeProperty("--wave-scale")
+      element.style.removeProperty("box-shadow")
+    }
   })
 })
 

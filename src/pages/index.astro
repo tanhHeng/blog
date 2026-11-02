@@ -419,11 +419,18 @@ p {
 			grid-template-rows: repeat(4, 0.5rem);
 			gap: 2rem;
 
+			// `--glow` (0–1) swells a dot near the pointer (up to 1.2×) and deepens it towards $light-blue;
+			// `--wave` adds the ripples' and idle wave's colour on top, and `--wave-scale` the idle wave's swell
+			// at half its value (ripples do not swell the dots). All are set by `src/scripts/home.js`.
 			.circle {
+				--glow: 0;
+				--wave-scale: 0;
+				--wave: 0;
 				width: 0.5rem;
 				height: 0.5rem;
 				border-radius: 50%;
-				background-color: $ex-light-blue;
+				background-color: color-mix(in srgb, $light-blue calc(min(1, var(--glow) + var(--wave)) * 100%), $ex-light-blue);
+				scale: calc(1 + var(--glow) * 0.2 + var(--wave-scale) * 0.5);
 			}
 		}
 

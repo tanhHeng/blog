@@ -30,7 +30,7 @@
     let pointerY = 0;
     let lastCell = '';
     // Over readable or actionable content the marks nearly vanish, so they never compete with it.
-    const contentSelector = 'a, button, input, textarea, select, summary, label, dialog, img, video, svg, figure, pre, code, table, blockquote, li, p, h1, h2, h3, h4, h5, h6, [role="button"]';
+    const contentSelector = 'a, button, input, textarea, select, summary, label, dialog, img, video, svg, figure, pre, code, table, blockquote, li, p, h1, h2, h3, h4, h5, h6, [role="button"], .circles-grid';
     let overContent = false;
     // Content under `pointer-events: none` (the homepage sections, which let the scroll targets beneath take
     // input) never becomes the event target, so the pointer is also tested against content boxes. Decorative
