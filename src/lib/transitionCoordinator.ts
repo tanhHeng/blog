@@ -26,6 +26,8 @@ const dotsThreshold = 500
 // long numeral spreads its entrance over at most the budget.
 const numeralStagger = 45
 const numeralStaggerBudget = 250
+// Grapheme splitter for the veil numeral. It takes no options, so one instance serves every navigation.
+const numeralSegmenter = new Intl.Segmenter()
 
 const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms))
 const easeInOut = "cubic-bezier(0.65, 0, 0.35, 1)"
@@ -150,7 +152,7 @@ async function populate(transition: Transition, data: PageTransition | undefined
   const caption = scope.querySelector<HTMLElement>("[data-veil-caption]")
   if (caption) caption.textContent = data?.caption ?? ""
   const digits = Array.from(
-    new Intl.Segmenter().segment(data?.numeral ?? ""),
+    numeralSegmenter.segment(data?.numeral ?? ""),
     ({ segment }) => segment,
   )
   const stagger = Math.min(numeralStagger, numeralStaggerBudget / Math.max(digits.length, 1))
