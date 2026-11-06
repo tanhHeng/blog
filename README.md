@@ -28,11 +28,14 @@ Requires Node `>=24.18.0` and Yarn 4.
 yarn install
 yarn dev            # local dev server
 yarn check:astro    # type and template diagnostics
-yarn build          # static build into dist/
+yarn build          # static build into dist/, plus the Cloudflare Build Output
 yarn preview        # serve the build
+yarn deploy         # build and deploy the Worker (cf auth login first)
 ```
 
 Built with [Astro](https://astro.build), Sass, and a little TypeScript; there is no server, database, or CMS.
+
+The site is hosted on Cloudflare Workers Static Assets, configured in `cloudflare.config.ts` and deployed with the [`cf` CLI](https://github.com/cloudflare/cf). `yarn deploy` runs `cf deploy --prebuilt`; `yarn deploy:preview` deploys a branch Preview.
 
 ## License
 

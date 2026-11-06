@@ -32,3 +32,6 @@ pnpm-debug.log*
 .omp/
 
 .yarn/*
+
+# cloudflare cf build output and generated types
+.cloudflare/

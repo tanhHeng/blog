@@ -4,10 +4,13 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "astro build && node scripts/build-output.mjs",
+    "build:preview": "CLOUDFLARE_PREVIEW_BUILD=true yarn build",
     "preview": "astro preview",
     "astro": "astro",
     "check:astro": "astro check",
+    "deploy": "yarn build && cf deploy --prebuilt --mode production",
+    "deploy:preview": "yarn build:preview && cf previews deploy --prebuilt --mode production",
     "prepare": "vp config --no-agent"
   },
   "dependencies": {
@@ -23,15 +26,15 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.12",
     "@astrojs/ts-content-mapper": "^0.2.0",
+    "@cloudflare/build-output-utils": "0.9.7",
+    "@cloudflare/config": "0.29.1",
     "@emnapi/runtime": "^1.11.3",
+    "cf": "1.0.0-beta.27",
     "typescript": "7.0.2",
     "vite-plus": "catalog:"
   },
   "resolutions": {
     "vite": "npm:@voidzero-dev/vite-plus-core@1.4.0"
-  },
-  "engines": {
-    "node": ">=24.18.0"
   },
   "packageManager": "yarn@4.18.1"
 }

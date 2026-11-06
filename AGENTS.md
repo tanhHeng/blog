@@ -10,6 +10,8 @@ Manage the background server with `yarn astro dev stop`, `yarn astro dev status`
 
 There's no need to stop astro dev server every time.
 
+Deployment goes through the Cloudflare CLI: `yarn deploy` builds the site and deploys the Worker described by `cloudflare.config.ts` (Workers Static Assets). Run `cf auth login` once first. `yarn deploy:preview` deploys a branch Preview.
+
 ## Documentation
 
 Full documentation: https://docs.astro.build
@@ -48,8 +50,8 @@ This repository contains `TANH.MOE`, a personal editorial blog for tanh_Heng. It
 - Package manager: Yarn 4.17.1; use the existing `yarn.lock` and do not introduce another package manager.
 - Runtime requirement: Node `>=22.12.0`.
 - Styling: Sass/SCSS, including component-scoped styles and global styles; `animate.css` is loaded by the base layout.
-- Build and preview: `yarn build` creates the production site in `dist/`; `yarn preview` serves that build.
-- Astro is currently configured with `defineConfig({})`; there are no integrations, adapters, server endpoints, or external data sources configured.
+- Build and preview: `yarn build` creates the production site in `dist/` and its Cloudflare Build Output in `.cloudflare/output/v0/`; `yarn preview` serves the Astro build; `yarn deploy` deploys the Worker with `cf deploy --prebuilt`.
+- Hosting: Cloudflare Workers Static Assets, configured in `cloudflare.config.ts` (no adapter, no Wrangler configuration). The Worker serves only pre-rendered files, so requests do not invoke Worker code.
 
 ### Repository structure
 
@@ -69,6 +71,8 @@ This repository contains `TANH.MOE`, a personal editorial blog for tanh_Heng. It
 │   └── env.d.ts            Astro/TypeScript environment declarations
 ├── .design/                Reference screenshots and visual design targets
 ├── astro.config.mjs        Astro configuration
+├── cloudflare.config.ts    Worker name, compatibility date, static assets, domain
+├── scripts/build-output.mjs Turns `dist/` into the Build Output `cf deploy` reads
 ├── vite.config.ts          Vite Plus configuration
 ├── package.json             Scripts, dependencies, and Node/package-manager constraints
 └── AGENTS.md               Development and agent operating instructions
