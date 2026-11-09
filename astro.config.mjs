@@ -1,6 +1,6 @@
-import react from "@astrojs/react"
-// @ts-check
-import { defineConfig } from "astro/config"
+import react from "@astrojs/react";
+import cloudflare from "@astrojs/cloudflare";
+import { defineConfig } from "astro/config";
 
 // https://astro.build/config
 export default defineConfig({
@@ -10,4 +10,7 @@ export default defineConfig({
     // follow the site palette instead of a bundled editor theme.
     shikiConfig: { theme: "css-variables" },
   },
-})
+  adapter: cloudflare({
+    imageService: "passthrough",
+  }),
+});

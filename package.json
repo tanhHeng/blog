@@ -4,14 +4,9 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build && node scripts/build-output.mjs",
-    "build:preview": "CLOUDFLARE_PREVIEW_BUILD=true yarn build",
-    "preview": "astro preview",
-    "astro": "astro",
-    "check:astro": "astro check",
-    "deploy": "yarn build && cf deploy --prebuilt --mode production",
-    "deploy:preview": "yarn build:preview && cf previews deploy --prebuilt --mode production",
-    "prepare": "vp config --no-agent"
+    "build": "astro build",
+    "deploy": "cf deploy --mode production",
+    "deploy:preview": "cf previews deploy --mode production"
   },
   "dependencies": {
     "@astrojs/react": "^7.1.2",
@@ -25,6 +20,7 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.12",
+    "@astrojs/cloudflare": "^15.0.0-beta.5",
     "@astrojs/ts-content-mapper": "^0.2.0",
     "@cloudflare/build-output-utils": "0.9.9",
     "@cloudflare/config": "0.30.1",
