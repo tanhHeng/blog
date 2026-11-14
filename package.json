@@ -9,23 +9,23 @@
     "deploy:preview": "cf previews deploy --mode production"
   },
   "dependencies": {
-    "@astrojs/react": "^7.1.2",
+    "@astrojs/react": "^7.1.7",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "animate.css": "^4.1.1",
-    "astro": "^7.4.5",
+    "astro": "^7.4.10",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "sass": "^1.107.1"
+    "sass": "^1.108.2"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.12",
     "@astrojs/cloudflare": "^15.0.0-beta.5",
     "@astrojs/ts-content-mapper": "^0.2.0",
-    "@cloudflare/build-output-utils": "0.9.9",
-    "@cloudflare/config": "0.30.1",
+    "@cloudflare/build-output-utils": "0.9.12",
+    "@cloudflare/config": "0.31.1",
     "@emnapi/runtime": "^1.11.3",
-    "cf": "1.0.0-beta.27",
+    "cf": "1.0.0-beta.29",
     "typescript": "7.0.2",
     "vite-plus": "catalog:"
   },
