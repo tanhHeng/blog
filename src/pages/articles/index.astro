@@ -18,9 +18,48 @@ for (const article of articles) {
   }
 }
 const tags = [...tagIndex.values()].sort((a, b) => b.count - a.count || titleOrder.compare(a.label, b.label));
+// The ring's sectors fill its right half, clockwise from the top. Geometry is in % of the ring's box and
+// angles are degrees from the top: sectors span `inner` to `outer` with a constant-width `gap` between
+// them, and labels sit at `label` in a box `labelHalfHeight` tall each way.
+const ring = { inner: 36, outer: 50, label: 43, gap: 2.2, labelHalfHeight: 2.8 };
 const ringTags = tags.slice(0, 8);
 const sectorCount = Math.max(5, ringTags.length);
 const sectorAngle = 180 / sectorCount;
+const toDegrees = (radians: number) => (radians * 180) / Math.PI;
+const ringPoint = (radius: number, angle: number): [number, number] => [
+  50 + radius * Math.sin((angle * Math.PI) / 180),
+  50 - radius * Math.cos((angle * Math.PI) / 180),
+];
+// The angle half of `clearance` subtends at `radius`; insetting every arc by it keeps a gap parallel.
+const edgeInset = (radius: number, clearance: number) => toDegrees(Math.asin(clearance / 2 / radius));
+const sectors = Array.from({ length: sectorCount }, (_, index) => {
+  const start = index * sectorAngle;
+  const steps = Math.ceil(sectorAngle / 3);
+  const arc = (radius: number) => {
+    const inset = edgeInset(radius, ring.gap);
+    return Array.from({ length: steps + 1 }, (_, step) =>
+      ringPoint(radius, start + inset + ((sectorAngle - 2 * inset) * step) / steps));
+  };
+  const wedge = [...arc(ring.outer), ...arc(ring.inner).reverse()];
+  const [x, y] = ringPoint(ring.label, start + sectorAngle / 2);
+  // The wedge clips its label, which is horizontal text: widen the label's box until a corner
+  // would come within 1% of an edge of the wedge.
+  const fits = (px: number, py: number) => {
+    const radius = Math.hypot(px - 50, py - 50);
+    const angle = toDegrees(Math.atan2(px - 50, 50 - py));
+    const inset = edgeInset(radius, ring.gap + 2);
+    return radius >= ring.inner + 1 && radius <= ring.outer - 1 && angle >= start + inset && angle <= start + sectorAngle - inset;
+  };
+  const cornersFit = (halfWidth: number) =>
+    [-1, 1].every((sx) => [-1, 1].every((sy) => fits(x + sx * halfWidth, y + sy * ring.labelHalfHeight)));
+  let halfWidth = 0;
+  while (cornersFit(halfWidth + 0.25)) halfWidth += 0.25;
+  return {
+    tag: ringTags[index],
+    wedge: `polygon(${wedge.map(([px, py]) => `${px.toFixed(2)}% ${py.toFixed(2)}%`).join(', ')})`,
+    label: `top: ${y.toFixed(2)}%; left: ${x.toFixed(2)}%; max-width: ${(2 * halfWidth).toFixed(2)}%;`,
+  };
+});
 const description = '记录设计、数学与游戏之间的思考，在结构与诗意之间寻找可感知的秩序。';
 const formatIndex = (index: number) => String(index).padStart(2, '0');
 const years: { year: string; entries: { article: (typeof articles)[number]; index: number }[] }[] = [];
@@ -49,47 +88,49 @@ const pluralArticles = (count: number) => `${count} ${count === 1 ? 'article' : 
         </header>
 
         <div class="filter-panel">
-        <div class="filter-orbit" role="group" aria-label="Popular tag shortcuts">
+        <div class="filter-orbit" role="group" aria-label="Popular tag shortcuts" style={`--orbit-shown: ${articles.length ? 1 : 0};`}>
           <div class="orbit-guide" aria-hidden="true"></div>
+          <div class="orbit-satellite" aria-hidden="true"></div>
+          <div class="orbit-gauge" aria-hidden="true">
+            <span class="orbit-gauge-marker"></span>
+            <span class="orbit-gauge-marker orbit-gauge-ghost"></span>
+          </div>
+          <div class="orbit-pulse" aria-hidden="true"></div>
           <div class="orbit-sectors">
-          {Array.from({ length: sectorCount }, (_, index) => {
-            const tag = ringTags[index];
-            const radians = ((index + 0.5) * sectorAngle - 90) * Math.PI / 180;
-            return (
-              <div class:list={['orbit-option', { 'is-empty': !tag }]}>
-              {tag && (
-              <button
-                class="orbit-tag"
-                type="button"
-                data-filter-tag={tag.key}
-                data-tag-label={tag.label}
-                style={`--node-x: ${50 + 43 * Math.cos(radians)}%; --node-y: ${50 + 43 * Math.sin(radians)}%;`}
-                aria-pressed="false"
-                aria-controls="article-index"
-                aria-label={`Filter by ${tag.label}`}
-                title={tag.label}
-                disabled
-              >
-                <span class="orbit-tag-index" aria-hidden="true">{formatIndex(index + 1)}</span>
+          {sectors.map(({ tag, wedge, label }) => tag ? (
+            <button
+              class="orbit-sector orbit-tag"
+              type="button"
+              data-filter-tag={tag.key}
+              data-tag-label={tag.label}
+              style={`--wedge: ${wedge};`}
+              aria-pressed="false"
+              aria-controls="article-index"
+              aria-label={`Filter by ${tag.label}, ${pluralArticles(tag.count)}`}
+              title={tag.label}
+              disabled
+            >
+              <span class="orbit-tag-text" style={label}>
                 <span class="orbit-tag-label">{tag.label}</span>
-              </button>
-              )}
-              <span
-                class="orbit-sector"
-                aria-hidden="true"
-                style={`--sector-start: ${index * sectorAngle + 3}deg; --sector-sweep: ${sectorAngle - 6}deg;`}
-              ></span>
-              </div>
-            );
-          })}
+                <span class="orbit-tag-count" aria-hidden="true">{tag.count}</span>
+              </span>
+            </button>
+          ) : (
+            <span class="orbit-sector is-empty" aria-hidden="true" style={`--wedge: ${wedge};`}></span>
+          ))}
           </div>
           <div class="orbit-core">
-            <span class="orbit-eyebrow">BROWSE BY TAG</span>
-            <h2>Filter</h2>
-            <p class="orbit-summary" data-filter-summary>All articles</p>
-            <p class="orbit-selection" data-selected-tags>Select tags to narrow the index.</p>
+            <h2 class="orbit-eyebrow">FILTER BY TAG</h2>
+            <p class="orbit-count" aria-hidden="true">
+              <span data-filter-shown>{formatIndex(articles.length)}</span>
+              <span class="orbit-count-total">/ {formatIndex(articles.length)}</span>
+            </p>
+            <p class="orbit-selection" data-selected-tags>All articles</p>
             <span class="orbit-core-rule" aria-hidden="true"></span>
-            <span class="orbit-mode">MATCH ALL SELECTED</span>
+            <div class="orbit-action">
+              <p class="orbit-hint" data-filter-hint>SELECT TAGS TO NARROW</p>
+              <button class="orbit-clear" type="button" data-clear-filters hidden disabled>CLEAR <span aria-hidden="true">×</span></button>
+            </div>
           </div>
         </div>
 
@@ -206,13 +247,17 @@ const pluralArticles = (count: number) => `${count} ${count === 1 ? 'article' : 
 
     const tagButtons = Array.from(page.querySelectorAll<HTMLButtonElement>('[data-filter-tag]'));
     const allButton = page.querySelector<HTMLButtonElement>('[data-filter-all]')!;
-    const clearButton = page.querySelector<HTMLButtonElement>('[data-clear-filters]');
+    const clearButtons = Array.from(page.querySelectorAll<HTMLButtonElement>('[data-clear-filters]'));
     const count = page.querySelector<HTMLElement>('[data-results-count]')!;
     const heading = page.querySelector<HTMLElement>('[data-results-heading]')!;
-    const summary = page.querySelector<HTMLElement>('[data-filter-summary]')!;
+    const shownOutput = page.querySelector<HTMLElement>('[data-filter-shown]')!;
+    const hint = page.querySelector<HTMLElement>('[data-filter-hint]')!;
+    const orbitClear = page.querySelector<HTMLButtonElement>('.orbit-clear')!;
     const selection = page.querySelector<HTMLElement>('[data-selected-tags]')!;
     const emptyState = page.querySelector<HTMLElement>('[data-empty-state]')!;
     const orbit = page.querySelector<HTMLElement>('.filter-orbit')!;
+    const pulse = orbit.querySelector<HTMLElement>('.orbit-pulse')!;
+    const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
     const tagLabels = new Map<string, string>();
     for (const button of tagButtons) {
       tagLabels.set(button.dataset.filterTag!, button.dataset.tagLabel!);
@@ -227,6 +272,18 @@ const pluralArticles = (count: number) => `${count} ${count === 1 ? 'article' : 
       entries: Array.from(element.querySelectorAll<HTMLElement>('[data-article-tags]')),
     }));
     const selected = new Set<string>();
+    // The tag under a mouse pointer or keyboard focus, if any.
+    let previewKey: string | undefined;
+
+    // The gauge's ghost marker shows the share of articles that toggling `previewKey` would leave.
+    // Without a preview it rests on the real marker, so it always departs from there.
+    function updatePreview() {
+      const keys = new Set(selected);
+      if (previewKey !== undefined && !keys.delete(previewKey)) keys.add(previewKey);
+      const shown = entries.filter((entry) => [...keys].every((key) => entry.tags.has(key))).length;
+      orbit.style.setProperty('--orbit-preview', String(entries.length ? shown / entries.length : 0));
+      orbit.classList.toggle('is-previewing', previewKey !== undefined);
+    }
 
     function updateResults() {
       const keys = [...selected];
@@ -243,10 +300,13 @@ const pluralArticles = (count: number) => `${count} ${count === 1 ? 'article' : 
       }
       allButton.setAttribute('aria-pressed', String(selected.size === 0));
       orbit.classList.toggle('has-filters', selected.size > 0);
+      orbit.style.setProperty('--orbit-shown', String(entries.length ? shown / entries.length : 0));
+      shownOutput.textContent = String(shown).padStart(2, '0');
+      hint.hidden = selected.size > 0;
+      orbitClear.hidden = selected.size === 0;
       count.textContent = `Showing ${shown} of ${entries.length}`;
       heading.textContent = selected.size ? 'Filtered articles' : 'All articles';
-      summary.textContent = selected.size ? `${selected.size} ${selected.size === 1 ? 'filter' : 'filters'}` : 'All articles';
-      selection.textContent = selected.size ? labels.join(' · ') : 'Select tags to narrow the index.';
+      selection.textContent = selected.size ? labels.join(' · ') : 'All articles';
       selection.title = selected.size ? labels.join(' · ') : '';
       emptyState.hidden = shown > 0;
       for (const group of yearGroups) {
@@ -260,6 +320,7 @@ const pluralArticles = (count: number) => `${count} ${count === 1 ? 'article' : 
       url.searchParams.delete('tag');
       for (const label of labels) url.searchParams.append('tag', label);
       if (url.href !== window.location.href) history.replaceState(history.state, '', url);
+      updatePreview();
     }
 
     function readSelection() {
@@ -278,8 +339,8 @@ const pluralArticles = (count: number) => `${count} ${count === 1 ? 'article' : 
 
       if (button.hasAttribute('data-filter-all') || button.hasAttribute('data-clear-filters')) {
         selected.clear();
-        // Clearing the empty state hides its button; keep keyboard focus in the filter group.
-        if (button === clearButton) allButton.focus({ preventScroll: true });
+        // Clearing hides the clear button that was pressed; keep keyboard focus in the filter group.
+        if (button !== allButton) allButton.focus({ preventScroll: true });
       } else {
         const key = button.dataset.filterTag;
         if (key === undefined || !tagLabels.has(key)) return;
@@ -287,12 +348,35 @@ const pluralArticles = (count: number) => `${count} ${count === 1 ? 'article' : 
         else selected.add(key);
       }
       updateResults();
+      if (!reducedMotion.matches) {
+        pulse.animate(
+          [
+            { transform: 'scale(1)', opacity: 0.55 },
+            // From the core's edge (32% of the ring) to the guide circle (50%).
+            { transform: 'scale(1.5625)', opacity: 0 },
+          ],
+          { duration: 720, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+        );
+      }
     });
+
+    const previewTag = (target: EventTarget | null) => {
+      const button = target instanceof Element ? target.closest<HTMLButtonElement>('[data-filter-tag]') : null;
+      if (button?.dataset.filterTag === previewKey) return;
+      previewKey = button?.dataset.filterTag;
+      updatePreview();
+    };
+    scope.listen(page, 'pointerover', (event) => {
+      if (event.pointerType === 'mouse') previewTag(event.target);
+    });
+    scope.listen(page, 'pointerleave', () => previewTag(null));
+    scope.listen(page, 'focusin', (event) => previewTag(event.target));
+    scope.listen(page, 'focusout', () => previewTag(null));
 
     readSelection();
     for (const button of tagButtons) button.disabled = false;
     allButton.disabled = false;
-    if (clearButton) clearButton.disabled = false;
+    for (const button of clearButtons) button.disabled = false;
   });
 </script>
 

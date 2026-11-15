@@ -19,11 +19,8 @@ export default defineConfig({
     },
   },
   staged: {
-    // Markdown is matched for `vp check` but ignored by `fmt`; without the flag a Markdown-only commit fails.
-    "*.{astro,js,mjs,cjs,ts,mts,cts,tsx,jsx,json,css,scss,md}": [
+    // `fmt` skips Markdown (ignored above) and Astro files; without the flag a commit of only those fails.
+    "*.{astro,js,mjs,cjs,ts,mts,cts,tsx,jsx,json,css,scss,md}":
       "vp fmt --no-error-on-unmatched-pattern",
-      "vp check --fix",
-    ],
-    "*.astro": "yarn check:astro",
   },
 })
