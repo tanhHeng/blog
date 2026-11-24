@@ -337,7 +337,7 @@ const pagerLinks = [
   font-family: $font-family-default;
   font-size: 1rem;
   line-height: 2.05;
-  counter-reset: article-section;
+  counter-reset: article-section article-figure;
 
   :global(p) {
     margin: 0 0 1.35rem;
@@ -884,6 +884,41 @@ const pagerLinks = [
   // Markdown wraps a standalone image in a paragraph; drop that paragraph's own margin.
   :global(p:has(> img:only-child)) {
     margin: 0;
+  }
+
+  // Images with a title become figures (`src/lib/figureCaptions.ts`). The caption sits centred under
+  // the image as a numbered plate label: "FIG. 01", a hairline divider, then the title.
+  :global(figure) {
+    margin: 1.8rem 0;
+    counter-increment: article-figure;
+
+    :global(img) {
+      margin: 0 auto;
+    }
+  }
+
+  :global(figcaption) {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.6rem;
+    margin-top: 0.8rem;
+    color: $primary-blue;
+    font-size: 0.85rem;
+    letter-spacing: 0.06em;
+    line-height: 1.6;
+    text-align: center;
+
+    &::before {
+      flex: 0 0 auto;
+      padding-right: 0.6rem;
+      border-right: 1px solid rgba($primary-blue, 0.35);
+      color: $light-blue;
+      font-family: $font-family-heading;
+      font-size: 0.72rem;
+      letter-spacing: 0.2em;
+      content: 'Fig. ' counter(article-figure, decimal-leading-zero);
+    }
   }
 
   // Footnotes close the body as endnotes: a hairline, a small-caps label, then the notes in a smaller

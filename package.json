@@ -9,6 +9,7 @@
     "deploy:preview": "cf previews deploy --mode production"
   },
   "dependencies": {
+    "@astrojs/markdown-satteri": "^0.4.10",
     "@astrojs/react": "^7.1.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
@@ -16,7 +17,8 @@
     "astro": "^7.4.5",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "sass": "^1.107.1"
+    "sass": "^1.107.1",
+    "satteri": "^0.11.6"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.12",
