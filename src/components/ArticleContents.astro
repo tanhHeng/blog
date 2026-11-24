@@ -89,17 +89,16 @@ const visibleHeadings = headings.filter(({ depth }) => depth >= 2 && depth <= 4)
     // The fill and the pointer are measured in pixels from the current item's box, so they are re-measured
     // whenever that box can move: on a new current item, on resize, once web fonts arrive (they rewrap the
     // items), and when the mobile sheet opens (while the sheet is closed its items are not laid out, and a
-    // measure taken then is stale once it opens). The fill ends at the item's middle; the pointer sits on
-    // its first line.
+    // measure taken then is stale once it opens). Both end on the item's first line, so on a wrapped
+    // heading the fill stops at the pointer instead of running on under it.
     const syncFill = () => {
-      const fill = current ? current.item.offsetTop + current.item.offsetHeight / 2 : 0;
+      const fill = current
+        ? current.item.offsetTop + parseFloat(getComputedStyle(current.item).lineHeight) / 2
+        : 0;
       list.style.setProperty('--contents-fill', `${fill}px`);
       if (!pointer) return;
       pointer.hidden = !current;
-      if (current) {
-        const firstLine = current.item.offsetTop + parseFloat(getComputedStyle(current.item).lineHeight) / 2;
-        pointer.style.setProperty('--pointer-y', `${list.offsetTop + firstLine}px`);
-      }
+      if (current) pointer.style.setProperty('--pointer-y', `${list.offsetTop + fill}px`);
     };
     const setCurrent = (next: typeof current) => {
       if (next === current) return;
