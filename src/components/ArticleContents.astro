@@ -37,6 +37,7 @@ const visibleHeadings = headings.filter(({ depth }) => depth >= 2 && depth <= 4)
             </li>
           ))}
         </ol>
+        <span class="contents-pointer" data-contents-pointer hidden aria-hidden="true"></span>
       </nav>
       <p class="contents-progress">
         <span>Read</span>
@@ -75,6 +76,7 @@ const visibleHeadings = headings.filter(({ depth }) => depth >= 2 && depth <= 4)
 
     const summary = contents.querySelector('summary');
     const percent = contents.querySelector('[data-contents-percent]');
+    const pointer = contents.querySelector<HTMLElement>('[data-contents-pointer]');
     const entries = Array.from(list.querySelectorAll<HTMLAnchorElement>('a[href^="#"]')).flatMap((link) => {
       const heading = document.getElementById(decodeURIComponent(link.hash.slice(1)));
       const item = link.parentElement;
@@ -84,13 +86,20 @@ const visibleHeadings = headings.filter(({ depth }) => depth >= 2 && depth <= 4)
     let frame = 0;
     let closeTimer = 0;
 
-    // The fill is measured in pixels from the current item's box, so it is re-measured whenever that box
-    // can move: on a new current item, on resize, once web fonts arrive (they rewrap the items), and when
-    // the mobile sheet opens (while the sheet is closed its items are not laid out, and a measure taken
-    // then is stale once it opens).
+    // The fill and the pointer are measured in pixels from the current item's box, so they are re-measured
+    // whenever that box can move: on a new current item, on resize, once web fonts arrive (they rewrap the
+    // items), and when the mobile sheet opens (while the sheet is closed its items are not laid out, and a
+    // measure taken then is stale once it opens). The fill ends at the item's middle; the pointer sits on
+    // its first line.
     const syncFill = () => {
       const fill = current ? current.item.offsetTop + current.item.offsetHeight / 2 : 0;
       list.style.setProperty('--contents-fill', `${fill}px`);
+      if (!pointer) return;
+      pointer.hidden = !current;
+      if (current) {
+        const firstLine = current.item.offsetTop + parseFloat(getComputedStyle(current.item).lineHeight) / 2;
+        pointer.style.setProperty('--pointer-y', `${list.offsetTop + firstLine}px`);
+      }
     };
     const setCurrent = (next: typeof current) => {
       if (next === current) return;
@@ -175,7 +184,10 @@ const visibleHeadings = headings.filter(({ depth }) => depth >= 2 && depth <= 4)
       }
     }) as EventListener);
     scope.listen(mobileQuery, 'change', syncMode);
-    scope.cleanup(() => list.style.removeProperty('--contents-fill'));
+    scope.cleanup(() => {
+      list.style.removeProperty('--contents-fill');
+      pointer?.style.removeProperty('--pointer-y');
+    });
     update();
     syncMode();
   });
@@ -280,6 +292,7 @@ $rail-offset: $rail-x - $list-inset;
 }
 
 nav {
+  position: relative;
   max-height: calc(100dvh - #{$contents-top} - 6rem);
   margin-top: 0.85rem;
   overflow: hidden auto;
@@ -363,18 +376,20 @@ ol {
   font-size: 0.68rem;
 }
 
-.article-contents :global(.toc-item.is-current)::after {
+// One pointer for the whole list, so it glides along the rail to the new current item with the fill.
+.contents-pointer {
+  --pointer-y: 0px;
   position: absolute;
-  top: 0.725em;
-  left: calc(#{$rail-offset} + 0.5px);
+  top: 0;
+  left: calc(#{$rail-x} + 0.5px);
   z-index: 1;
   width: 0.42rem;
   height: 0.42rem;
   box-sizing: border-box;
   border: 1px solid $primary-blue;
   background: #fff;
-  content: '';
-  transform: translate(-50%, -50%) rotate(45deg);
+  transform: translate(-50%, calc(var(--pointer-y) - 50%)) rotate(45deg);
+  transition: transform 280ms $ease-out;
 }
 
 .article-contents :global(.toc-item a),
@@ -634,6 +649,7 @@ ol {
   .contents-scrim,
   .contents-body,
   ol::after,
+  .contents-pointer,
   .article-contents :global(.toc-item a) {
     transition: none;
   }
