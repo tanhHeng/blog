@@ -29,8 +29,11 @@ interface GithubEvent {
 }
 
 const api = "https://api.github.com"
+// GitHub rejects requests without a `User-Agent` (403); the Cloudflare adapter prerenders in workerd,
+// whose `fetch` sends none.
 const headers: HeadersInit = {
   Accept: "application/vnd.github+json",
+  "User-Agent": "tanh.moe",
   "X-GitHub-Api-Version": "2022-11-28",
   ...(GITHUB_TOKEN && { Authorization: `Bearer ${GITHUB_TOKEN}` }),
 }
