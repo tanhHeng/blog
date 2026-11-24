@@ -3,7 +3,7 @@ import BaseLayout from './BaseLayout.astro';
 import ArticleContents from '../components/ArticleContents.astro';
 import RotatingCircles from '../components/RotatingCircles.astro';
 
-const { frontmatter = {}, getHeadings, url } = Astro.props;
+const { frontmatter = {}, headings: allHeadings = [], url } = Astro.props;
 const title = frontmatter.title ?? 'Untitled article';
 const date = frontmatter.date instanceof Date
   ? frontmatter.date.toISOString().slice(0, 10)
@@ -11,7 +11,8 @@ const date = frontmatter.date instanceof Date
 const year = date.slice(0, 4);
 const tags = frontmatter.tags ?? [];
 const readingTime = frontmatter.readingTime ?? '3 min';
-const headings = typeof getHeadings === 'function' ? await getHeadings() : [];
+// The footnotes' heading (`footnote-label`) labels the notes at the end; it is not a section of the article.
+const headings = allHeadings.filter(({ slug }: { slug: string }) => slug !== 'footnote-label');
 
 // Article modules import this layout, and `lib/articles` eagerly imports every article module.
 // A static import would evaluate the list while this article is still mid-evaluation.
@@ -384,12 +385,18 @@ const pagerLinks = [
     color: $content-color;
     font-weight: 400;
     line-height: 1.4;
-    // Keeps anchored headings clear of the fixed navbar and its fade.
+  }
+
+  // Keeps anchored headings and footnotes clear of the fixed navbar and its fade.
+  :global(:is(h2, h3, h4, [id^='user-content-fn'])) {
     scroll-margin-top: calc(navbar.$navbar-actual-height + 2rem);
   }
 
   // Numbering mirrors the level-2 counter in `ArticleContents.astro`.
+  // A short accent rides the start of the rule under each section; where scroll-driven animations are
+  // supported, it draws out as the heading scrolls into view.
   :global(h2) {
+    position: relative;
     display: flex;
     align-items: baseline;
     gap: 0.8rem;
@@ -406,6 +413,27 @@ const pagerLinks = [
       font-size: 0.85rem;
       letter-spacing: 0.12em;
       content: counter(article-section, decimal-leading-zero);
+    }
+
+    &::after {
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      width: 3rem;
+      height: 1px;
+      background: $primary-blue;
+      content: '';
+      transform-origin: left;
+    }
+
+    @supports (animation-timeline: view()) {
+      @media (prefers-reduced-motion: no-preference) {
+        &::after {
+          animation: section-rule linear both;
+          animation-timeline: view();
+          animation-range: entry 20% cover 35%;
+        }
+      }
     }
   }
 
@@ -436,6 +464,22 @@ const pagerLinks = [
     line-height: 1.5;
   }
 
+  // Below the contents' depth: quiet run-in labels rather than headings of their own.
+  :global(h5),
+  :global(h6) {
+    margin: 1.6rem 0 0.35rem;
+    color: $primary-blue;
+    font-size: 0.92rem;
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    line-height: 1.5;
+  }
+
+  :global(h6) {
+    color: $light-blue;
+    font-size: 0.85rem;
+  }
+
   :global(blockquote) {
     margin: 1.6rem 0;
     padding: 0.45rem 1.1rem 0.65rem;
@@ -446,15 +490,73 @@ const pagerLinks = [
     > :global(:last-child) {
       margin-bottom: 0;
     }
+
+    // A quote inside a quote steps back to a fainter bar.
+    :global(blockquote) {
+      margin: 0.8rem 0;
+      border-left-color: rgba($light-blue, 0.4);
+      color: $light-blue;
+    }
   }
 
-  // Expandable text folds open and shut: `::details-content` animates to and from `auto` height
+  // Expandable text sits between two hairlines; its summary carries a chevron that turns down as it
+  // opens. It folds open and shut: `::details-content` animates to and from `auto` height
   // (`interpolate-size`), and `content-visibility` is held while it closes so the text stays painted
   // until the fold ends. While it moves, its lower edge fades out over `--fold-fade` instead of
   // cutting through a line of text; the fade shrinks to nothing as it opens. Browsers without
   // `::details-content` open and close at once.
   :global(details) {
+    margin: 1.6rem 0;
+    border-top: 1px solid rgba($primary-blue, 0.28);
+    border-bottom: 1px solid rgba($primary-blue, 0.28);
     interpolate-size: allow-keywords;
+
+    > :global(summary) {
+      position: relative;
+      padding: 0.55rem 0 0.55rem 1.35rem;
+      color: $primary-blue;
+      list-style: none;
+      transition: color 180ms ease-out;
+
+      &::-webkit-details-marker {
+        display: none;
+      }
+
+      &::before {
+        position: absolute;
+        top: calc(0.55rem + 1.025em);
+        left: 0.2rem;
+        width: 0.4rem;
+        height: 0.4rem;
+        box-sizing: border-box;
+        border-right: 1px solid currentColor;
+        border-bottom: 1px solid currentColor;
+        content: '';
+        transform: translate(0, -50%) rotate(-45deg);
+        transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      &:hover,
+      &:focus-visible {
+        color: $content-color;
+      }
+
+      &:focus-visible {
+        outline: 1px solid rgba($primary-blue, 0.6);
+        outline-offset: 0.15rem;
+      }
+    }
+
+    &[open] > :global(summary)::before {
+      transform: translate(0, -75%) rotate(45deg);
+    }
+
+    // Padding, not margin: a trailing margin would collapse out of the folding box, which then jumps by
+    // that much when the fold ends.
+    > :global(:not(summary):last-child) {
+      margin-bottom: 0;
+      padding-bottom: 0.9rem;
+    }
 
     &::details-content {
       --fold-fade: 3rem;
@@ -475,7 +577,8 @@ const pagerLinks = [
     }
 
     @media (prefers-reduced-motion: reduce) {
-      &::details-content {
+      &::details-content,
+      > :global(summary)::before {
         transition: none;
       }
     }
@@ -489,6 +592,34 @@ const pagerLinks = [
 
   :global(li) {
     padding-left: 0.35rem;
+  }
+
+  // Task lists drop the bullet for a drawn box; done items fade back and carry a check.
+  :global(.contains-task-list) {
+    padding-left: 0.2rem;
+    list-style: none;
+  }
+
+  :global(.task-list-item) {
+    padding-left: 0;
+
+    &:has(> input:checked) {
+      color: $light-blue;
+    }
+  }
+
+  :global(.task-list-item > input) {
+    width: 0.85rem;
+    height: 0.85rem;
+    margin: 0 0.55rem 0 0;
+    border: 1px solid $primary-blue;
+    background: #fff;
+    vertical-align: -0.08em;
+    appearance: none;
+
+    &:checked {
+      background: $ex-light-blue url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.3 2.3L9.5 3.5' fill='none' stroke='%238992bd' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 100% no-repeat;
+    }
   }
 
   // Body links, drawn with four background layers so every part follows links that wrap across lines:
@@ -563,6 +694,34 @@ const pagerLinks = [
     color: #3f4a70;
     font-family: $font-family-code;
     font-size: 0.86em;
+  }
+
+  // A highlighter stroke across the lower half of the line, like the link wash.
+  :global(mark) {
+    padding: 0 0.15em;
+    background: linear-gradient(transparent 52%, rgba($ex-light-blue, 0.85) 52%);
+    color: inherit;
+    box-decoration-break: clone;
+  }
+
+  :global(kbd) {
+    display: inline-block;
+    min-width: 1.6em;
+    padding: 0 0.4em;
+    border: 1px solid rgba($primary-blue, 0.45);
+    border-bottom-width: 2px;
+    border-radius: 0.25rem;
+    background: #fff;
+    color: $primary-blue;
+    font-family: $font-family-code;
+    font-size: 0.78em;
+    line-height: 1.6;
+    text-align: center;
+  }
+
+  :global(del) {
+    color: $light-blue;
+    text-decoration-color: rgba($primary-blue, 0.6);
   }
 
   // Code blocks: a pale paper panel in the site's blues, with the language as a small caption.
@@ -725,6 +884,66 @@ const pagerLinks = [
   // Markdown wraps a standalone image in a paragraph; drop that paragraph's own margin.
   :global(p:has(> img:only-child)) {
     margin: 0;
+  }
+
+  // Footnotes close the body as endnotes: a hairline, a small-caps label, then the notes in a smaller
+  // size. The label is the generated `h2`, kept out of the section numbering and the contents.
+  :global(.footnotes) {
+    margin-top: 3rem;
+    padding-top: 1.1rem;
+    border-top: 1px solid rgba($primary-blue, 0.28);
+    color: $primary-blue;
+    font-size: 0.86rem;
+    line-height: 1.85;
+
+    :global(h2) {
+      display: block;
+      margin: 0 0 0.5rem;
+      padding: 0;
+      border: 0;
+      color: $light-blue;
+      font-family: $font-family-heading;
+      font-size: 0.78rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      counter-increment: none;
+
+      &::before,
+      &::after {
+        content: none;
+      }
+    }
+
+    :global(ol) {
+      margin: 0;
+      padding-left: 1.3rem;
+    }
+
+    :global(li::marker) {
+      color: $light-blue;
+      font-family: $font-family-heading;
+    }
+
+    :global(p) {
+      margin: 0 0 0.3rem;
+    }
+
+    // The note a reader jumps to glows briefly, so it is easy to find among the others.
+    :global(li:target) {
+      animation: note-found 1.6s ease-out;
+    }
+
+    :global(.data-footnote-backref) {
+      margin-left: 0.2em;
+      font-family: $font-family-code;
+      font-size: 0.9em;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      :global(li:target) {
+        animation: none;
+      }
+    }
   }
 
   // Tables: open rules in the book style, no vertical lines. CJK phrases keep together (`keep-all`) and
@@ -970,9 +1189,7 @@ const pagerLinks = [
   }
 
   .article-body {
-    :global(h2),
-    :global(h3),
-    :global(h4) {
+    :global(:is(h2, h3, h4, [id^='user-content-fn'])) {
       scroll-margin-top: 8rem;
     }
   }
@@ -1072,6 +1289,18 @@ const pagerLinks = [
   // Only the text-gradient layer moves; the underline and wash layers keep their place at the bottom.
   to {
     background-position: -200% 0, 0 100%, 0 100%, 0 100%;
+  }
+}
+
+@keyframes section-rule {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes note-found {
+  from {
+    background: rgba($ex-light-blue, 0.7);
   }
 }
 </style>

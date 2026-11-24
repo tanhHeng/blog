@@ -52,23 +52,10 @@ const visibleHeadings = headings.filter(({ depth }) => depth >= 2 && depth <= 4)
 
   onPageLoad((scope) => {
     const contents = document.querySelector<HTMLDetailsElement>('[data-article-contents]');
-    const article = document.querySelector<HTMLElement>('.article-body');
     const list = contents?.querySelector('ol');
-    if (!contents || !article || !list) return;
+    if (!contents || !list) return;
 
-    if (list.children.length === 0) {
-      article.querySelectorAll('h2, h3, h4').forEach((heading) => {
-        if (!heading.id) return;
-        const item = document.createElement('li');
-        item.className = `toc-item level-${heading.tagName.slice(1)}`;
-        const link = document.createElement('a');
-        link.href = `#${heading.id}`;
-        link.textContent = heading.textContent;
-        item.append(link);
-        list.append(item);
-      });
-    }
-
+    // The layout renders the items from the article's headings; with none, the contents stay hidden.
     if (list.children.length === 0) {
       contents.hidden = true;
       return;
@@ -346,7 +333,6 @@ ol {
   }
 }
 
-// Items are also created by the client fallback, so item rules must reach unscoped markup.
 .article-contents :global(.toc-item) {
   position: relative;
   line-height: 1.45;
