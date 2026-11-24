@@ -337,27 +337,33 @@ const pluralArticles = (count: number) => `${count} ${count === 1 ? 'article' : 
       const button = event.target.closest<HTMLButtonElement>('button');
       if (!button || !page.contains(button)) return;
 
+      // Whether the click adds a tag (`true`), removes one or clears them (`false`), or changes nothing.
+      let adding: boolean | undefined;
       if (button.hasAttribute('data-filter-all') || button.hasAttribute('data-clear-filters')) {
+        if (selected.size > 0) adding = false;
         selected.clear();
         // Clearing hides the clear button that was pressed; keep keyboard focus in the filter group.
         if (button !== allButton) allButton.focus({ preventScroll: true });
       } else {
         const key = button.dataset.filterTag;
         if (key === undefined || !tagLabels.has(key)) return;
-        if (selected.has(key)) selected.delete(key);
-        else selected.add(key);
+        adding = !selected.delete(key);
+        if (adding) selected.add(key);
       }
       updateResults();
-      if (!reducedMotion.matches) {
-        pulse.animate(
-          [
-            { transform: 'scale(1)', opacity: 0.55 },
-            // From the core's edge (32% of the ring) to the guide circle (50%).
-            { transform: 'scale(1.5625)', opacity: 0 },
-          ],
-          { duration: 720, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
-        );
-      }
+      // A ring between the core's edge (32% of the ring) and the guide circle (50%, scale 1.5625):
+      // adding a tag sends it out, removing one draws it in from the edge. Both start visible and fast
+      // so they move with the sector's own transition, then ease off and fade.
+      if (adding === undefined || reducedMotion.matches) return;
+      pulse.getAnimations().forEach((animation) => animation.cancel());
+      const [from, to] = adding ? ['scale(1)', 'scale(1.5625)'] : ['scale(1.5625)', 'scale(1)'];
+      pulse.animate(
+        [
+          { transform: from, opacity: 0.55 },
+          { transform: to, opacity: 0 },
+        ],
+        { duration: 720, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+      );
     });
 
     const previewTag = (target: EventTarget | null) => {
