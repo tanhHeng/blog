@@ -1,0 +1,13 @@
+{
+  "name": "tanh-blog-rebuild",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "cf deploy"
+  },
+  "devDependencies": {
+    "cf": "1.0.0-beta.27",
+    "wrangler": "^4"
+  },
+  "packageManager": "yarn@4.18.1"
+}

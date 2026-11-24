@@ -1,8 +1,9 @@
-// Rebuilds the site on a schedule (`wrangler.toml` crons) so the homepage's Recent list picks up new
-// GitHub activity, which is only fetched at build time. Deploy separately from the site:
-//   cd worker && yarn dlx wrangler deploy
-//   yarn dlx wrangler secret put DEPLOY_HOOK_URL
-// The hook URL comes from the site Worker's Settings > Builds > Deploy Hooks; treat it as a secret.
+// Triggers a build of the site Worker on the schedule in `cloudflare.config.ts`. This is its own
+// project, deployed separately from the site (`cf auth login` first):
+//   cd worker && yarn install && yarn cf deploy
+//   yarn cf workers secrets update DEPLOY_HOOK_URL
+// The hook URL comes from the site Worker's Settings > Builds > Deploy Hooks, which requires the site
+// Worker to be connected to the Git repository (Workers Builds). Treat the URL as a secret.
 
 interface Env {
   DEPLOY_HOOK_URL: string
