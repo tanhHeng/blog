@@ -430,10 +430,15 @@ const pagerLinks = [
   }
 
   :global(blockquote) {
-    margin: 1.8rem 0;
-    padding: 0.65rem 1.1rem;
+    margin: 1.6rem 0;
+    padding: 0.45rem 1.1rem 0.65rem;
     border-left: 0.4rem solid $ex-light-blue;
     color: $primary-blue;
+
+    // Body paragraphs keep their bottom margin; inside a quote it would pad only the bottom edge.
+    > :global(:last-child) {
+      margin-bottom: 0;
+    }
   }
 
   :global(ul),
