@@ -3,11 +3,46 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import HeroSection from '../components/HeroSection.astro';
 import TextDecorations from '../components/TextDecorations.astro';
 import { articles } from '../lib/articles';
+import { recentGithubActivity } from '../lib/github';
 import { friendLinks } from '../lib/friends';
 import '../styles/global.scss';
 
 const chapters = ['Prologue', 'About', 'Recent', 'Coda'];
-const recentArticles = articles.slice(0, 3);
+// Recent mixes articles with GitHub pushes and releases (one per repository), newest first.
+const recentCount = 4;
+// GitHub reports UTC times; show them on the author's calendar, like the article dates.
+const githubDate = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Shanghai' });
+// Commit messages and release names longer than this many characters end in an ellipsis; the full
+// text stays in the link's tooltip.
+const noteLimit = 40;
+const shorten = (text: string) => {
+	const characters = [...text];
+	return characters.length > noteLimit ? `${characters.slice(0, noteLimit - 1).join('').trimEnd()}…` : text;
+};
+const recentEntries = [
+	...articles.slice(0, recentCount).map((article) => ({
+		title: article.title,
+		url: article.url,
+		date: article.date,
+		timestamp: article.timestamp,
+		kind: 'New Article',
+		note: undefined,
+		fullNote: undefined,
+		external: false,
+	})),
+	...(await recentGithubActivity(recentCount)).map((activity) => ({
+		title: `${activity.name} ${activity.kind === 'push' ? '开发' : '发布'}`,
+		url: activity.url,
+		date: githubDate.format(activity.timestamp),
+		timestamp: activity.timestamp,
+		kind: 'GitHub',
+		note: shorten(activity.note),
+		fullNote: activity.note,
+		external: true,
+	})),
+]
+	.sort((a, b) => b.date.localeCompare(a.date) || b.timestamp - a.timestamp)
+	.slice(0, recentCount);
 const formatIndex = (index: number) => String(index).padStart(2, '0');
 // Two piano octaves; `true` marks a black key. Shared by the section sweep and the coda ornament.
 const octave = [false, true, false, true, false, false, true, false, true, false, true, false];
@@ -83,28 +118,26 @@ const codaKeys = pianoKeys.map((black, index) => {
 					<h2 class="title">Recent</h2>
 					<a class="recent-all link-underline" href="/articles">All articles</a>
 				</div>
-				{recentArticles.length > 0 ? (
+				{recentEntries.length > 0 ? (
 					<ol class="recent-list">
-						{recentArticles.map((article, index) => (
+						{recentEntries.map((entry, index) => (
 							<li data-reveal>
-								<a class="recent-container" href={article.url}>
+								<a class="recent-container" href={entry.url} target={entry.external ? '_blank' : undefined} rel={entry.external ? 'noreferrer' : undefined} title={entry.note !== entry.fullNote ? entry.fullNote : undefined}>
 									<span class="recent-index">{formatIndex(index + 1)}</span>
 									<span class="recent-info">
-										<span class="recent-title">{article.title}</span>
+										<span class="recent-title">{entry.title}</span>
 										<span class="recent-detail">
-											<time datetime={article.date}>{article.date.replaceAll('-', '.')}</time>
-											{article.readingTime && <span>{article.readingTime}</span>}
-											{[...article.tags.values()].slice(0, 2).map((tag) => <span class="recent-tag">{tag}</span>)}
+											<time datetime={entry.date}>{entry.date}</time>
+											<span>{entry.kind}</span>
+											{entry.note && <span class="recent-note">// {entry.note}</span>}
 										</span>
-										{article.description && <span class="recent-description">{article.description}</span>}
 									</span>
-									<span class="recent-arrow" aria-hidden="true">→</span>
 								</a>
 							</li>
 						))}
 					</ol>
 				) : (
-					<p class="recent-empty" data-reveal>这里还没有文章。</p>
+					<p class="recent-empty" data-reveal>这里还没有动态。</p>
 				)}
 			</section>
 			<section class="footpage-content" hidden>
@@ -526,12 +559,14 @@ p {
 		letter-spacing: 0.1em;
 	}
 
+	// Entries hang off a filled index square level with the title's first line; the date, kind and
+	// commit note run beneath in the heading face. No rules between entries.
 	.recent-list {
 		display: flex;
 		flex-direction: column;
-		margin: 0;
+		gap: 1.35rem;
+		margin: 0.25rem 0 0;
 		padding: 0;
-		border-top: 1px solid $ex-light-blue;
 		list-style: none;
 	}
 
@@ -539,22 +574,22 @@ p {
 		display: flex;
 		flex-direction: row;
 		align-items: flex-start;
-		gap: 1rem;
-		padding: 1.1rem 0;
-		border-bottom: 1px solid $ex-light-blue;
+		gap: 1.1rem;
 		color: inherit;
 		font-size: $font-size-larger-1;
 		text-decoration: none;
 
+		// 1.75em of 0.8em is the title's 1.4 line box, so the square fills exactly its first line.
 		.recent-index {
 			flex: none;
-			font-family: $font-family-default;
-			width: 2rem;
-			height: 2rem;
-			line-height: 2rem;
-			text-align: center;
+			width: 2em;
+			height: 1.75em;
 			color: #FFFFFF;
 			background-color: $primary-blue;
+			font-family: $font-family-heading;
+			font-size: 0.8em;
+			line-height: 1.75em;
+			text-align: center;
 			transition: background-color 300ms ease-out;
 		}
 
@@ -562,48 +597,40 @@ p {
 			display: flex;
 			flex: 1;
 			flex-direction: column;
-			gap: 0.35rem;
+			gap: 0.1rem;
 			min-width: 0;
 		}
 
 		.recent-title {
-			font-family: $font-family-default;
 			color: $content-color;
-			font-weight: 500;
-			line-height: 1.3;
+			font-family: $font-family-default;
+			line-height: 1.4;
+			transition: color 300ms ease-out;
 		}
 
 		.recent-detail {
 			display: flex;
 			flex-wrap: wrap;
-			flex-direction: row;
-			gap: 0 1rem;
-			font-size: $font-size-content;
+			align-items: baseline;
+			gap: 0 1.2rem;
 			color: $light-blue;
+			font-family: $font-family-heading;
+			font-size: 0.8em;
+			letter-spacing: 0.04em;
 			line-height: 1.6;
 		}
 
-		.recent-tag {
-			font-family: $font-family-heading;
-			font-size: 0.85rem;
-			letter-spacing: 0.06em;
-		}
-
-		.recent-description {
+		// The note is a commit message or release name, not a label: the body face, not small caps.
+		// Long ones are already cut to `noteLimit`; the CSS ellipsis covers narrow columns.
+		.recent-note {
 			overflow: hidden;
-			color: $content-color;
-			font-size: 0.9rem;
-			line-height: 1.7;
+			min-width: 0;
+			max-width: 100%;
+			font-family: $font-family-default;
+			font-size: 0.8em;
+			letter-spacing: 0;
 			text-overflow: ellipsis;
 			white-space: nowrap;
-		}
-
-		.recent-arrow {
-			align-self: center;
-			color: $light-blue;
-			transition:
-				color 300ms ease-out,
-				transform 420ms cubic-bezier(0.16, 1, 0.3, 1);
 		}
 
 		&:hover,
@@ -612,9 +639,8 @@ p {
 				background-color: $content-color;
 			}
 
-			.recent-arrow {
+			.recent-title {
 				color: $primary-blue;
-				transform: translateX(0.5rem);
 			}
 		}
 
@@ -967,12 +993,7 @@ p {
 	}
 
 	.recent-content .recent-container {
-		padding: 0.9rem 0;
 		font-size: 1.05rem;
-
-		.recent-detail {
-			font-size: 0.9rem;
-		}
 	}
 
 	.footpage-content {

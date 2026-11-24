@@ -1,0 +1,8 @@
+name = "tanh-moe-rebuild"
+main = "rebuild.ts"
+compatibility_date = "2026-11-24"
+workers_dev = false
+
+# Every 12 hours (UTC).
+[triggers]
+crons = ["0 */12 * * *"]
