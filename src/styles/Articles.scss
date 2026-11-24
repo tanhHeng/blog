@@ -797,13 +797,16 @@
     transform: scaleX(0);
     transform-origin: left;
   }
+  // Grown with `clip-path` rather than `scaleY`: a transform animation runs on its own compositor layer,
+  // where the 2px rule is resampled at a sub-pixel offset and reads bolder until it ends.
   &::after {
     top: 1.75rem;
     bottom: 1.75rem;
     left: 0;
     width: 2px;
     background: rgba($primary-blue, 0.45);
-    transform: scaleY(0);
+    clip-path: inset(50% 0);
+    transition: clip-path 520ms cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   &:hover,
@@ -812,7 +815,7 @@
       transform: scaleX(1);
     }
     &::after {
-      transform: scaleY(1);
+      clip-path: inset(0);
     }
     .article-number {
       color: $primary-blue;
