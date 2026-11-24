@@ -621,11 +621,14 @@ const pagerLinks = [
 
   // Body links, drawn with four background layers so every part follows links that wrap across lines:
   // 1. a looping blue gradient clipped to the glyphs (the text colour), on top;
-  // 2. a solid underline that sweeps in from the left on hover;
+  // 2. a solid underline that sweeps in from the left on hover and out to the right after it: it is
+  //    pinned to the right end at rest and to the left on hover (`--link-sweep`, which `link-flow`
+  //    repeats, as an animation's keyframes override every layer's position);
   // 3. the faint resting underline;
   // 4. a pale wash that rises behind the lower half of the text on hover.
   // Only the first layer is clipped to the text; the rest paint the box beneath the glyphs.
   :global(a) {
+    --link-sweep: 100%;
     padding: 0 0.1em;
     color: $content-color;
     text-decoration: none;
@@ -633,7 +636,7 @@ const pagerLinks = [
     // by one full image width (`-200%`, see `link-flow`) loops without a seam.
     background:
       linear-gradient(90deg, $content-color, $primary-blue, $light-blue, $primary-blue, $content-color) 0 0 / 200% 100%,
-      linear-gradient($primary-blue, $primary-blue) 0 100% / 0 1px no-repeat,
+      linear-gradient($primary-blue, $primary-blue) var(--link-sweep) 100% / 0 1px no-repeat,
       linear-gradient(rgba($primary-blue, 0.35), rgba($primary-blue, 0.35)) 0 100% / 100% 1px no-repeat,
       linear-gradient(rgba($ex-light-blue, 0.55), rgba($ex-light-blue, 0.55)) 0 100% / 100% 0 no-repeat;
     -webkit-background-clip: text, border-box, border-box, border-box;
@@ -646,6 +649,7 @@ const pagerLinks = [
 
   :global(a:hover),
   :global(a:focus-visible) {
+    --link-sweep: 0%;
     background-size: 200% 100%, 100% 1px, 100% 1px, 100% 0.45em;
   }
 
@@ -1320,7 +1324,7 @@ const pagerLinks = [
 @keyframes link-flow {
   // Only the text-gradient layer moves; the underline and wash layers keep their place at the bottom.
   to {
-    background-position: -200% 0, 0 100%, 0 100%, 0 100%;
+    background-position: -200% 0, var(--link-sweep) 100%, 0 100%, 0 100%;
   }
 }
 

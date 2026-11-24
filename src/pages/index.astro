@@ -639,9 +639,10 @@ p {
 		}
 
 		// Hover sweeps the navbar's light-blue stripe in from the left behind the lower part of the title,
-		// on every line it wraps to.
+		// on every line it wraps to, and sweeps it out to the right: the stripe is pinned to the right edge
+		// at rest and to the left on hover, a jump only `background-size` transitions over.
 		.recent-title-text {
-			background: linear-gradient($ex-light-blue, $ex-light-blue) left bottom / 0% 45% no-repeat;
+			background: linear-gradient($ex-light-blue, $ex-light-blue) right bottom / 0% 45% no-repeat;
 			box-decoration-break: clone;
 			-webkit-box-decoration-break: clone;
 			transition: background-size 420ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -701,6 +702,7 @@ p {
 			}
 
 			.recent-title-text {
+				background-position: left bottom;
 				background-size: 100% 45%;
 			}
 

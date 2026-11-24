@@ -25,6 +25,8 @@ html {
   font-family: $font-family-default;
 }
 
+// The underline draws in from the left and leaves towards the right: the origin flips with the hover
+// state and changes instantly, since only `transform` transitions.
 .link-underline {
   position: relative;
   text-decoration: none;
@@ -38,13 +40,14 @@ html {
     background: currentColor;
     content: "";
     transform: scaleX(0);
-    transform-origin: left;
+    transform-origin: right;
     transition: transform 240ms ease-out;
   }
 
   &:hover::after,
   &:focus-visible::after {
     transform: scaleX(1);
+    transform-origin: left;
   }
 
   &:focus-visible {
