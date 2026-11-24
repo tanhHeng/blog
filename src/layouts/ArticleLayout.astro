@@ -499,21 +499,19 @@ const pagerLinks = [
     }
   }
 
-  // Expandable text sits between two hairlines; its summary carries a chevron that turns down as it
-  // opens. It folds open and shut: `::details-content` animates to and from `auto` height
+  // Expandable text: its summary carries a chevron that turns down as it opens. It folds open and shut:
+  // `::details-content` animates to and from `auto` height
   // (`interpolate-size`), and `content-visibility` is held while it closes so the text stays painted
   // until the fold ends. While it moves, its lower edge fades out over `--fold-fade` instead of
   // cutting through a line of text; the fade shrinks to nothing as it opens. Browsers without
   // `::details-content` open and close at once.
   :global(details) {
     margin: 1.6rem 0;
-    border-top: 1px solid rgba($primary-blue, 0.28);
-    border-bottom: 1px solid rgba($primary-blue, 0.28);
     interpolate-size: allow-keywords;
 
     > :global(summary) {
       position: relative;
-      padding: 0.55rem 0 0.55rem 1.35rem;
+      padding-left: 1.35rem;
       color: $primary-blue;
       list-style: none;
       transition: color 180ms ease-out;
@@ -524,7 +522,7 @@ const pagerLinks = [
 
       &::before {
         position: absolute;
-        top: calc(0.55rem + 1.025em);
+        top: 1.025em;
         left: 0.2rem;
         width: 0.4rem;
         height: 0.4rem;
@@ -551,11 +549,10 @@ const pagerLinks = [
       transform: translate(0, -75%) rotate(45deg);
     }
 
-    // Padding, not margin: a trailing margin would collapse out of the folding box, which then jumps by
-    // that much when the fold ends.
+    // The details' own margin spaces it from what follows. A trailing margin inside would collapse out of
+    // the folding box, which then jumps by that much when the fold ends.
     > :global(:not(summary):last-child) {
       margin-bottom: 0;
-      padding-bottom: 0.9rem;
     }
 
     &::details-content {
