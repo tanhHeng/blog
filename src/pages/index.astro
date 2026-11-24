@@ -123,9 +123,9 @@ const codaKeys = pianoKeys.map((black, index) => {
 						{recentEntries.map((entry, index) => (
 							<li data-reveal>
 								<a class="recent-container" href={entry.url} target={entry.external ? '_blank' : undefined} rel={entry.external ? 'noreferrer' : undefined} title={entry.note !== entry.fullNote ? entry.fullNote : undefined}>
-									<span class="recent-index">{formatIndex(index + 1)}</span>
+									<span class="recent-index" aria-hidden="true"><span class="recent-index-text">{formatIndex(index + 1)}</span></span>
 									<span class="recent-info">
-										<span class="recent-title">{entry.title}</span>
+										<span class="recent-title"><span class="recent-title-text">{entry.title}</span><span class="recent-arrow" aria-hidden="true">{entry.external ? '↗' : '→'}</span></span>
 										<span class="recent-detail">
 											<time datetime={entry.date}>{entry.date}</time>
 											<span>{entry.kind}</span>
@@ -341,6 +341,19 @@ p {
 	60%,
 	100% {
 		transform: translateX(100%);
+	}
+}
+
+// A Recent index square's ring: sounds at the square's edge and swells out as it fades.
+@keyframes recent-index-ring {
+	from {
+		opacity: 0.9;
+		transform: scale(1);
+	}
+
+	to {
+		opacity: 0;
+		transform: scale(1.9);
 	}
 }
 
@@ -579,10 +592,14 @@ p {
 		font-size: $font-size-larger-1;
 		text-decoration: none;
 
-		// 1.75em of 0.8em is the title's 1.4 line box, so the square fills exactly its first line.
+		// A square as tall as the title's first line (1.75em of 0.8em is its 1.4 line box). Hover turns it
+		// into a diamond, the shape of the site's pointer cursor: it rotates 45deg while shrinking to
+		// 2.2em across its diagonal, and the number undoes both so it stays upright and at size. A ring
+		// sounds out from it, as the dot grid's ripples do; it restarts on every hover.
 		.recent-index {
+			position: relative;
 			flex: none;
-			width: 2em;
+			width: 1.75em;
 			height: 1.75em;
 			color: #FFFFFF;
 			background-color: $primary-blue;
@@ -590,7 +607,21 @@ p {
 			font-size: 0.8em;
 			line-height: 1.75em;
 			text-align: center;
-			transition: background-color 300ms ease-out;
+			transition: transform 560ms cubic-bezier(0.34, 1.4, 0.64, 1);
+
+			&::after {
+				position: absolute;
+				inset: 0;
+				border: 1px solid $light-blue;
+				content: '';
+				opacity: 0;
+				pointer-events: none;
+			}
+		}
+
+		.recent-index-text {
+			display: block;
+			transition: transform 560ms cubic-bezier(0.34, 1.4, 0.64, 1);
 		}
 
 		.recent-info {
@@ -605,7 +636,28 @@ p {
 			color: $content-color;
 			font-family: $font-family-default;
 			line-height: 1.4;
-			transition: color 300ms ease-out;
+		}
+
+		// Hover sweeps the navbar's light-blue stripe in from the left behind the lower part of the title,
+		// on every line it wraps to.
+		.recent-title-text {
+			background: linear-gradient($ex-light-blue, $ex-light-blue) left bottom / 0% 45% no-repeat;
+			box-decoration-break: clone;
+			-webkit-box-decoration-break: clone;
+			transition: background-size 420ms cubic-bezier(0.22, 1, 0.36, 1);
+		}
+
+		// Where the entry leads: `↗` leaves for GitHub, `→` stays on the site. Shown only on hover.
+		.recent-arrow {
+			display: inline-block;
+			margin-left: 0.4em;
+			color: $primary-blue;
+			font-size: 0.8em;
+			opacity: 0;
+			transform: translateX(-0.4em);
+			transition:
+				opacity 240ms ease-out,
+				transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
 		}
 
 		.recent-detail {
@@ -629,6 +681,7 @@ p {
 			font-family: $font-family-default;
 			font-size: 0.8em;
 			letter-spacing: 0;
+			transition: color 300ms ease-out;
 			text-overflow: ellipsis;
 			white-space: nowrap;
 		}
@@ -636,11 +689,45 @@ p {
 		&:hover,
 		&:focus-visible {
 			.recent-index {
-				background-color: $content-color;
+				transform: rotate(45deg) scale(0.889);
+
+				&::after {
+					animation: recent-index-ring 1000ms cubic-bezier(0.22, 1, 0.36, 1);
+				}
 			}
 
-			.recent-title {
+			.recent-index-text {
+				transform: scale(1.125) rotate(-45deg);
+			}
+
+			.recent-title-text {
+				background-size: 100% 45%;
+			}
+
+			.recent-arrow {
+				opacity: 1;
+				transform: none;
+			}
+
+			.recent-note {
 				color: $primary-blue;
+			}
+		}
+
+		@media (prefers-reduced-motion: reduce) {
+			.recent-index,
+			.recent-index-text,
+			.recent-title-text,
+			.recent-arrow,
+			.recent-note {
+				transition: none;
+			}
+
+			&:hover,
+			&:focus-visible {
+				.recent-index::after {
+					animation: none;
+				}
 			}
 		}
 
