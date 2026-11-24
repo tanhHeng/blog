@@ -37,7 +37,7 @@ const visibleHeadings = headings.filter(({ depth }) => depth >= 2 && depth <= 4)
             </li>
           ))}
         </ol>
-        <span class="contents-pointer" data-contents-pointer hidden aria-hidden="true"></span>
+        <span class="contents-pointer" data-contents-pointer aria-hidden="true"></span>
       </nav>
       <p class="contents-progress">
         <span>Read</span>
@@ -97,8 +97,17 @@ const visibleHeadings = headings.filter(({ depth }) => depth >= 2 && depth <= 4)
         : 0;
       list.style.setProperty('--contents-fill', `${fill}px`);
       if (!pointer) return;
-      pointer.hidden = !current;
-      if (current) pointer.style.setProperty('--pointer-y', `${list.offsetTop + fill}px`);
+      if (!current) {
+        pointer.classList.remove('is-shown');
+        return;
+      }
+      pointer.style.setProperty('--pointer-y', `${list.offsetTop + fill}px`);
+      if (!pointer.classList.contains('is-shown')) {
+        // Commit the position while hidden (it does not glide then), so the pointer grows in on the item
+        // instead of sliding in from the last place it was.
+        pointer.getBoundingClientRect();
+        pointer.classList.add('is-shown');
+      }
     };
     const setCurrent = (next: typeof current) => {
       if (next === current) return;
@@ -376,6 +385,8 @@ ol {
 }
 
 // One pointer for the whole list, so it glides along the rail to the new current item with the fill.
+// It grows in when the first heading is reached and shrinks away above it; only a shown pointer glides.
+// Position lives in `translate` and the shape in `transform`, so the growth scales the diamond in place.
 .contents-pointer {
   --pointer-y: 0px;
   position: absolute;
@@ -387,8 +398,21 @@ ol {
   box-sizing: border-box;
   border: 1px solid $primary-blue;
   background: #fff;
-  transform: translate(-50%, calc(var(--pointer-y) - 50%)) rotate(45deg);
-  transition: transform 280ms $ease-out;
+  opacity: 0;
+  translate: -50% calc(var(--pointer-y) - 50%);
+  transform: rotate(-45deg) scale(0);
+  transition:
+    transform 320ms $ease-out,
+    opacity 200ms ease-out;
+
+  &.is-shown {
+    opacity: 1;
+    transform: rotate(45deg) scale(1);
+    transition:
+      translate 280ms $ease-out,
+      transform 420ms $ease-out,
+      opacity 200ms ease-out;
+  }
 }
 
 .article-contents :global(.toc-item a),
@@ -649,6 +673,7 @@ ol {
   .contents-body,
   ol::after,
   .contents-pointer,
+  .contents-pointer.is-shown,
   .article-contents :global(.toc-item a) {
     transition: none;
   }
