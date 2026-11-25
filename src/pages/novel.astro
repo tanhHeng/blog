@@ -89,7 +89,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
         </div>
       </div>
       <div class="stage-shade"></div>
-      <div class="stage-mist"></div>
+      <canvas class="stage-mist" data-stage-mist></canvas>
     </div>
 
     <div class="hotspot-layer" data-hotspot-layer>
@@ -389,6 +389,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
 
 <script>
   import { onPageLoad } from '../lib/pageLifecycle';
+  import { paintMistBrush } from '../scripts/mistBrush';
 
   onPageLoad((scope) => {
     const root = document.querySelector<HTMLElement>('[data-novel]');
@@ -413,6 +414,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
 
     let activeScene: HTMLElement | undefined;
     let frame = 0;
+    let intro = 0;
 
     // Places the frame so `focus` lands on the composition target, clamped so the frame always covers the viewport.
     const placeCamera = () => {
@@ -483,7 +485,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     // `--intro` runs 0 → 1 across the first viewport of scroll and dissolves the white mist.
     const updateScroll = () => {
       frame = 0;
-      const intro = Math.min(Math.max(window.scrollY / (window.innerHeight * 0.85), 0), 1);
+      intro = Math.min(Math.max(window.scrollY / (window.innerHeight * 0.85), 0), 1);
       root.style.setProperty('--intro', intro.toFixed(3));
     };
     scope.listen(window, 'scroll', () => {
@@ -493,6 +495,15 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     // Leaving the page hands the navbar back its default colours while the transition veil covers the scene,
     // so the bar already matches the next page.
     scope.listen(document, 'astro:before-preparation', () => root.classList.add('is-leaving'));
+    // The pointer washes the opening mist away like watercolour, showing the meadow sharp and saturated beneath,
+    // only while the mist is still showing.
+    paintMistBrush(root.querySelector<HTMLCanvasElement>('[data-stage-mist]')!, scope, {
+      narrow,
+      reducedMotion,
+      video,
+      frameRatio,
+      canPaint: () => intro < 1 && !root.classList.contains('is-browsing'),
+    });
 
     // Scene navigation --------------------------------------------------------
     // Native snapping runs at a browser-fixed speed, so whole-scene moves are glided here instead:
@@ -1041,8 +1052,8 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     width: 100%;
     height: 100%;
     object-fit: cover;
-    // The mist lifts while the scene sharpens.
-    filter: saturate(calc(0.75 + var(--intro) * 0.25)) blur(calc((1 - var(--intro)) * 6px));
+    // The mist lifts while the scene sharpens. The opening blur stays light, so the character reads through the mist.
+    filter: saturate(calc(0.75 + var(--intro) * 0.25)) blur(calc((1 - var(--intro)) * 2.5px));
   }
 
   .stage-shade {
@@ -1054,13 +1065,21 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     opacity: var(--intro);
   }
 
-  // Opening mist: the site's white editorial canvas, dissolving into the night meadow.
+  // Opening mist: the site's white editorial canvas, dissolving into the night meadow. `mistBrush.ts` draws it
+  // (a radial veil, clearer at the centre) in `color` and lets the pointer wash it away; until then it is solid.
   .stage-mist {
+    --wash-edge: #{$light-blue};
     position: absolute;
     inset: 0;
-    background:
-      radial-gradient(ellipse 60% 55% at 62% 48%, rgba($mist, 0.55) 0%, rgba($mist, 0.92) 62%, $mist 100%);
+    width: 100%;
+    height: 100%;
+    color: $mist;
+    background: $mist;
     opacity: calc(1 - var(--intro));
+
+    &.is-painted {
+      background: none;
+    }
   }
 
   // Hotspots --------------------------------------------------------------
@@ -2803,10 +2822,6 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     .stage-shade {
       background:
         linear-gradient(180deg, rgba($night, 0.5) 0%, rgba($night, 0) 24%, rgba($night, 0) 42%, rgba($night, 0.82) 78%, rgba($night, 0.92) 100%);
-    }
-
-    .stage-mist {
-      background: radial-gradient(ellipse 80% 45% at 50% 40%, rgba($mist, 0.6) 0%, rgba($mist, 0.92) 65%, $mist 100%);
     }
 
     // The title is one long Latin word that cannot wrap: below about 370px its 3rem would run past the
