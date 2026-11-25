@@ -147,9 +147,20 @@ const {
 
     const maskMouseCircle = document.getElementById('mask-mouse-circle');
     if (maskMouseCircle) {
+      let frame = 0;
+      let x = '';
+      let y = '';
+      // Measured in the event and written in the frame's write phase, so a move never dirties style before the
+      // frame's reads.
+      const follow = () => {
+        frame = 0;
+        maskMouseCircle.style.setProperty('--x', x);
+        maskMouseCircle.style.setProperty('--y', y);
+      };
       scope.listen(document, 'mousemove', ((event: MouseEvent) => {
-        maskMouseCircle.style.setProperty('--x', `${(event.clientX / window.innerWidth) * 100}vw`);
-        maskMouseCircle.style.setProperty('--y', `${(event.clientY / window.innerHeight) * 100}vh`);
+        x = `${(event.clientX / window.innerWidth) * 100}vw`;
+        y = `${(event.clientY / window.innerHeight) * 100}vh`;
+        if (!frame) frame = scope.frame(follow, 'write');
       }) as EventListener);
     }
   });

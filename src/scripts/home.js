@@ -383,8 +383,11 @@ onPageLoad((scope) => {
     )
   }
 
+  // The dots' boxes are measured in the frame's read phase, the pull and lines written in its write phase.
   function requestAttractionFrame() {
-    if (!animationFrame) animationFrame = scope.frame(animateAttraction)
+    if (animationFrame) return
+    scope.frame(updateAttractedCircles, "read")
+    animationFrame = scope.frame(animateAttraction, "write")
   }
 
   function cancelLineTurnover() {
@@ -531,7 +534,6 @@ onPageLoad((scope) => {
 
   function animateAttraction(time) {
     animationFrame = 0
-    updateAttractedCircles()
     updateLineAssignments(time)
 
     const elapsed = Math.min(50, time - lastFrameTime)
@@ -750,7 +752,7 @@ onPageLoad((scope) => {
     for (let index = waves.length - 1; index >= 0; index--) {
       if (now >= waves[index].end) waves.splice(index, 1)
     }
-    if (waves.length) frame = scope.frame(render)
+    if (waves.length) frame = scope.frame(render, "write")
   }
 
   // `steps` maps each dot to its delay (ms), strength (0–1: swell and ring), and tint (0–1: how far its
@@ -759,7 +761,7 @@ onPageLoad((scope) => {
     const start = performance.now()
     const longest = Math.max(...Array.from(steps.values(), (step) => step.delay))
     waves.push({ steps, duration, scales, start, end: start + longest + duration })
-    if (!frame) frame = scope.frame(render)
+    if (!frame) frame = scope.frame(render, "write")
   }
 
   scope.listen(

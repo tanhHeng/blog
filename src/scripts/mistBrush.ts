@@ -489,9 +489,11 @@ export function paintMistBrush(
     }
   }
 
+  // Reads layout (line boxes, the canvas and video boxes) and draws only on canvases, never touching styles, so it
+  // runs in the frame's read phase.
   const tick = (now: number) => {
     if (now - lastTime < MIN_FRAME) {
-      frame = scope.frame(tick)
+      frame = scope.frame(tick, "read")
       return
     }
     const elapsed = Math.min(now - lastTime, 50)
@@ -520,14 +522,14 @@ export function paintMistBrush(
     // The clouds only show where something is wet, so they need to flow only then.
     if (!options.still() && !options.reducedMotion.matches) flow += elapsed / 1000
     render()
-    frame = wetCells || chasing ? scope.frame(tick) : 0
+    frame = wetCells || chasing ? scope.frame(tick, "read") : 0
   }
 
   const start = () => {
     if (frame) return
     // Back-dated by one interval, so the first frame paints instead of waiting out `MIN_FRAME`.
     lastTime = performance.now() - MIN_FRAME
-    frame = scope.frame(tick)
+    frame = scope.frame(tick, "read")
   }
 
   const toCanvas = (event: PointerEvent): Point => {

@@ -499,14 +499,18 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
       ],
     });
 
-    // `--intro` runs 0 → 1 across the first viewport of scroll and dissolves the white mist.
+    // `--intro` runs 0 → 1 across the first viewport of scroll and dissolves the white mist. Measured in the scroll
+    // event, where layout is still clean, and written in the frame's write phase.
+    const measureScroll = () => {
+      intro = Math.min(Math.max(window.scrollY / (window.innerHeight * 0.85), 0), 1);
+    };
     const updateScroll = () => {
       frame = 0;
-      intro = Math.min(Math.max(window.scrollY / (window.innerHeight * 0.85), 0), 1);
       root.style.setProperty('--intro', intro.toFixed(3));
     };
     scope.listen(window, 'scroll', () => {
-      if (!frame) frame = scope.frame(updateScroll);
+      measureScroll();
+      if (!frame) frame = scope.frame(updateScroll, 'write');
     }, { passive: true });
     scope.listen(narrow, 'change', placeCamera);
     // Leaving the page hands the navbar back its default colours while the transition veil covers the scene,
@@ -642,14 +646,15 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     let driftFrame = 0;
     scope.listen(window, 'pointermove', (event) => {
       if (event.pointerType !== 'mouse' || reducedMotion.matches || driftFrame) return;
+      // Measured in the event and written in the frame's write phase.
+      const dx = (event.clientX / window.innerWidth - 0.5) * -18;
+      const dy = (event.clientY / window.innerHeight - 0.5) * -12;
       driftFrame = scope.frame(() => {
         driftFrame = 0;
-        const dx = (event.clientX / window.innerWidth - 0.5) * -18;
-        const dy = (event.clientY / window.innerHeight - 0.5) * -12;
         drifts.forEach((layer) => {
           layer.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(1.03)`;
         });
-      });
+      }, 'write');
     }, { passive: true });
 
     for (const hotspot of hotspots) {
@@ -949,6 +954,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
       video.pause();
       for (const panel of panels) if (panel.open) panel.close();
     });
+    measureScroll();
     updateScroll();
     setActiveScene(stops[currentStop] ?? scenes[0]);
     // Enables transitions only after the first placement, so the page does not animate in from the origin.

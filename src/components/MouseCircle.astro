@@ -28,6 +28,11 @@
     let speed = 0;
     let angle = 0;
     let target: EventTarget | null = null;
+    let cursor = '';
+    // Read every frame: the text cursor turns on and off within one element (`src/scripts/textCursor.ts`).
+    const readCursor = () => {
+      cursor = cursorOf(target);
+    };
 
     const hide = () => {
       circle.classList.remove('is-visible', 'is-pressed');
@@ -39,11 +44,9 @@
       // gliding in from where it was last seen.
       const appearing = !circle.classList.contains('is-visible');
       circle.classList.toggle('is-placing', appearing);
-      if (appearing) scope.frame(() => circle.classList.remove('is-placing'));
+      if (appearing) scope.frame(() => circle.classList.remove('is-placing'), 'write');
       circle.style.setProperty('--x', `${x}px`);
       circle.style.setProperty('--y', `${y}px`);
-      // Read every frame: the text cursor turns on and off within one element (`src/scripts/textCursor.ts`).
-      const cursor = cursorOf(target);
       circle.classList.toggle('is-link', cursor.endsWith('pointer'));
       circle.classList.toggle('is-text', cursor.endsWith('text'));
       // Over text the disc stands upright as a highlighter behind the caret: no stretch, and the heading
@@ -78,7 +81,10 @@
       y = lastY = event.clientY;
       lastTime = event.timeStamp;
       target = event.target;
-      if (!frame) frame = scope.frame(render);
+      if (!frame) {
+        scope.frame(readCursor, 'read');
+        frame = scope.frame(render, 'write');
+      }
       scope.clearTimeout(relaxTimer);
       relaxTimer = scope.timeout(() => {
         speed = 0;

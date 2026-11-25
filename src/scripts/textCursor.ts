@@ -31,9 +31,24 @@ onPageLoad((scope) => {
   const root = document.documentElement
   let x = -1
   let y = -1
-  const update = () => root.toggleAttribute("data-over-text", x >= 0 && isOverText(x, y))
+  let over = false
+  let frame = 0
+  // The caret lookup needs clean layout, so it runs in the frame's read phase and the mark in its write phase.
+  const measure = () => {
+    over = x >= 0 && isOverText(x, y)
+  }
+  const mark = () => {
+    frame = 0
+    root.toggleAttribute("data-over-text", over)
+  }
+  const update = () => {
+    if (frame) return
+    scope.frame(measure, "read")
+    frame = scope.frame(mark, "write")
+  }
   const clear = () => {
     x = y = -1
+    over = false
     root.removeAttribute("data-over-text")
   }
 

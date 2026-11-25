@@ -62,6 +62,10 @@
     const hide = () => {
       layer.classList.remove('is-active');
     };
+    // Reads content boxes, so it runs in the frame's read phase, before any writes.
+    const measure = () => {
+      overContent = pointsAtContent(lastTarget, pointerX, pointerY);
+    };
     const render = () => {
       frame = 0;
       const { size, column, row, x, y } = nearest();
@@ -76,7 +80,6 @@
         lastCell = cell;
       }
       layer.classList.add('is-active');
-      overContent = pointsAtContent(lastTarget, pointerX, pointerY);
       layer.classList.toggle('is-muted', overContent);
       scope.clearTimeout(idleTimer);
       idleTimer = scope.timeout(hide, 2400);
@@ -87,7 +90,10 @@
       pointerX = event.clientX;
       pointerY = event.clientY;
       lastTarget = event.target;
-      if (!frame) frame = scope.frame(render);
+      if (!frame) {
+        scope.frame(measure, 'read');
+        frame = scope.frame(render, 'write');
+      }
     });
     scope.listen(document, 'mouseout', (event: MouseEvent) => {
       if (!event.relatedTarget) hide();
@@ -98,6 +104,7 @@
       if (pointsAtContent(event.target, event.clientX, event.clientY)) return;
       pointerX = event.clientX;
       pointerY = event.clientY;
+      measure();
       render();
       const { x, y } = nearest();
       const pulse = document.createElement('span');
