@@ -33,19 +33,30 @@ const PAINT_FILTER = "saturate(1.35) contrast(1.06)"
 const DRY = 4200
 // Time constant (ms) of the brush trailing the pointer, which turns jittery input into broad, even strokes.
 const FOLLOW = 110
-// Text guards: each text line is a capsule (a stadium) around its centre line, as tall as the line box and as long
-// as the line, grown by `GUARD_PAD` CSS pixels all round. Its force runs from 0 at the edge to 1 on the centre
-// line; from `GUARD_CORE` inwards lies the core. From the edge to the core the brush weakens linearly to
-// `GUARD_CORE_SHARE` of its strength, and the most the mist may thin falls linearly from `GUARD_MAX_REVEAL` (of
-// the mist's opacity) to `GUARD_CORE_SHARE` of it; both stay there across the core, so text stays readable. The
-// capsule is never drawn as such: it is sampled through a slowly flowing displacement of up to about `GUARD_WARP`
-// CSS pixels, so its edge billows in and out like cloud, reaching past the capsule and drifting; only the outer
-// part of the capsule may billow inwards, so the core always stays.
+// Text guards: each text line has a core around its centre line (a capsule as long as the line, its radius
+// `1 - GUARD_CORE` of the line box's half-height plus `GUARD_PAD` CSS pixels) where the brush keeps only
+// `GUARD_CORE_SHARE` of its strength and the mist may thin by only `GUARD_CORE_SHARE` of `GUARD_MAX_REVEAL` (of
+// the mist's opacity), so text stays readable. Around the core runs a band `GUARD_BAND` CSS pixels wide, the same
+// for every font size and about as wide as a wash's own edge: across it the brush weakens linearly from full
+// strength to the core's share, and the cap closes in over a wash's two tiers, so a text line grades into the
+// washed mist the way a wash grades into the mist. The band is never drawn as such: it is sampled through a
+// slowly flowing displacement of up to about `GUARD_WARP` CSS pixels, so its edge billows in and out like cloud,
+// reaching past it and drifting; only the outer half of the band may billow inwards, so the core always stays.
 const GUARD_PAD = 16
 const GUARD_CORE = 0.505
+const GUARD_BAND = 64
 const GUARD_CORE_SHARE = 0.3
 const GUARD_MAX_REVEAL = 0.3
 const GUARD_WARP = 30
+// Where the band's first tier ends, on the same 0..1.2 scale (a wash's own ends at 0.3): about half way across,
+// so the cell's mist dissolves gradually into the washed mist at its outer edge instead of rising in a ring.
+const GUARD_FIRST_TIER = 0.6
+// Where the second tier of the band's two-tier edge starts, on a 0..1.2 scale across the band (a wash's own
+// second tier starts at 0.5 of its wetness), so it runs longer than a wash's.
+const GUARD_SECOND_TIER = 0.1
+// Eases the second tier in (its progress raised to this power), so most of it stays almost as clear as the first
+// tier leaves it and it closes in mainly near the core: a subtler, more transparent second tier.
+const GUARD_SECOND_EASE = 2
 // Thin strokes lose contrast sooner, so smaller text keeps more mist: lines up to `SMALL_LINE` CSS pixels tall may
 // thin only `SMALL_TEXT_REVEAL` of what `GUARD_MAX_REVEAL` allows, easing to the full limit at `LARGE_LINE`.
 const SMALL_TEXT_REVEAL = 0.75
@@ -133,7 +144,7 @@ export function paintMistBrush(
   let wet = new Float32Array(0)
   // Per-cell threshold offset: drying follows it, so wash edges come out lobed instead of round.
   let grain = new Float32Array(0)
-  // Per-cell resistance behind text (0 outside the capsules, rising linearly to 1 on a centre line), the reveal
+  // Per-cell hold behind text (0 outside the bands, rising linearly to 1 at a core), the reveal
   // limit factor of the line it comes from (smaller text keeps more mist), and the opacity of its glowing cloud
   // edge before the wash scales it.
   let guard = new Float32Array(0)
@@ -225,18 +236,21 @@ export function paintMistBrush(
   }
 
   // Flowing displacement (in cells) of the guard capsules at cell (x, y): two noise layers per axis, drifting
-  // different ways, so the edge billows in broad lobes with finer curls on them.
+  // different ways, so the edge billows in broad lobes with gentler curls on them. The finer layer's features
+  // span several 8px cells and it weighs little, so neighbouring cells move together instead of leaving
+  // cell-sized patches of heavier mist. The scale keeps the overall spread of the earlier, more even mix, so the
+  // band reaches no further out than before.
   const displace = (x: number, y: number, warp: number) => {
     const t = flow
-    const along = (broad: number, fine: number) => (0.65 * broad + 0.35 * fine - 0.5) * 3.2 * warp
+    const along = (broad: number, fine: number) => (0.8 * broad + 0.2 * fine - 0.5) * 2.9 * warp
     return [
       along(
         flowBroad((x + t * 0.9) / 6, (y - t * 0.35) / 6),
-        flowFine((x - t * 1.4) / 2.2, (y + t * 0.5) / 2.2),
+        flowFine((x - t * 1.4) / 4, (y + t * 0.5) / 4),
       ),
       along(
         flowBroad((x - t * 0.6) / 6 + 31.7, (y + t * 0.4) / 6 + 17.3),
-        flowFine((x + t * 1.1) / 2.2 + 11.1, (y - t * 0.7) / 2.2 + 5.9),
+        flowFine((x + t * 1.1) / 4 + 11.1, (y - t * 0.7) / 4 + 5.9),
       ),
     ]
   }
@@ -251,6 +265,7 @@ export function paintMistBrush(
     const box = canvas.getBoundingClientRect()
     const scale = RESOLUTION / CELL
     const warp = GUARD_WARP * scale
+    const band = GUARD_BAND * scale
     for (const text of texts) {
       range.selectNodeContents(text)
       for (const line of range.getClientRects()) {
@@ -261,13 +276,13 @@ export function paintMistBrush(
         const inset = Math.min(line.height, line.width) / 2
         const startX = (line.left + inset - box.left) * scale - 0.5
         const endX = (line.right - inset - box.left) * scale - 0.5
-        const radius = (line.height / 2 + GUARD_PAD) * scale
+        const outer = (line.height / 2 + GUARD_PAD) * (1 - GUARD_CORE) * scale + band
         const lineReveal =
           SMALL_TEXT_REVEAL +
           (1 - SMALL_TEXT_REVEAL) *
             Math.min(Math.max((line.height - SMALL_LINE) / (LARGE_LINE - SMALL_LINE), 0), 1)
-        // The displacement peaks at 1.6 × `warp`; the box covers every cell it can pull into the capsule.
-        const reach = radius + warp * 1.6
+        // The displacement peaks at 1.6 × `warp`; the box covers every cell it can pull into the band.
+        const reach = outer + warp * 1.6
         const fromX = Math.max(0, Math.floor(startX - reach))
         const toX = Math.min(cols - 1, Math.ceil(endX + reach))
         const fromY = Math.max(0, Math.floor(cy - reach))
@@ -277,15 +292,15 @@ export function paintMistBrush(
             const [dx, dy] = displace(x, y, warp)
             const px = x + dx
             const along = Math.min(Math.max(px, startX), endX)
-            const warped = 1 - Math.hypot(px - along, y + dy - cy) / radius
-            // Undisplaced, the force floors the billowing: nothing in the outer quarter, reaching `GUARD_CORE`
-            // where the core starts, so the edge only billows inwards across the outer part.
-            const plain = 1 - Math.hypot(x - Math.min(Math.max(x, startX), endX), y - cy) / radius
-            const floor = (GUARD_CORE * (plain - 0.25)) / (GUARD_CORE - 0.25)
-            const force = Math.min(Math.max(warped, floor), 1)
+            const warped = (outer - Math.hypot(px - along, y + dy - cy)) / band
+            // Undisplaced, the hold floors the billowing: nothing in the band's outer half, reaching 1 where the
+            // core starts, so the edge only billows inwards across the outer half.
+            const plain =
+              (outer - Math.hypot(x - Math.min(Math.max(x, startX), endX), y - cy)) / band
+            const hold = Math.min(Math.max(warped, (plain - 0.5) * 2, 0), 1)
             const i = y * cols + x
-            if (force > guard[i]) {
-              guard[i] = force
+            if (hold > guard[i]) {
+              guard[i] = hold
               guardReveal[i] = lineReveal
             }
           }
@@ -298,12 +313,12 @@ export function paintMistBrush(
       for (let x = 0; x < cols; x += 1) {
         const i = y * cols + x
         if (!guard[i]) continue
-        // A wide transition: the field is coarse (8px cells), and a sharp edge would show its steps.
-        const s = smoothstep(0, 0.35, guard[i])
-        // A faint cool halo, then a bright glow along the billowing edge of the resistance.
+        // Spread across the whole band: a glow peaking near the band's edge reads as a ring of heavier mist.
+        const s = smoothstep(0, 1, guard[i])
+        // A faint cool halo, then a soft glow across the billowing band of the resistance.
         const layers: [number[], number][] = [
           [halo, s * 0.1],
-          [glow, 4 * s * (1 - s) * 0.5],
+          [glow, 4 * s * (1 - s) * 0.2],
         ]
         let alpha = 0
         let red = 0
@@ -366,18 +381,28 @@ export function paintMistBrush(
     for (let i = 0; i < wet.length; i += 1) {
       const level = wet[i] - grain[i] * 0.45
       const reach = smoothstep(0.05, 0.3, level)
+      // How far overlapping passes have deepened the wash: a wash's own second tier.
+      const deep = smoothstep(0.5, 1.2, level)
       // A first pass reaches a little over half of what overlapping passes can.
-      const strength = 0.55 * reach + 0.45 * smoothstep(0.5, 1.2, level)
-      // Behind text the wash and its cap both fall linearly from the edge to `GUARD_CORE_SHARE` at the core; the
-      // cap eases in just inside the edge, so the edge shows no seam.
-      const hold = Math.min(guard[i] / GUARD_CORE, 1)
+      const strength = 0.55 * reach + 0.45 * deep
+      // Behind text the wash weakens linearly across the band to `GUARD_CORE_SHARE` at the core, and its cap closes
+      // in over a wash's two tiers, with a longer second tier, so the text cell grades into the washed mist. Like
+      // a wash's second tier, the cell's yields to overlapping passes: as they deepen the wash, it opens again,
+      // less so towards the core and not at all there, while the first tier always holds.
+      const hold = guard[i]
       const share = 1 - (1 - GUARD_CORE_SHARE) * hold
-      const cap = 1 - (1 - guardCap * share * guardReveal[i]) * smoothstep(0, 0.3, hold)
+      const tiers = hold * 1.2
+      const closing =
+        0.55 * smoothstep(0.05, GUARD_FIRST_TIER, tiers) +
+        0.45 *
+          smoothstep(GUARD_SECOND_TIER, 1.2, tiers) ** GUARD_SECOND_EASE *
+          (1 - deep * (1 - hold))
+      const cap = 1 - (1 - guardCap * share * guardReveal[i]) * closing
       const held = Math.min(strength * share, cap)
       wash[i * 4 + 3] = held * 255
-      // Pigment gathers where the wash meets the mist.
-      const body = Math.min(reach * share, cap)
-      edge[i * 4 + 3] = body * (1 - body) * 4 * 0.12 * 255
+      // Pigment gathers where the wash meets the mist, but not where the text's band holds it back: there the
+      // mist should dissolve, not draw a line.
+      edge[i * 4 + 3] = reach * (1 - reach) * 4 * 0.12 * (1 - guard[i]) * 255
       vapour[i * 4 + 3] = cloudAlpha[i] * reach * 255
     }
     reveal.ctx.putImageData(revealImage, 0, 0)
