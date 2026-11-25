@@ -31,6 +31,10 @@ const MAX_REVEAL = 0.7
 const PAINT_FILTER = "saturate(1.35) contrast(1.06)"
 // Milliseconds for a fully wet patch to dry back into mist.
 const DRY = 4200
+// A cell's wash level is its wetness less its grain offset; below `WASH_FROM` it shows nothing at all, so the text
+// guards and cloud edge are computed only above it.
+const GRAIN = 0.45
+const WASH_FROM = 0.05
 // Time constant (ms) of the brush trailing the pointer, which turns jittery input into broad, even strokes.
 const FOLLOW = 110
 // Text guards: each text line has a core around its centre line (a capsule as long as the line, its radius
@@ -68,18 +72,21 @@ const smoothstep = (from: number, to: number, value: number) => {
   return t * t * (3 - 2 * t)
 }
 
-/** Smooth value noise in 0..1 with one lattice point per unit, repeating every `period` units. */
+/** Smooth value noise in 0..1 with one lattice point per unit, repeating every `period` units (a power of two). */
 function valueNoise(period = 64) {
   const lattice = Float32Array.from({ length: period * period }, Math.random)
-  const wrap = (n: number) => ((n % period) + period) % period
+  const mask = period - 1
   return (x: number, y: number) => {
     const ix = Math.floor(x)
     const iy = Math.floor(y)
     const fx = smoothstep(0, 1, x - ix)
     const fy = smoothstep(0, 1, y - iy)
-    const at = (dx: number, dy: number) => lattice[wrap(iy + dy) * period + wrap(ix + dx)]
-    const top = at(0, 0) + (at(1, 0) - at(0, 0)) * fx
-    const bottom = at(0, 1) + (at(1, 1) - at(0, 1)) * fx
+    const row = (iy & mask) * period
+    const next = ((iy + 1) & mask) * period
+    const left = ix & mask
+    const right = (ix + 1) & mask
+    const top = lattice[row + left] + (lattice[row + right] - lattice[row + left]) * fx
+    const bottom = lattice[next + left] + (lattice[next + right] - lattice[next + left]) * fx
     return top + (bottom - top) * fy
   }
 }
@@ -150,6 +157,13 @@ export function paintMistBrush(
   let guard = new Float32Array(0)
   let guardReveal = new Float32Array(0)
   let cloudAlpha = new Float32Array(0)
+  // Per-cell wash level this frame (see `WASH_FROM`), and the flowing displacement of each cell, computed at most
+  // once a frame (`shiftedAt` holds the frame it was computed in) however many line boxes reach the cell.
+  let levels = new Float32Array(0)
+  let shiftX = new Float32Array(0)
+  let shiftY = new Float32Array(0)
+  let shiftedAt = new Uint32Array(0)
+  let shiftFrame = 0
   let revealImage: ImageData | undefined
   let rimImage: ImageData | undefined
   let cloudImage: ImageData | undefined
@@ -224,6 +238,11 @@ export function paintMistBrush(
     guard = new Float32Array(cols * rows)
     guardReveal = new Float32Array(cols * rows)
     cloudAlpha = new Float32Array(cols * rows)
+    levels = new Float32Array(cols * rows)
+    shiftX = new Float32Array(cols * rows)
+    shiftY = new Float32Array(cols * rows)
+    shiftedAt = new Uint32Array(cols * rows)
+    shiftFrame = 0
     reveal.element.width = rim.element.width = clouds.element.width = cols
     reveal.element.height = rim.element.height = clouds.element.height = rows
     revealImage = reveal.ctx.createImageData(cols, rows)
@@ -235,24 +254,24 @@ export function paintMistBrush(
     canvas.classList.add("is-painted")
   }
 
-  // Flowing displacement (in cells) of the guard capsules at cell (x, y): two noise layers per axis, drifting
-  // different ways, so the edge billows in broad lobes with gentler curls on them. The finer layer's features
-  // span several 8px cells and it weighs little, so neighbouring cells move together instead of leaving
-  // cell-sized patches of heavier mist. The scale keeps the overall spread of the earlier, more even mix, so the
-  // band reaches no further out than before.
-  const displace = (x: number, y: number, warp: number) => {
+  // Writes the flowing displacement (in cells) of the guard capsules at cell (x, y), index `i`, into `shiftX` and
+  // `shiftY`: two noise layers per axis, drifting different ways, so the edge billows in broad lobes with gentler
+  // curls on them. The finer layer's features span several 8px cells and it weighs little, so neighbouring cells
+  // move together instead of leaving cell-sized patches of heavier mist.
+  const displace = (x: number, y: number, warp: number, i: number) => {
     const t = flow
-    const along = (broad: number, fine: number) => (0.8 * broad + 0.2 * fine - 0.5) * 2.9 * warp
-    return [
-      along(
-        flowBroad((x + t * 0.9) / 6, (y - t * 0.35) / 6),
-        flowFine((x - t * 1.4) / 4, (y + t * 0.5) / 4),
-      ),
-      along(
-        flowBroad((x - t * 0.6) / 6 + 31.7, (y + t * 0.4) / 6 + 17.3),
-        flowFine((x + t * 1.1) / 4 + 11.1, (y - t * 0.7) / 4 + 5.9),
-      ),
-    ]
+    const scale = 2.9 * warp
+    shiftX[i] =
+      (0.8 * flowBroad((x + t * 0.9) / 6, (y - t * 0.35) / 6) +
+        0.2 * flowFine((x - t * 1.4) / 4, (y + t * 0.5) / 4) -
+        0.5) *
+      scale
+    shiftY[i] =
+      (0.8 * flowBroad((x - t * 0.6) / 6 + 31.7, (y + t * 0.4) / 6 + 17.3) +
+        0.2 * flowFine((x + t * 1.1) / 4 + 11.1, (y - t * 0.7) / 4 + 5.9) -
+        0.5) *
+      scale
+    shiftedAt[i] = shiftFrame
   }
 
   // Measures the text's current line boxes into `guard` through the flowing displacement, then lays the cloud edge
@@ -289,16 +308,18 @@ export function paintMistBrush(
         const toY = Math.min(rows - 1, Math.ceil(cy + reach))
         for (let y = fromY; y <= toY; y += 1) {
           for (let x = fromX; x <= toX; x += 1) {
-            const [dx, dy] = displace(x, y, warp)
-            const px = x + dx
+            const i = y * cols + x
+            // A dry cell shows no wash, so its hold would never be read.
+            if (levels[i] <= WASH_FROM) continue
+            if (shiftedAt[i] !== shiftFrame) displace(x, y, warp, i)
+            const px = x + shiftX[i]
             const along = Math.min(Math.max(px, startX), endX)
-            const warped = (outer - Math.hypot(px - along, y + dy - cy)) / band
+            const warped = (outer - Math.hypot(px - along, y + shiftY[i] - cy)) / band
             // Undisplaced, the hold floors the billowing: nothing in the band's outer half, reaching 1 where the
             // core starts, so the edge only billows inwards across the outer half.
             const plain =
               (outer - Math.hypot(x - Math.min(Math.max(x, startX), endX), y - cy)) / band
             const hold = Math.min(Math.max(warped, (plain - 0.5) * 2, 0), 1)
-            const i = y * cols + x
             if (hold > guard[i]) {
               guard[i] = hold
               guardReveal[i] = lineReveal
@@ -309,33 +330,20 @@ export function paintMistBrush(
     }
 
     const { halo, glow } = colours
-    for (let y = 0; y < rows; y += 1) {
-      for (let x = 0; x < cols; x += 1) {
-        const i = y * cols + x
-        if (!guard[i]) continue
-        // Spread across the whole band: a glow peaking near the band's edge reads as a ring of heavier mist.
-        const s = smoothstep(0, 1, guard[i])
-        // A faint cool halo, then a soft glow across the billowing band of the resistance.
-        const layers: [number[], number][] = [
-          [halo, s * 0.1],
-          [glow, 4 * s * (1 - s) * 0.2],
-        ]
-        let alpha = 0
-        let red = 0
-        let green = 0
-        let blue = 0
-        for (const [colour, a] of layers) {
-          red = colour[0] * a + red * (1 - a)
-          green = colour[1] * a + green * (1 - a)
-          blue = colour[2] * a + blue * (1 - a)
-          alpha = a + alpha * (1 - a)
-        }
-        if (!alpha) continue
-        data[i * 4] = red / alpha
-        data[i * 4 + 1] = green / alpha
-        data[i * 4 + 2] = blue / alpha
-        cloudAlpha[i] = alpha
+    for (let i = 0; i < guard.length; i += 1) {
+      if (!guard[i]) continue
+      // Spread across the whole band: a glow peaking near the band's edge reads as a ring of heavier mist.
+      const s = smoothstep(0, 1, guard[i])
+      // A faint cool halo, then a soft glow over it across the billowing band of the resistance.
+      const haloAlpha = s * 0.1
+      const glowAlpha = 4 * s * (1 - s) * 0.2
+      const alpha = glowAlpha + haloAlpha * (1 - glowAlpha)
+      if (!alpha) continue
+      for (let channel = 0; channel < 3; channel += 1) {
+        const under = halo[channel] * haloAlpha
+        data[i * 4 + channel] = (glow[channel] * glowAlpha + under * (1 - glowAlpha)) / alpha
       }
+      cloudAlpha[i] = alpha
     }
   }
 
@@ -370,6 +378,8 @@ export function paintMistBrush(
       ctx.globalCompositeOperation = "source-over"
       return
     }
+    for (let i = 0; i < wet.length; i += 1) levels[i] = wet[i] - grain[i] * GRAIN
+    shiftFrame += 1
     shapeClouds()
     const width = cols * CELL
     const height = rows * CELL
@@ -379,8 +389,12 @@ export function paintMistBrush(
     // The wash strength (0..1, scaled by `MAX_REVEAL` on the mist) that keeps text mist within its limit.
     const guardCap = GUARD_MAX_REVEAL / MAX_REVEAL
     for (let i = 0; i < wet.length; i += 1) {
-      const level = wet[i] - grain[i] * 0.45
-      const reach = smoothstep(0.05, 0.3, level)
+      const level = levels[i]
+      if (level <= WASH_FROM) {
+        wash[i * 4 + 3] = edge[i * 4 + 3] = vapour[i * 4 + 3] = 0
+        continue
+      }
+      const reach = smoothstep(WASH_FROM, 0.3, level)
       // How far overlapping passes have deepened the wash: a wash's own second tier.
       const deep = smoothstep(0.5, 1.2, level)
       // A first pass reaches a little over half of what overlapping passes can.
