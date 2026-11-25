@@ -4,12 +4,16 @@ interface MistBrushOptions {
   /** Switches the mist to its narrow-screen shape; keep in sync with the page's `max-width: 850px` rules. */
   narrow: MediaQueryList
   reducedMotion: MediaQueryList
-  /** Checked on every stroke; the brush only paints while it returns true. */
-  canPaint: () => boolean
+  /** Whether the mist is showing; the brush paints only while it is. */
+  active: () => boolean
+  /** Holds the clouds still (the page's motion toggle is on Pause). */
+  still: () => boolean
   /** The stage video under the mist; washed areas show it sharp and saturated, wherever it is transformed to. */
   video: HTMLVideoElement
   /** Width / height of the video frame; the opening camera covers the stage with it, centred, unscaled. */
   frameRatio: number
+  /** Elements whose text the mist guards: behind each of their text lines it resists the brush. */
+  guards: Element[]
 }
 
 interface Point {
@@ -19,7 +23,7 @@ interface Point {
 
 // Canvas pixels per CSS pixel. The mist is soft, so half resolution looks the same.
 const RESOLUTION = 0.5
-// Canvas pixels per cell of the wetness field (8 CSS pixels); the bilinear upscale keeps wash edges soft.
+// Canvas pixels per cell of the wetness and cloud fields (8 CSS pixels); the bilinear upscale keeps edges soft.
 const CELL = 4
 // The most mist a wash takes away: one pass clears part of it, overlapping passes deepen towards this.
 const MAX_REVEAL = 0.7
@@ -29,31 +33,56 @@ const PAINT_FILTER = "saturate(1.35) contrast(1.06)"
 const DRY = 4200
 // Time constant (ms) of the brush trailing the pointer, which turns jittery input into broad, even strokes.
 const FOLLOW = 110
+// Text guards: each text line is a capsule (a stadium) around its centre line, as tall as the line box and as long
+// as the line, grown by `GUARD_PAD` CSS pixels all round. Its force runs from 0 at the edge to 1 on the centre
+// line; from `GUARD_CORE` inwards lies the core. From the edge to the core the brush weakens linearly to
+// `GUARD_CORE_SHARE` of its strength, and the most the mist may thin falls linearly from `GUARD_MAX_REVEAL` (of
+// the mist's opacity) to `GUARD_CORE_SHARE` of it; both stay there across the core, so text stays readable. The
+// capsule is never drawn as such: it is sampled through a slowly flowing displacement of up to about `GUARD_WARP`
+// CSS pixels, so its edge billows in and out like cloud, reaching past the capsule and drifting; only the outer
+// part of the capsule may billow inwards, so the core always stays.
+const GUARD_PAD = 16
+const GUARD_CORE = 0.505
+const GUARD_CORE_SHARE = 0.3
+const GUARD_MAX_REVEAL = 0.3
+const GUARD_WARP = 30
+// Thin strokes lose contrast sooner, so smaller text keeps more mist: lines up to `SMALL_LINE` CSS pixels tall may
+// thin only `SMALL_TEXT_REVEAL` of what `GUARD_MAX_REVEAL` allows, easing to the full limit at `LARGE_LINE`.
+const SMALL_TEXT_REVEAL = 0.75
+const SMALL_LINE = 24
+const LARGE_LINE = 64
 
 const smoothstep = (from: number, to: number, value: number) => {
   const t = Math.min(Math.max((value - from) / (to - from), 0), 1)
   return t * t * (3 - 2 * t)
 }
 
-/** Smooth value noise over a `cols`×`rows` grid with lattice points every `spacing` cells, in 0..1. */
-function valueNoise(cols: number, rows: number, spacing: number) {
-  const width = Math.ceil(cols / spacing) + 2
-  const lattice = Float32Array.from(
-    { length: width * (Math.ceil(rows / spacing) + 2) },
-    Math.random,
-  )
+/** Smooth value noise in 0..1 with one lattice point per unit, repeating every `period` units. */
+function valueNoise(period = 64) {
+  const lattice = Float32Array.from({ length: period * period }, Math.random)
+  const wrap = (n: number) => ((n % period) + period) % period
   return (x: number, y: number) => {
-    const gx = x / spacing
-    const gy = y / spacing
-    const ix = Math.floor(gx)
-    const iy = Math.floor(gy)
-    const fx = smoothstep(0, 1, gx - ix)
-    const fy = smoothstep(0, 1, gy - iy)
-    const at = (dx: number, dy: number) => lattice[(iy + dy) * width + ix + dx]
+    const ix = Math.floor(x)
+    const iy = Math.floor(y)
+    const fx = smoothstep(0, 1, x - ix)
+    const fy = smoothstep(0, 1, y - iy)
+    const at = (dx: number, dy: number) => lattice[wrap(iy + dy) * period + wrap(ix + dx)]
     const top = at(0, 0) + (at(1, 0) - at(0, 0)) * fx
     const bottom = at(0, 1) + (at(1, 1) - at(0, 1)) * fx
     return top + (bottom - top) * fy
   }
+}
+
+/** Text nodes with visible characters under `roots`, measured every frame for their line boxes. */
+function textNodesOf(roots: Element[]) {
+  const nodes: Text[] = []
+  for (const root of roots) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (node.textContent?.trim()) nodes.push(node as Text)
+    }
+  }
+  return nodes
 }
 
 /**
@@ -63,9 +92,14 @@ function valueNoise(cols: number, rows: number, spacing: number) {
  * where strokes overlap, then dries back over a few seconds. Mouse and pen paint while moving; a touch wets one
  * patch where it lands.
  *
+ * Behind the text of `guards` the mist resists the brush: each text line is a capsule inside which the wash
+ * weakens linearly towards the line's centre, and the mist there never thins past a readable limit. Where a wash meets
+ * that resistance, a slowly flowing, glowing cloud edge shows, fading as it dries.
+ *
  * The canvas must cover the same box as the stage (it reads both bounding boxes to line the video up). It takes
- * the mist's colour from its CSS `color` and the rim tint from `--wash-edge`, and gets `is-painted` once the mist
- * is drawn, so its CSS fallback background can step aside.
+ * the mist's colour from its CSS `color`, the wash rim and cloud halo tint from `--wash-edge`, and the cloud edge
+ * glow from `--mist-glow`; it gets `is-painted` once the mist is drawn, so its CSS fallback background can step
+ * aside.
  */
 export function paintMistBrush(
   canvas: HTMLCanvasElement,
@@ -82,9 +116,16 @@ export function paintMistBrush(
   const mist = layer()
   const reveal = layer()
   const rim = layer()
+  const clouds = layer()
   // Offscreen composites: the sharp video cut to the washes, and the mist thinned by them.
   const paint = layer()
   const veil = layer()
+  const texts = textNodesOf(options.guards)
+  const range = document.createRange()
+  const grainBroad = valueNoise()
+  const grainFine = valueNoise()
+  const flowBroad = valueNoise()
+  const flowFine = valueNoise()
 
   let cols = 0
   let rows = 0
@@ -92,13 +133,23 @@ export function paintMistBrush(
   let wet = new Float32Array(0)
   // Per-cell threshold offset: drying follows it, so wash edges come out lobed instead of round.
   let grain = new Float32Array(0)
+  // Per-cell resistance behind text (0 outside the capsules, rising linearly to 1 on a centre line), the reveal
+  // limit factor of the line it comes from (smaller text keeps more mist), and the opacity of its glowing cloud
+  // edge before the wash scales it.
+  let guard = new Float32Array(0)
+  let guardReveal = new Float32Array(0)
+  let cloudAlpha = new Float32Array(0)
   let revealImage: ImageData | undefined
   let rimImage: ImageData | undefined
+  let cloudImage: ImageData | undefined
+  let colours = { halo: [0, 0, 0], glow: [0, 0, 0] }
   let wetCells = false
   let brush: Point | undefined
   let target: Point | undefined
   let frame = 0
   let lastTime = 0
+  // Seconds of cloud flow; it advances only while the clouds may move.
+  let flow = 0
 
   const drawMist = () => {
     const width = Math.max(1, Math.round(canvas.clientWidth * RESOLUTION))
@@ -107,13 +158,21 @@ export function paintMistBrush(
     canvas.height = mist.element.height = paint.element.height = veil.element.height = height
 
     const style = getComputedStyle(canvas)
-    const [r, g, b] = style.color.match(/[\d.]+/g)!.map(Number)
+    // A canvas normalizes any CSS colour to `#rrggbb`.
+    const rgb = (colour: string) => {
+      mist.ctx.fillStyle = colour
+      return (mist.ctx.fillStyle as string).match(/\w\w/g)!.map((hex) => parseInt(hex, 16))
+    }
+    const [r, g, b] = rgb(style.color)
     const tone = (alpha: number) => `rgba(${r}, ${g}, ${b}, ${alpha})`
+    const edge = rgb(style.getPropertyValue("--wash-edge").trim() || style.color)
+    colours = { halo: edge, glow: rgb(style.getPropertyValue("--mist-glow").trim() || "#fff") }
+
     // A tilted elliptical veil hugging the character: thinnest over her and thickening smoothly towards the edges.
     // Placed in video-frame coordinates (fractions of the frame's width and height, measured on
     // `public/novel/meadow-poster.webp`, head to knees) inside the frame as the opening camera shows it, so it stays
     // on her at every viewport shape. `along`/`across` are semi-axes in frame widths where the veil reaches
-    // `outer`; it stays clear to about 32% of them, then thickens over a long, eased band. A negative `tilt`
+    // `outer`; it stays clear to about 26% of them, then thickens over a long, eased band. A negative `tilt`
     // (radians) leans the top left, like her body. Narrow screens keep more mist, as their copy sits over her feet.
     const character = { x: 0.491, y: 0.413, along: 0.32, across: 0.22, tilt: -0.53 }
     const [inner, outer] = options.narrow.matches ? [0.6, 0.92] : [0.6, 0.94]
@@ -140,29 +199,129 @@ export function paintMistBrush(
     mist.ctx.fillRect(-reach, -reach / squash, reach * 2, (reach * 2) / squash)
     mist.ctx.restore()
 
-    // A canvas normalizes any CSS colour to `#rrggbb`.
-    mist.ctx.fillStyle = style.getPropertyValue("--wash-edge").trim() || tone(1)
-    const edge = (mist.ctx.fillStyle as string).match(/\w\w/g)!.map((hex) => parseInt(hex, 16))
-
     cols = Math.ceil(width / CELL)
     rows = Math.ceil(height / CELL)
     radius = Math.min(width, height) * 0.13
     wet = new Float32Array(cols * rows)
     wetCells = false
-    const broad = valueNoise(cols, rows, 8)
-    const fine = valueNoise(cols, rows, 2.5)
     grain = new Float32Array(cols * rows)
     for (let y = 0; y < rows; y += 1) {
-      for (let x = 0; x < cols; x += 1) grain[y * cols + x] = 0.65 * broad(x, y) + 0.35 * fine(x, y)
+      for (let x = 0; x < cols; x += 1) {
+        grain[y * cols + x] = 0.65 * grainBroad(x / 8, y / 8) + 0.35 * grainFine(x / 2.5, y / 2.5)
+      }
     }
-    reveal.element.width = rim.element.width = cols
-    reveal.element.height = rim.element.height = rows
+    guard = new Float32Array(cols * rows)
+    guardReveal = new Float32Array(cols * rows)
+    cloudAlpha = new Float32Array(cols * rows)
+    reveal.element.width = rim.element.width = clouds.element.width = cols
+    reveal.element.height = rim.element.height = clouds.element.height = rows
     revealImage = reveal.ctx.createImageData(cols, rows)
     rimImage = rim.ctx.createImageData(cols, rows)
+    cloudImage = clouds.ctx.createImageData(cols, rows)
     for (let i = 0; i < cols * rows; i += 1) rimImage.data.set(edge, i * 4)
 
     render()
     canvas.classList.add("is-painted")
+  }
+
+  // Flowing displacement (in cells) of the guard capsules at cell (x, y): two noise layers per axis, drifting
+  // different ways, so the edge billows in broad lobes with finer curls on them.
+  const displace = (x: number, y: number, warp: number) => {
+    const t = flow
+    const along = (broad: number, fine: number) => (0.65 * broad + 0.35 * fine - 0.5) * 3.2 * warp
+    return [
+      along(
+        flowBroad((x + t * 0.9) / 6, (y - t * 0.35) / 6),
+        flowFine((x - t * 1.4) / 2.2, (y + t * 0.5) / 2.2),
+      ),
+      along(
+        flowBroad((x - t * 0.6) / 6 + 31.7, (y + t * 0.4) / 6 + 17.3),
+        flowFine((x + t * 1.1) / 2.2 + 11.1, (y - t * 0.7) / 2.2 + 5.9),
+      ),
+    ]
+  }
+
+  // Measures the text's current line boxes into `guard` through the flowing displacement, then lays the cloud edge
+  // along it. Writes its colour into `cloudImage` and its full opacity into `cloudAlpha`; `render` scales it by
+  // the wash.
+  const shapeClouds = () => {
+    const data = cloudImage!.data
+    guard.fill(0)
+    cloudAlpha.fill(0)
+    const box = canvas.getBoundingClientRect()
+    const scale = RESOLUTION / CELL
+    const warp = GUARD_WARP * scale
+    for (const text of texts) {
+      range.selectNodeContents(text)
+      for (const line of range.getClientRects()) {
+        if (!line.width || !line.height) continue
+        // The centre line runs between the centres of the capsule's round ends; a line shorter than it is tall
+        // collapses to a point, and its capsule to a circle.
+        const cy = (line.top + line.height / 2 - box.top) * scale - 0.5
+        const inset = Math.min(line.height, line.width) / 2
+        const startX = (line.left + inset - box.left) * scale - 0.5
+        const endX = (line.right - inset - box.left) * scale - 0.5
+        const radius = (line.height / 2 + GUARD_PAD) * scale
+        const lineReveal =
+          SMALL_TEXT_REVEAL +
+          (1 - SMALL_TEXT_REVEAL) *
+            Math.min(Math.max((line.height - SMALL_LINE) / (LARGE_LINE - SMALL_LINE), 0), 1)
+        // The displacement peaks at 1.6 × `warp`; the box covers every cell it can pull into the capsule.
+        const reach = radius + warp * 1.6
+        const fromX = Math.max(0, Math.floor(startX - reach))
+        const toX = Math.min(cols - 1, Math.ceil(endX + reach))
+        const fromY = Math.max(0, Math.floor(cy - reach))
+        const toY = Math.min(rows - 1, Math.ceil(cy + reach))
+        for (let y = fromY; y <= toY; y += 1) {
+          for (let x = fromX; x <= toX; x += 1) {
+            const [dx, dy] = displace(x, y, warp)
+            const px = x + dx
+            const along = Math.min(Math.max(px, startX), endX)
+            const warped = 1 - Math.hypot(px - along, y + dy - cy) / radius
+            // Undisplaced, the force floors the billowing: nothing in the outer quarter, reaching `GUARD_CORE`
+            // where the core starts, so the edge only billows inwards across the outer part.
+            const plain = 1 - Math.hypot(x - Math.min(Math.max(x, startX), endX), y - cy) / radius
+            const floor = (GUARD_CORE * (plain - 0.25)) / (GUARD_CORE - 0.25)
+            const force = Math.min(Math.max(warped, floor), 1)
+            const i = y * cols + x
+            if (force > guard[i]) {
+              guard[i] = force
+              guardReveal[i] = lineReveal
+            }
+          }
+        }
+      }
+    }
+
+    const { halo, glow } = colours
+    for (let y = 0; y < rows; y += 1) {
+      for (let x = 0; x < cols; x += 1) {
+        const i = y * cols + x
+        if (!guard[i]) continue
+        // A wide transition: the field is coarse (8px cells), and a sharp edge would show its steps.
+        const s = smoothstep(0, 0.35, guard[i])
+        // A faint cool halo, then a bright glow along the billowing edge of the resistance.
+        const layers: [number[], number][] = [
+          [halo, s * 0.1],
+          [glow, 4 * s * (1 - s) * 0.5],
+        ]
+        let alpha = 0
+        let red = 0
+        let green = 0
+        let blue = 0
+        for (const [colour, a] of layers) {
+          red = colour[0] * a + red * (1 - a)
+          green = colour[1] * a + green * (1 - a)
+          blue = colour[2] * a + blue * (1 - a)
+          alpha = a + alpha * (1 - a)
+        }
+        if (!alpha) continue
+        data[i * 4] = red / alpha
+        data[i * 4 + 1] = green / alpha
+        data[i * 4 + 2] = blue / alpha
+        cloudAlpha[i] = alpha
+      }
+    }
   }
 
   // Draws the current video frame where the stage shows it, cut to the washes. False while it has no frame yet.
@@ -191,25 +350,39 @@ export function paintMistBrush(
 
   const render = () => {
     ctx.globalCompositeOperation = "copy"
-    if (!wetCells || !revealImage || !rimImage) {
+    if (!wetCells || !revealImage || !rimImage || !cloudImage) {
       ctx.drawImage(mist.element, 0, 0)
       ctx.globalCompositeOperation = "source-over"
       return
     }
+    shapeClouds()
+    const width = cols * CELL
+    const height = rows * CELL
     const wash = revealImage.data
     const edge = rimImage.data
+    const vapour = cloudImage.data
+    // The wash strength (0..1, scaled by `MAX_REVEAL` on the mist) that keeps text mist within its limit.
+    const guardCap = GUARD_MAX_REVEAL / MAX_REVEAL
     for (let i = 0; i < wet.length; i += 1) {
       const level = wet[i] - grain[i] * 0.45
-      const body = smoothstep(0.05, 0.3, level)
+      const reach = smoothstep(0.05, 0.3, level)
       // A first pass reaches a little over half of what overlapping passes can.
-      wash[i * 4 + 3] = (0.55 * body + 0.45 * smoothstep(0.5, 1.2, level)) * 255
+      const strength = 0.55 * reach + 0.45 * smoothstep(0.5, 1.2, level)
+      // Behind text the wash and its cap both fall linearly from the edge to `GUARD_CORE_SHARE` at the core; the
+      // cap eases in just inside the edge, so the edge shows no seam.
+      const hold = Math.min(guard[i] / GUARD_CORE, 1)
+      const share = 1 - (1 - GUARD_CORE_SHARE) * hold
+      const cap = 1 - (1 - guardCap * share * guardReveal[i]) * smoothstep(0, 0.3, hold)
+      const held = Math.min(strength * share, cap)
+      wash[i * 4 + 3] = held * 255
       // Pigment gathers where the wash meets the mist.
+      const body = Math.min(reach * share, cap)
       edge[i * 4 + 3] = body * (1 - body) * 4 * 0.12 * 255
+      vapour[i * 4 + 3] = cloudAlpha[i] * reach * 255
     }
     reveal.ctx.putImageData(revealImage, 0, 0)
     rim.ctx.putImageData(rimImage, 0, 0)
-    const width = cols * CELL
-    const height = rows * CELL
+    clouds.ctx.putImageData(cloudImage, 0, 0)
 
     const v = veil.ctx
     v.imageSmoothingQuality = "high"
@@ -222,7 +395,9 @@ export function paintMistBrush(
     v.globalCompositeOperation = "source-over"
     v.drawImage(rim.element, 0, 0, width, height)
 
-    // The washes keep the full-strength mask for the paint, so one pass already shows sharp colour under thinner mist.
+    // The washes keep the full-strength mask for the paint, so one pass already shows sharp colour under thinner
+    // mist.
+    ctx.imageSmoothingQuality = "high"
     paint.ctx.imageSmoothingQuality = "high"
     if (drawPaint(width, height)) {
       ctx.drawImage(paint.element, 0, 0)
@@ -230,6 +405,10 @@ export function paintMistBrush(
     }
     ctx.drawImage(veil.element, 0, 0)
     ctx.globalCompositeOperation = "source-over"
+    // A slight blur hides the cells of the upscaled field, so the edge reads as vapour.
+    ctx.filter = `blur(${CELL * 0.75}px)`
+    ctx.drawImage(clouds.element, 0, 0, width, height)
+    ctx.filter = "none"
   }
 
   // Adds a gaussian of wetness centred on (x, y), in canvas pixels.
@@ -270,7 +449,7 @@ export function paintMistBrush(
   const tick = (now: number) => {
     const elapsed = Math.min(now - lastTime, 50)
     lastTime = now
-    if (!options.canPaint()) brush = target = undefined
+    if (!options.active()) brush = target = undefined
     let chasing = false
     if (brush && target) {
       const follow = 1 - Math.exp(-elapsed / FOLLOW)
@@ -291,6 +470,8 @@ export function paintMistBrush(
         if (wet[i] > 0) wetCells = true
       }
     }
+    // The clouds only show where something is wet, so they need to flow only then.
+    if (!options.still() && !options.reducedMotion.matches) flow += elapsed / 1000
     render()
     frame = wetCells || chasing ? scope.frame(tick) : 0
   }
@@ -310,7 +491,7 @@ export function paintMistBrush(
     window,
     "pointermove",
     (event) => {
-      if (event.pointerType === "touch" || options.reducedMotion.matches || !options.canPaint()) {
+      if (event.pointerType === "touch" || options.reducedMotion.matches || !options.active()) {
         brush = target = undefined
         return
       }
@@ -325,7 +506,7 @@ export function paintMistBrush(
     window,
     "pointerdown",
     (event) => {
-      if (event.pointerType !== "touch" || options.reducedMotion.matches || !options.canPaint())
+      if (event.pointerType !== "touch" || options.reducedMotion.matches || !options.active())
         return
       const point = toCanvas(event)
       wetAt(point.x, point.y, 0.9, radius * 1.3)

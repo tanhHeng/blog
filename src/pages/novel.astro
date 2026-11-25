@@ -482,6 +482,23 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     scenes.forEach((scene) => sceneObserver.observe(scene));
     scope.observe(sceneObserver);
 
+    // The pointer washes the opening mist away like watercolour, showing the meadow sharp and saturated beneath,
+    // only while the mist is still showing. Behind the opening's text and the navbar the mist resists the brush,
+    // more towards the middle of each line, and never thins past a readable limit.
+    paintMistBrush(root.querySelector<HTMLCanvasElement>('[data-stage-mist]')!, scope, {
+      narrow,
+      reducedMotion,
+      video,
+      frameRatio,
+      active: () => intro < 1 && !root.classList.contains('is-browsing'),
+      still: () => root.classList.contains('is-paused'),
+      guards: [
+        root.querySelector('.intro-copy')!,
+        root.querySelector('.intro-cues')!,
+        document.querySelector('#site-navbar')!,
+      ],
+    });
+
     // `--intro` runs 0 → 1 across the first viewport of scroll and dissolves the white mist.
     const updateScroll = () => {
       frame = 0;
@@ -495,15 +512,6 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     // Leaving the page hands the navbar back its default colours while the transition veil covers the scene,
     // so the bar already matches the next page.
     scope.listen(document, 'astro:before-preparation', () => root.classList.add('is-leaving'));
-    // The pointer washes the opening mist away like watercolour, showing the meadow sharp and saturated beneath,
-    // only while the mist is still showing.
-    paintMistBrush(root.querySelector<HTMLCanvasElement>('[data-stage-mist]')!, scope, {
-      narrow,
-      reducedMotion,
-      video,
-      frameRatio,
-      canPaint: () => intro < 1 && !root.classList.contains('is-browsing'),
-    });
 
     // Scene navigation --------------------------------------------------------
     // Native snapping runs at a browser-fixed speed, so whole-scene moves are glided here instead:
@@ -1069,6 +1077,7 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
   // (a radial veil, clearer at the centre) in `color` and lets the pointer wash it away; until then it is solid.
   .stage-mist {
     --wash-edge: #{$light-blue};
+    --mist-glow: #fff;
     position: absolute;
     inset: 0;
     width: 100%;
