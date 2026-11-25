@@ -37,6 +37,10 @@ const GRAIN = 0.45
 const WASH_FROM = 0.05
 // Time constant (ms) of the brush trailing the pointer, which turns jittery input into broad, even strokes.
 const FOLLOW = 110
+// Shortest interval (ms) between two paints: at most 60 a second, with a margin for 60Hz frame jitter. Faster
+// displays skip frames in between (120Hz paints every other frame); every step is timed by the real elapsed time, so
+// the brush, drying, and flow keep their speed and strokes stay continuous.
+const MIN_FRAME = 1000 / 60 - 2
 // Text guards: each text line has a core around its centre line (a capsule as long as the line, its radius
 // `1 - GUARD_CORE` of the line box's half-height plus `GUARD_PAD` CSS pixels) where the brush keeps only
 // `GUARD_CORE_SHARE` of its strength and the mist may thin by only `GUARD_CORE_SHARE` of `GUARD_MAX_REVEAL` (of
@@ -486,6 +490,10 @@ export function paintMistBrush(
   }
 
   const tick = (now: number) => {
+    if (now - lastTime < MIN_FRAME) {
+      frame = scope.frame(tick)
+      return
+    }
     const elapsed = Math.min(now - lastTime, 50)
     lastTime = now
     if (!options.active()) brush = target = undefined
@@ -517,7 +525,8 @@ export function paintMistBrush(
 
   const start = () => {
     if (frame) return
-    lastTime = performance.now()
+    // Back-dated by one interval, so the first frame paints instead of waiting out `MIN_FRAME`.
+    lastTime = performance.now() - MIN_FRAME
     frame = scope.frame(tick)
   }
 
