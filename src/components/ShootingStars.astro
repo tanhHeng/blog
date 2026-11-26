@@ -33,6 +33,13 @@
   // Chance that a second star follows on the next diagonal over, `PAIR_DELAY` ms later.
   const PAIR_CHANCE = 0.18;
   const PAIR_DELAY = 260;
+  // Chance that a star passes through instead of burning out: it crosses the viewport and leaves it past the
+  // bottom or right edge, without a burst. It runs at least `PASS_MIN` steps.
+  const PASS_CHANCE = 0.25;
+  const PASS_MIN = 5;
+
+  // How a star's run ends: it bursts, with or without its grid coordinate, or it passes out of view.
+  type Ending = 'labelled' | 'burst' | 'pass';
 
   const between = ([min, max]: number[]) => min + Math.random() * (max - min);
   const span = (className: string) => {
@@ -49,7 +56,7 @@
     // Same tile as the `DynamicCircles` mask (`min(10vh, 10vw)` from the viewport corner): the tile's cross
     // meets at its centre, and its diagonal runs corner to corner through that centre, so a diagonal links
     // the intersections `(column + 0.5, row + 0.5)` tile by tile.
-    const launch = (column: number, row: number, steps: number, labelled: boolean) => {
+    const launch = (column: number, row: number, steps: number, ending: Ending) => {
       const size = Math.min(window.innerWidth, window.innerHeight) * 0.1;
       const at = (step: number) => ({ x: (column + step + 0.5) * size, y: (row + step + 0.5) * size });
       const start = at(0);
@@ -116,6 +123,14 @@
         tick(point.x, point.y, duration * timeAt(step / steps), 0.35);
       }
 
+      // A star that passes out of view goes with nothing more; the rest burst.
+      if (ending === 'pass') {
+        Promise.allSettled(finished).then(() => {
+          for (const part of parts) part.remove();
+        });
+        return;
+      }
+
       // The burst, where the star burns out: the carried ring blows out and fades, four shards fly out along the
       // grid's row and column onto the neighbouring intersections, which tick as they arrive, and a thin ring
       // follows it out.
@@ -153,7 +168,7 @@
         tick(end.x + dx, end.y + dy, duration + 260, 0.35);
       }
 
-      if (labelled) {
+      if (ending === 'labelled') {
         const label = place(span('star-label'), end.x, end.y);
         label.textContent = `${String(column + steps + 1).padStart(2, '0')} · ${String(row + steps + 1).padStart(2, '0')}`;
         finished.push(label.animate(
@@ -169,15 +184,34 @@
     };
 
     // Every star starts at an entry intersection just outside the viewport, one step above the top edge or left
-    // of the left edge, so it flies in rather than appearing mid-screen, and its run of `steps` ends at least one
-    // intersection in from the bottom and right edges, so its ring and label always show. Entries are drawn
-    // uniformly from all that fit, so a long edge sends more stars than a short one.
+    // of the left edge, so it flies in rather than appearing mid-screen. A bursting star's run of `steps` ends at
+    // least one intersection in from the bottom and right edges, so its burst and label always show; a passing
+    // star runs on until it, its tail's head end, and its carried ring are past the bottom or right edge.
+    // Entries are drawn uniformly from all that fit, so a long edge sends more stars than a short one.
     const spawn = () => {
       const size = Math.min(window.innerWidth, window.innerHeight) * 0.1;
       // Intersections inside the viewport along each axis are indices 0 .. count - 1. The shorter axis always
       // has 10 (the tile is a tenth of it); the epsilon keeps float error from dropping one.
       const columns = Math.floor(window.innerWidth / size + 1e-6);
       const rows = Math.floor(window.innerHeight / size + 1e-6);
+
+      if (Math.random() < PASS_CHANCE) {
+        // The first step whose intersection lies a full tile past an edge, so the ring is out of view too.
+        const exit = (index: number, extent: number) => Math.ceil((extent + size) / size - 0.5 - index);
+        const passes: [number, number, number][] = [];
+        const add = (column: number, row: number) => {
+          const steps = Math.min(exit(column, window.innerWidth), exit(row, window.innerHeight));
+          if (steps >= PASS_MIN) passes.push([column, row, steps]);
+        };
+        for (let column = -1; column < columns; column++) add(column, -1);
+        for (let row = 0; row < rows; row++) add(-1, row);
+        if (passes.length > 0) {
+          const [column, row, steps] = passes[Math.floor(Math.random() * passes.length)];
+          launch(column, row, steps, 'pass');
+          return;
+        }
+      }
+
       const steps = Math.min(Math.round(between(STEPS)), columns - 1, rows - 1);
       // Above the top edge (row -1) or left of the left edge (column -1); the last index keeps the end at
       // `count - 2` or less.
@@ -186,12 +220,12 @@
       for (let row = 0; row + steps <= rows - 2; row++) entries.push([-1, row]);
       if (entries.length === 0) return;
       const [column, row] = entries[Math.floor(Math.random() * entries.length)];
-      launch(column, row, steps, true);
+      launch(column, row, steps, 'labelled');
       // The follower enters two intersections further along the same edge, on the diagonal two over, and runs
       // two steps less, so it too starts outside and ends inside.
       if (Math.random() < PAIR_CHANCE) {
         const [followColumn, followRow] = row === -1 ? [column + 2, row] : [column, row + 2];
-        scope.timeout(() => launch(followColumn, followRow, steps - 2, false), PAIR_DELAY);
+        scope.timeout(() => launch(followColumn, followRow, steps - 2, 'burst'), PAIR_DELAY);
       }
     };
 
