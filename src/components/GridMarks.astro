@@ -17,6 +17,7 @@
 
 <script>
   import { onPageLoad } from '../lib/pageLifecycle';
+  import { pointsAtContent } from '../scripts/pointerContent';
 
   onPageLoad((scope) => {
     const layer = document.getElementById('grid-marks');
@@ -30,23 +31,7 @@
     let pointerY = 0;
     let lastCell = '';
     // Over readable or actionable content the marks nearly vanish, so they never compete with it.
-    const contentSelector = 'a, button, input, textarea, select, summary, label, dialog, img, video, svg, figure, pre, code, table, blockquote, li, p, h1, h2, h3, h4, h5, h6, [role="button"], .circles-grid';
     let overContent = false;
-    // Content under `pointer-events: none` (the homepage sections, which let the scroll targets beneath take
-    // input) never becomes the event target, so the pointer is also tested against content boxes. Decorative
-    // `aria-hidden` subtrees are skipped: some, like the homepage attraction layer, span the whole viewport.
-    const isContent = (element: Element) => element.closest('[aria-hidden="true"]') === null;
-    const pointsAtContent = (target: EventTarget | null, x: number, y: number) => {
-      const hit = target instanceof Element ? target.closest(contentSelector) : null;
-      if (hit && isContent(hit)) return true;
-      const page = document.querySelector('.page-content');
-      if (!page) return false;
-      for (const element of page.querySelectorAll(contentSelector)) {
-        const box = element.getBoundingClientRect();
-        if (x >= box.left && x <= box.right && y >= box.top && y <= box.bottom && box.width > 0 && isContent(element)) return true;
-      }
-      return false;
-    };
     let lastTarget: EventTarget | null = null;
 
     // Same tile as the `DynamicCircles` mask (`min(10vh, 10vw)`, origin at the viewport corner); the SVG tile

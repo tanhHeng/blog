@@ -12,6 +12,7 @@
 
 <script>
   import { onPageLoad } from '../lib/pageLifecycle';
+  import { pointsAtContent } from '../scripts/pointerContent';
 
   // Seconds between stars: the first comes `FIRST` after a page loads, later ones `NEXT` apart.
   const FIRST = [1.5, 3.5];
@@ -37,6 +38,14 @@
   // bottom or right edge, without a burst. It runs at least `PASS_MIN` steps.
   const PASS_CHANCE = 0.25;
   const PASS_MIN = 5;
+  // A click on the blank page (one that triggers nothing) summons a star with chance `SUMMON_BASE`, rising by
+  // `SUMMON_STEP` with every blank click that summoned none, so a few in a row always bring one; a summon
+  // starts the count over. Kept across page navigations.
+  const SUMMON_BASE = 0.1;
+  const SUMMON_STEP = 0.15;
+  let missedSummons = 0;
+  // Pieces of debris scattered around the pointer by a summoning click, a whole number in this range.
+  const DEBRIS = [4, 7];
 
   // How a star's run ends: it bursts, with or without its grid coordinate, or it passes out of view.
   type Ending = 'labelled' | 'burst' | 'pass';
@@ -229,18 +238,72 @@
       }
     };
 
+    const showing = () =>
+      document.visibilityState === 'visible' &&
+      !reducedMotion.matches &&
+      !document.documentElement.hasAttribute('data-page-entering') &&
+      getComputedStyle(layer).display !== 'none';
+
     const schedule = (range: number[]) => {
       scope.timeout(() => {
-        const showing =
-          document.visibilityState === 'visible' &&
-          !reducedMotion.matches &&
-          !document.documentElement.hasAttribute('data-page-entering') &&
-          getComputedStyle(layer).display !== 'none';
-        if (showing) spawn();
+        if (showing()) spawn();
         schedule(NEXT);
       }, between(range) * 1000);
     };
     schedule(FIRST);
+
+    // Debris bursting out around the pointer when a click summons a star: 4–7 thin diamonds of mixed lengths and
+    // blues fly out in all directions to 0.3–0.9 tiles, each pointing along its flight and turning a little as it
+    // slows, and fade.
+    const scatter = (x: number, y: number) => {
+      const size = Math.min(window.innerWidth, window.innerHeight) * 0.1;
+      const count = Math.floor(between([DEBRIS[0], DEBRIS[1] + 1]));
+      for (let index = 0; index < count; index++) {
+        const angle = ((index + Math.random() * 0.8) / count) * Math.PI * 2;
+        const heading = (angle * 180) / Math.PI;
+        const reach = size * between([0.3, 0.9]);
+        const turn = between([15, 60]) * (Math.random() < 0.5 ? -1 : 1);
+        const piece = span('star-debris');
+        piece.style.left = `${x}px`;
+        piece.style.top = `${y}px`;
+        piece.style.setProperty('--length', `${between([9, 15]).toFixed(1)}px`);
+        if (Math.random() < 0.4) piece.classList.add('is-light');
+        layer.append(piece);
+        // The flight starts at about three times its average speed and eases out; the fade runs on its own linear
+        // clock, so the pieces stay visible while they slow down instead of fading with the flight's quick start.
+        const duration = between([600, 1000]);
+        piece.animate(
+          [
+            { transform: `translate(0, 0) rotate(${heading}deg) scale(1)` },
+            { transform: `translate(${Math.cos(angle) * reach}px, ${Math.sin(angle) * reach}px) rotate(${heading + turn}deg) scale(0.55)` },
+          ],
+          { duration, easing: 'cubic-bezier(0.2, 0.6, 0.35, 1)' },
+        );
+        piece.animate(
+          [{ opacity: 0 }, { opacity: 0.75, offset: 0.05 }, { opacity: 0.6, offset: 0.55 }, { opacity: 0 }],
+          { duration },
+        ).finished.finally(() => piece.remove());
+      }
+    };
+
+    // A summoned star flies in along the diagonal through the grid intersection nearest the click, entering just
+    // beyond the top or left edge, and bursts there, where `GridMarks` rings the same intersection; debris
+    // bursts out around the pointer as it is summoned.
+    scope.listen(document, 'click', (event: MouseEvent) => {
+      if (event.defaultPrevented || event.button !== 0 || !showing()) return;
+      if (pointsAtContent(event.target, event.clientX, event.clientY)) return;
+      if (Math.random() >= SUMMON_BASE + SUMMON_STEP * missedSummons) {
+        missedSummons += 1;
+        return;
+      }
+      missedSummons = 0;
+      scatter(event.clientX, event.clientY);
+      const size = Math.min(window.innerWidth, window.innerHeight) * 0.1;
+      const column = Math.round(event.clientX / size - 0.5);
+      const row = Math.round(event.clientY / size - 0.5);
+      const steps = Math.min(column, row) + 1;
+      launch(column - steps, row - steps, steps, 'labelled');
+    });
   });
 </script>
 
@@ -277,6 +340,21 @@
     height: 1px;
     background: linear-gradient(90deg, transparent, rgba($primary-blue, 0.06) 45%, rgba($primary-blue, 0.4));
     transform-origin: right;
+  }
+
+  // Debris from a summoning click: thin diamonds, `--length` long and a quarter as wide, laid along their flight
+  // (their x axis), some in the lighter blue.
+  .shooting-stars :global(.star-debris) {
+    width: var(--length);
+    height: calc(var(--length) * 0.28);
+    clip-path: polygon(0 50%, 50% 0, 100% 50%, 50% 100%);
+    background: $primary-blue;
+    opacity: 0;
+    translate: -50% -50%;
+
+    &:global(.is-light) {
+      background: $light-blue;
+    }
   }
 
   // Square on the turned anchor, so it shows as the diamond `GridMarks` marks its intersection with.
