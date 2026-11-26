@@ -111,31 +111,59 @@ onPageLoad((scope) => {
   }
 
   // Items rise into place line by line, unveiled through a soft clip that opens from the travel side.
+  // Inside a row, `[data-pop]` items (the About tags) pop in one by one just after it, and `[data-mark]`
+  // keywords sweep their stripe in from the left once it has settled; both rest in their final state.
   function revealIn(section, direction) {
     const down = direction === "down"
     const hiddenClip = down ? "inset(100% -10% -25% -10%)" : "inset(-25% -10% 100% -10%)"
+    let marks = 0
     return guardSection(
       section,
       track(
-        revealItems(section).map((item, index) =>
-          item.animate(
-            [
-              {
-                opacity: 0,
-                transform: `translateY(${down ? 2.25 : -2.25}rem)`,
-                filter: "blur(8px)",
-                clipPath: hiddenClip,
-              },
-              {
-                opacity: 1,
-                transform: "translateY(0)",
-                filter: "blur(0)",
-                clipPath: "inset(-25% -10% -25% -10%)",
-              },
-            ],
-            { duration: 820, delay: 120 + index * 85, easing: easeOut, fill: "backwards" },
-          ),
-        ),
+        revealItems(section).flatMap((item, index) => {
+          const delay = 120 + index * 85
+          return [
+            item.animate(
+              [
+                {
+                  opacity: 0,
+                  transform: `translateY(${down ? 2.25 : -2.25}rem)`,
+                  filter: "blur(8px)",
+                  clipPath: hiddenClip,
+                },
+                {
+                  opacity: 1,
+                  transform: "translateY(0)",
+                  filter: "blur(0)",
+                  clipPath: "inset(-25% -10% -25% -10%)",
+                },
+              ],
+              { duration: 820, delay, easing: easeOut, fill: "backwards" },
+            ),
+            ...Array.from(item.querySelectorAll("[data-pop]"), (pop, popIndex) =>
+              pop.animate(
+                [
+                  { opacity: 0, transform: "scale(0.6)", filter: "blur(4px)" },
+                  { opacity: 1, transform: "scale(1)", filter: "blur(0)" },
+                ],
+                {
+                  duration: 520,
+                  delay: delay + 220 + popIndex * 90,
+                  easing: "cubic-bezier(0.34, 1.4, 0.64, 1)",
+                  fill: "backwards",
+                },
+              ),
+            ),
+            ...Array.from(item.querySelectorAll("[data-mark]"), (mark) =>
+              mark.animate([{ backgroundSize: "0% 45%" }, { backgroundSize: "100% 45%" }], {
+                duration: 700,
+                delay: delay + 620 + marks++ * 280,
+                easing: easeOut,
+                fill: "backwards",
+              }),
+            ),
+          ]
+        }),
       ),
     )
   }

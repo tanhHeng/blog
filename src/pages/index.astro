@@ -8,6 +8,10 @@ import { friendLinks } from '../lib/friends';
 import '../styles/global.scss';
 
 const chapters = ['Prologue', 'About', 'Recent', 'Coda'];
+// The About copy follows the GitHub profile README (github.com/tanhHeng/tanhHeng), as `about.astro` does.
+// Its identity word cycles through these (`src/scripts/aboutIdentity.ts`). Keep them the same length: the
+// word sits inline in the paragraph, so a longer one would reflow the lines around it.
+const identities = ['深度学习爱好者', '开源工具开发者', '业余平面设计师'];
 // Recent mixes articles with GitHub pushes and releases (one per repository), newest first.
 const recentCount = 4;
 // GitHub reports UTC times; show them on the author's calendar, like the article dates.
@@ -98,17 +102,17 @@ const codaKeys = pianoKeys.map((black, index) => {
 			</section>
 			<section class="aboutme-content" hidden>
 				<h2 class="title" data-reveal>About Me</h2>
-				<p class="text" data-reveal>这里是 tanh丶桁~一名深度学习爱好者，同时也是业余平面设计师，在代码、算法与视觉之间反复横跳的交叉领域探索者。<br>我热衷于用技术解决实际问题，也用设计表达技术背后的温度。GitHub 是我沉淀技术思考、与社区协作共创的地方——你看到的每个仓库都是我某一领域的实践痕迹。</p>
+				<p class="text" data-reveal>这里是 tanh丶桁～一名<span class="about-identity about-mark" aria-hidden="true" data-mark data-identities={JSON.stringify(identities)}><span class="about-identity-word">{identities[0]}</span></span><span class="about-identity-all">{identities.join('、')}</span>，在深度学习、软件开发、Minecraft 工具与平面设计之间探索，想把想象做成实用的系统、清晰的解释，以及<span class="about-mark" data-mark>认真打磨的界面</span>。<br>现在正在构建这座博客，主催社区协作的技术 Minecraft 教材 <a class="link-underline" href="https://techmc.wiki" target="_blank" rel="noreferrer" title="Graduate Texts in Minecraft">GTMC</a>，也在 <a class="link-underline" href="https://github.com/LazyAlienServer" target="_blank" rel="noreferrer">LazyAlienServer</a> 参与 Minecraft 服务端工具的建设。</p>
 				<div class="tags" data-reveal>
 					<p class="tag-title">language</p>
-					{["python", "java"].map((lang) => (
-						<p class="tag">{lang}</p>
+					{["python", "java", "typescript"].map((lang) => (
+						<p class="tag" data-pop>{lang}</p>
 					))}
 				</div>
 				<div class="tags" data-reveal>
 					<p class="tag-title">interest</p>
-					{["sleep", "eat", "graphic design", "deep learning"].map((interest) => (
-						<p class="tag">{interest}</p>
+					{["deep learning", "minecraft", "graphic design", "sleep", "eat"].map((interest) => (
+						<p class="tag" data-pop>{interest}</p>
 					))}
 				</div>
 				<span class="about-signature" role="img" aria-label="tanh_Heng" data-reveal></span>
@@ -165,6 +169,7 @@ const codaKeys = pianoKeys.map((black, index) => {
 </BaseLayout>
 
 <script src="../scripts/home.js"></script>
+<script src="../scripts/aboutIdentity.ts"></script>
 
 <style scoped lang="scss">
 @use '../styles/global.scss' as *;
@@ -227,7 +232,9 @@ p {
 	z-index: 2;
 	pointer-events: none;
 
-	section.is-active a {
+	// Only what reacts to the pointer takes it: links, the About tags (hover diamond), and the identity
+	// word (held while hovered); the rest lets it through to the scroll sections beneath.
+	section.is-active :is(a, .tag, .about-identity) {
 		pointer-events: auto;
 	}
 }
@@ -518,6 +525,36 @@ p {
 		color: $content-color;
 		line-height: 2;
 		margin: 0;
+
+		a {
+			color: $primary-blue;
+		}
+	}
+
+	// Keywords carry the navbar's light-blue stripe behind the lower part of the line; `home.js` sweeps it in
+	// from the left once the paragraph has risen into place. On the identity it sits on the wrapper, not the
+	// cycling words, so `aboutIdentity.ts` can blur the words without blurring it. Marks never break across
+	// lines, so the sweep reads as one stroke.
+	.about-mark {
+		background: linear-gradient($ex-light-blue, $ex-light-blue) left bottom / 100% 45% no-repeat;
+		white-space: nowrap;
+	}
+
+	// The wrapper stays inline: as an inline-block its box would be the whole 2em line, and its stripe, 45% of
+	// that, thicker and lower than the other marks'. While the identity changes, `aboutIdentity.ts` sets the
+	// leaving copy inline just before the new word, taking no room, so both share one baseline.
+	:global(.about-identity-ghost) {
+		pointer-events: none;
+	}
+
+	// Every identity at once for screen readers; the cycling word alone would hide all but one.
+	.about-identity-all {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip-path: inset(50%);
+		white-space: nowrap;
 	}
 
 	.tags {
@@ -534,9 +571,28 @@ p {
 			margin: 0;
 		}
 
+		// Hovering a tag sets a small diamond in the gap before it, the shape of the site's pointer cursor,
+		// turning in from a square as Recent's index does.
 		.tag {
+			position: relative;
 			font-weight: normal;
 			margin: 0;
+
+			&::before {
+				position: absolute;
+				top: 50%;
+				left: -0.6em;
+				width: 0.32em;
+				height: 0.32em;
+				background: $light-blue;
+				content: '';
+				transform: translateY(-50%) rotate(0deg) scale(0);
+				transition: transform 420ms cubic-bezier(0.34, 1.4, 0.64, 1);
+			}
+
+			&:hover::before {
+				transform: translateY(-50%) rotate(45deg) scale(1);
+			}
 		}
 	}
 
