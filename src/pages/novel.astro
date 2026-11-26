@@ -195,7 +195,10 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
 
     <button class="motion-toggle" type="button" data-motion-toggle aria-pressed="false">
       <span class="motion-icon" aria-hidden="true"></span>
-      <span class="motion-label">Pause</span>
+      <span class="motion-label">
+        <span data-motion-label="pause">Pause</span>
+        <span data-motion-label="play" aria-hidden="true">Play</span>
+      </span>
     </button>
 
     <!-- View all: a blank sheet that only points to the contents, which open beside it (wide) or above it,
@@ -960,7 +963,9 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
       if (playing) void video.play().catch(() => setPlaying(false));
       else video.pause();
       motionToggle.setAttribute('aria-pressed', String(!playing));
-      motionToggle.querySelector('.motion-label')!.textContent = playing ? 'Pause' : 'Play';
+      for (const label of motionToggle.querySelectorAll<HTMLElement>('[data-motion-label]')) {
+        label.ariaHidden = String((label.dataset.motionLabel === 'pause') !== playing);
+      }
       root.classList.toggle('is-paused', !playing);
     };
     scope.listen(motionToggle, 'click', () => setPlaying(video.paused));
@@ -2069,6 +2074,9 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     }
   }
 
+  // The icon morphs between its two shapes: both halves are clipped from one full-size fill, as polygons
+  // with matching points so `clip-path` interpolates. Paused, the left bar stretches out into the triangle
+  // and the right bar draws into its tip; playing, they part again.
   .motion-icon {
     position: relative;
     width: 0.7rem;
@@ -2077,36 +2085,48 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     &::before,
     &::after {
       position: absolute;
-      top: 0;
-      bottom: 0;
-      width: 2px;
+      inset: 0;
       background: currentColor;
       content: '';
+      transition: clip-path 420ms cubic-bezier(0.65, 0, 0.35, 1);
     }
 
     &::before {
-      left: 0.1rem;
+      clip-path: polygon(0.1rem 0, calc(0.1rem + 2px) 0, calc(0.1rem + 2px) 100%, 0.1rem 100%);
     }
 
     &::after {
-      right: 0.1rem;
+      clip-path: polygon(calc(0.6rem - 2px) 0, 0.6rem 0, 0.6rem 100%, calc(0.6rem - 2px) 100%);
     }
   }
 
   .is-paused .motion-icon {
     &::before {
-      left: 0.1rem;
-      width: 0;
-      height: 0;
-      border-top: 0.4rem solid transparent;
-      border-bottom: 0.4rem solid transparent;
-      border-left: 0.6rem solid currentColor;
-      background: none;
+      clip-path: polygon(0.1rem 0, 0.7rem 0.4rem, 0.7rem 0.4rem, 0.1rem 100%);
     }
 
     &::after {
-      display: none;
+      clip-path: polygon(0.7rem 0.4rem, 0.7rem 0.4rem, 0.7rem 0.4rem, 0.7rem 0.4rem);
     }
+  }
+
+  // Both words share one grid cell, so the button keeps the longer word's width and the icon stays put;
+  // the leaving word blurs out while the arriving one fades in from a blur.
+  .motion-label {
+    display: grid;
+
+    > span {
+      grid-area: 1 / 1;
+      transition:
+        opacity 360ms ease,
+        filter 360ms ease;
+    }
+  }
+
+  .novel:not(.is-paused) [data-motion-label='play'],
+  .is-paused [data-motion-label='pause'] {
+    opacity: 0;
+    filter: blur(4px);
   }
 
   // Panels ---------------------------------------------------------------------
@@ -3041,7 +3061,10 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
 
     .swap > span,
     .novel-flow,
-    .motion-toggle {
+    .motion-toggle,
+    .motion-icon::before,
+    .motion-icon::after,
+    .motion-label > span {
       transition: none;
     }
 
