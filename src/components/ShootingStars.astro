@@ -140,9 +140,9 @@
         return;
       }
 
-      // The burst, where the star burns out: the carried ring blows out and fades, four shards fly out along the
-      // grid's row and column onto the neighbouring intersections, which tick as they arrive, and a thin ring
-      // follows it out.
+      // The burst, where the star burns out: the carried ring blows out and fades, four thin diamonds like the
+      // summoning debris fly out along the grid's row and column onto the neighbouring intersections, which tick
+      // as they arrive, and a thin ring follows it out.
       const end = at(steps);
       const burst = place(span('star-burst'), end.x, end.y);
       burst.style.setProperty('--carry', `${size * CARRY}px`);
@@ -165,16 +165,24 @@
         const angle = (index * Math.PI) / 2;
         const dx = Math.round(Math.cos(angle)) * size;
         const dy = Math.round(Math.sin(angle)) * size;
-        const shard = place(span('star-shard'), end.x, end.y);
-        finished.push(shard.animate(
-          [
-            { transform: 'translate(0, 0) rotate(45deg) scale(1.1)', opacity: 0 },
-            { opacity: 0.55, offset: 0.08 },
-            { transform: `translate(${dx}px, ${dy}px) rotate(45deg) scale(0.4)`, opacity: 0 },
-          ],
-          { duration: 760, delay: duration, easing: outward, fill: 'backwards' },
-        ).finished);
-        tick(end.x + dx, end.y + dy, duration + 260, 0.35);
+        const shard = place(span('star-debris'), end.x, end.y);
+        shard.style.setProperty('--length', `${between([10, 13]).toFixed(1)}px`);
+        // Pointing along the row or column it flies down; the fade runs on its own linear clock, so the shard
+        // stays visible while it slows towards the intersection.
+        finished.push(
+          shard.animate(
+            [
+              { transform: `translate(0, 0) rotate(${index * 90}deg) scale(1)` },
+              { transform: `translate(${dx}px, ${dy}px) rotate(${index * 90}deg) scale(0.5)` },
+            ],
+            { duration: 760, delay: duration, easing: 'cubic-bezier(0.2, 0.6, 0.35, 1)' },
+          ).finished,
+          shard.animate(
+            [{ opacity: 0 }, { opacity: 0.75, offset: 0.06 }, { opacity: 0.6, offset: 0.55 }, { opacity: 0 }],
+            { duration: 760, delay: duration },
+          ).finished,
+        );
+        tick(end.x + dx, end.y + dy, duration + 260, 0.4);
       }
 
       if (ending === 'labelled') {
@@ -342,8 +350,8 @@
     transform-origin: right;
   }
 
-  // Debris from a summoning click: thin diamonds, `--length` long and a quarter as wide, laid along their flight
-  // (their x axis), some in the lighter blue.
+  // Debris from a summoning click and the shards of a burst: thin diamonds, `--length` long and 0.28 as wide,
+  // laid along their flight (their x axis), some summoning debris in the lighter blue.
   .shooting-stars :global(.star-debris) {
     width: var(--length);
     height: calc(var(--length) * 0.28);
@@ -380,15 +388,6 @@
 
   .shooting-stars :global(.star-burst) {
     opacity: 0;
-  }
-
-  // A diamond like the head; it turns through its animated `transform`, after the move, so it flies straight.
-  .shooting-stars :global(.star-shard) {
-    width: 2.5px;
-    height: 2.5px;
-    background: $primary-blue;
-    opacity: 0;
-    translate: -50% -50%;
   }
 
   .shooting-stars :global(.star-spark) {
