@@ -569,29 +569,42 @@ p {
 		.tag-title {
 			font-weight: bold;
 			margin: 0;
+			transition: color 300ms ease-out;
 		}
 
-		// Hovering a tag sets a small diamond in the gap before it, the shape of the site's pointer cursor,
-		// turning in from a square as Recent's index does.
+		// Hovering a tag sweeps the navbar's light-blue stripe in from the left behind its lower part; leaving
+		// sweeps it out to the right (pinned right at rest, left on hover: a jump only `background-size`
+		// transitions over). The rest of the row recedes meanwhile.
 		.tag {
-			position: relative;
 			font-weight: normal;
 			margin: 0;
+			background: linear-gradient($ex-light-blue, $ex-light-blue) right bottom / 0% 45% no-repeat;
+			transition:
+				background-size 420ms cubic-bezier(0.22, 1, 0.36, 1),
+				opacity 300ms ease-out;
+		}
 
-			&::before {
-				position: absolute;
-				top: 50%;
-				left: -0.6em;
-				width: 0.32em;
-				height: 0.32em;
-				background: $light-blue;
-				content: '';
-				transform: translateY(-50%) rotate(0deg) scale(0);
-				transition: transform 420ms cubic-bezier(0.34, 1.4, 0.64, 1);
+		@media (hover: hover) {
+			.tag:hover {
+				background-position: left bottom;
+				background-size: 100% 45%;
 			}
 
-			&:hover::before {
-				transform: translateY(-50%) rotate(45deg) scale(1);
+			&:has(.tag:hover) {
+				.tag:not(:hover) {
+					opacity: 0.45;
+				}
+
+				.tag-title {
+					color: $light-blue;
+				}
+			}
+		}
+
+		@media (prefers-reduced-motion: reduce) {
+			.tag,
+			.tag-title {
+				transition: none;
 			}
 		}
 	}
