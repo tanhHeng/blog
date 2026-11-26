@@ -30,9 +30,9 @@
   const BURST = 1.6;
   // Fraction of the fall's time at which the star reaches `distance` (0–1) of its run.
   const timeAt = (distance: number) => distance ** (1 / ACCEL);
-  // Chance that a second star follows on the next diagonal over, `PAIR_DELAY` ms later.
+  // Chance that a second star follows on the next diagonal over, `PAIR_DELAY` seconds later.
   const PAIR_CHANCE = 0.18;
-  const PAIR_DELAY = 260;
+  const PAIR_DELAY = [0.75, 1.5];
   // Chance that a star passes through instead of burning out: it crosses the viewport and leaves it past the
   // bottom or right edge, without a burst. It runs at least `PASS_MIN` steps.
   const PASS_CHANCE = 0.25;
@@ -225,7 +225,7 @@
       // two steps less, so it too starts outside and ends inside.
       if (Math.random() < PAIR_CHANCE) {
         const [followColumn, followRow] = row === -1 ? [column + 2, row] : [column, row + 2];
-        scope.timeout(() => launch(followColumn, followRow, steps - 2, 'burst'), PAIR_DELAY);
+        scope.timeout(() => launch(followColumn, followRow, steps - 2, 'burst'), between(PAIR_DELAY) * 1000);
       }
     };
 
