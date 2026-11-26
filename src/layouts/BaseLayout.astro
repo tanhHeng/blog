@@ -3,6 +3,7 @@ import { ClientRouter } from 'astro:transitions';
 import Navbar from '../components/Navbar.astro';
 import DynamicCircles from '../components/DynamicCircles.astro';
 import GridMarks from '../components/GridMarks.astro';
+import ShootingStars from '../components/ShootingStars.astro';
 import MouseCircle from '../components/MouseCircle.astro';
 import PageTransitionVeil from '../components/PageTransitionVeil.astro';
 import '../styles/global.scss';
@@ -53,6 +54,7 @@ const entryVariant = routes[routePath(Astro.url.pathname)]?.variant ?? 'plain';
     <!-- First in the body, so a full page load's entry veil is in place before anything else can paint. -->
     <PageTransitionVeil variant={entryVariant} />
     <DynamicCircles />
+    <ShootingStars />
     <GridMarks />
     <MouseCircle />
     <Navbar activePage={activePage} />

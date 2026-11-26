@@ -1,0 +1,244 @@
+---
+// Shooting stars over the site background, drawn on the `DynamicCircles` mask grid: every few seconds a star
+// runs down one of the grid's `\` diagonals from intersection to intersection, each intersection it crosses
+// flashes a tick, and where it burns out a small ring opens with that intersection's grid coordinate, as
+// `GridMarks` labels it. Now and then a second star follows on the neighbouring diagonal.
+---
+
+<div class="shooting-stars" id="shooting-stars" transition:persist="shooting-stars" aria-hidden="true"></div>
+
+<script>
+  import { onPageLoad } from '../lib/pageLifecycle';
+
+  // Seconds between stars: the first comes `FIRST` after a page loads, later ones `NEXT` apart.
+  const FIRST = [2, 5];
+  const NEXT = [5, 12];
+  // Grid steps one star runs, and milliseconds per step.
+  const STEPS = [6, 10];
+  const STEP_TIME = 110;
+  // Chance that a second star follows on the next diagonal over, `PAIR_DELAY` ms later.
+  const PAIR_CHANCE = 0.18;
+  const PAIR_DELAY = 260;
+
+  const between = ([min, max]: number[]) => min + Math.random() * (max - min);
+  const span = (className: string) => {
+    const element = document.createElement('span');
+    element.className = className;
+    return element;
+  };
+
+  onPageLoad((scope) => {
+    const layer = document.getElementById('shooting-stars');
+    if (!layer) return;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    // Same tile as the `DynamicCircles` mask (`min(10vh, 10vw)` from the viewport corner): the tile's cross
+    // meets at its centre, and its diagonal runs corner to corner through that centre, so a diagonal links
+    // the intersections `(column + 0.5, row + 0.5)` tile by tile.
+    const launch = (column: number, row: number, steps: number, labelled: boolean) => {
+      const size = Math.min(window.innerWidth, window.innerHeight) * 0.1;
+      const at = (step: number) => ({ x: (column + step + 0.5) * size, y: (row + step + 0.5) * size });
+      const start = at(0);
+      const duration = steps * STEP_TIME;
+      const finished: Promise<unknown>[] = [];
+      const parts: Element[] = [];
+
+      const star = span('star');
+      star.style.left = `${start.x}px`;
+      star.style.top = `${start.y}px`;
+      star.style.setProperty('--tail', `${size * 3.2 * Math.SQRT2}px`);
+      const tail = star.appendChild(span('star-tail'));
+      const head = star.appendChild(span('star-head'));
+      layer.append(star);
+      parts.push(star);
+      finished.push(
+        star.animate([{ transform: 'translateX(0)' }, { transform: `translateX(${steps * size * Math.SQRT2}px)` }], { duration }).finished,
+        tail.animate(
+          [
+            { scale: '0 1', opacity: 0 },
+            { scale: '1 1', opacity: 1, offset: 0.35 },
+            { scale: '1 1', opacity: 1, offset: 0.8 },
+            { scale: '0.15 1', opacity: 0 },
+          ],
+          { duration, easing: 'ease-out' },
+        ).finished,
+        head.animate(
+          [
+            { opacity: 0, scale: '0.4' },
+            { opacity: 1, scale: '1', offset: 0.12 },
+            { opacity: 1, scale: '1', offset: 0.88 },
+            { opacity: 0, scale: '0.3' },
+          ],
+          { duration },
+        ).finished,
+      );
+
+      // Ticks light up as the head crosses each intersection and fade behind it.
+      for (let step = 1; step < steps; step++) {
+        const point = at(step);
+        const spark = span('star-spark');
+        spark.style.left = `${point.x}px`;
+        spark.style.top = `${point.y}px`;
+        layer.append(spark);
+        parts.push(spark);
+        finished.push(spark.animate(
+          [{ opacity: 0, scale: '0.3' }, { opacity: 0.7, scale: '1', offset: 0.12 }, { opacity: 0, scale: '1' }],
+          { duration: 1400, delay: (duration * step) / steps, easing: 'ease-out', fill: 'backwards' },
+        ).finished);
+      }
+
+      if (labelled) {
+        const end = at(steps);
+        const ring = span('star-ring');
+        const label = span('star-label');
+        for (const element of [ring, label]) {
+          element.style.left = `${end.x}px`;
+          element.style.top = `${end.y}px`;
+          layer.append(element);
+          parts.push(element);
+        }
+        ring.style.setProperty('--tile', `${size}px`);
+        label.textContent = `${String(column + steps + 1).padStart(2, '0')} · ${String(row + steps + 1).padStart(2, '0')}`;
+        const delay = duration * 0.9;
+        finished.push(
+          ring.animate(
+            [{ opacity: 0.9, scale: '0.1' }, { opacity: 0, scale: '1' }],
+            { duration: 1100, delay, easing: 'cubic-bezier(0.2, 0.7, 0.3, 1)', fill: 'backwards' },
+          ).finished,
+          label.animate(
+            [{ opacity: 0, translate: '0 3px' }, { opacity: 1, translate: '0 0', offset: 0.2 }, { opacity: 1, offset: 0.6 }, { opacity: 0 }],
+            { duration: 2200, delay, easing: 'ease-out', fill: 'backwards' },
+          ).finished,
+        );
+      }
+
+      // A star still running when the page changes finishes on the persisted layer, then goes.
+      Promise.allSettled(finished).then(() => {
+        for (const part of parts) part.remove();
+      });
+    };
+
+    const spawn = () => {
+      const size = Math.min(window.innerWidth, window.innerHeight) * 0.1;
+      const columns = Math.ceil(window.innerWidth / size);
+      const rows = Math.ceil(window.innerHeight / size);
+      const steps = Math.round(between(STEPS));
+      const column = Math.floor(between([-3, columns * 0.75]));
+      const row = Math.floor(between([-3, rows * 0.45]));
+      launch(column, row, steps, true);
+      if (Math.random() < PAIR_CHANCE) scope.timeout(() => launch(column + 2, row - 1, steps - 2, false), PAIR_DELAY);
+    };
+
+    const schedule = (range: number[]) => {
+      scope.timeout(() => {
+        const showing =
+          document.visibilityState === 'visible' &&
+          !reducedMotion.matches &&
+          !document.documentElement.hasAttribute('data-page-entering') &&
+          getComputedStyle(layer).display !== 'none';
+        if (showing) spawn();
+        schedule(NEXT);
+      }, between(range) * 1000);
+    };
+    schedule(FIRST);
+  });
+</script>
+
+<style lang="scss">
+  @use '../styles/global.scss' as *;
+
+  .shooting-stars {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .shooting-stars > :global(*) {
+    position: absolute;
+  }
+
+  // A zero-size anchor at the head, turned onto the grid's diagonal; the head moves along its x axis.
+  .shooting-stars :global(.star) {
+    width: 0;
+    height: 0;
+    rotate: 45deg;
+  }
+
+  .shooting-stars :global(.star-tail) {
+    position: absolute;
+    top: -0.5px;
+    right: 0;
+    width: var(--tail);
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba($primary-blue, 0.12) 45%, rgba($primary-blue, 0.8));
+    transform-origin: right;
+  }
+
+  // Square on the turned anchor, so it shows as the diamond `GridMarks` marks its intersection with.
+  .shooting-stars :global(.star-head) {
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    background: $primary-blue;
+    box-shadow: 0 0 0 2px rgba($ex-light-blue, 0.9), 0 0 10px 3px rgba($light-blue, 0.7);
+    translate: -50% -50%;
+  }
+
+  .shooting-stars :global(.star-spark) {
+    width: 9px;
+    height: 9px;
+    opacity: 0;
+    translate: -50% -50%;
+
+    &::before,
+    &::after {
+      position: absolute;
+      background: $light-blue;
+      content: '';
+    }
+
+    &::before {
+      top: 4px;
+      left: 0;
+      width: 9px;
+      height: 1px;
+    }
+
+    &::after {
+      top: 0;
+      left: 4px;
+      width: 1px;
+      height: 9px;
+    }
+  }
+
+  .shooting-stars :global(.star-ring) {
+    width: calc(var(--tile) * 1.2);
+    height: calc(var(--tile) * 1.2);
+    border: 1px solid rgba($primary-blue, 0.4);
+    border-radius: 50%;
+    opacity: 0;
+    translate: -50% -50%;
+  }
+
+  .shooting-stars :global(.star-label) {
+    margin: 0.45rem 0 0 0.6rem;
+    color: $light-blue;
+    font-family: $font-family-heading;
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    white-space: nowrap;
+    opacity: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .shooting-stars {
+      display: none;
+    }
+  }
+</style>
