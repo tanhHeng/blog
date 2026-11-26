@@ -16,13 +16,6 @@ const identities = ['深度学习爱好者', '开源工具开发者', '业余平
 const recentCount = 4;
 // GitHub reports UTC times; show them on the author's calendar, like the article dates.
 const githubDate = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Shanghai' });
-// Commit messages and release names longer than this many characters end in an ellipsis; the full
-// text stays in the link's tooltip.
-const noteLimit = 40;
-const shorten = (text: string) => {
-	const characters = [...text];
-	return characters.length > noteLimit ? `${characters.slice(0, noteLimit - 1).join('').trimEnd()}…` : text;
-};
 const recentEntries = [
 	...articles.slice(0, recentCount).map((article) => ({
 		title: article.title,
@@ -40,8 +33,7 @@ const recentEntries = [
 		date: githubDate.format(activity.timestamp),
 		timestamp: activity.timestamp,
 		kind: 'GitHub',
-		note: shorten(activity.note),
-		fullNote: activity.note,
+		note: activity.note,
 		external: true,
 	})),
 ]
@@ -126,7 +118,7 @@ const codaKeys = pianoKeys.map((black, index) => {
 					<ol class="recent-list">
 						{recentEntries.map((entry, index) => (
 							<li data-reveal>
-								<a class="recent-container" href={entry.url} target={entry.external ? '_blank' : undefined} rel={entry.external ? 'noreferrer' : undefined} title={entry.note !== entry.fullNote ? entry.fullNote : undefined}>
+								<a class="recent-container" href={entry.url} target={entry.external ? '_blank' : undefined} rel={entry.external ? 'noreferrer' : undefined} title={entry.note}>
 									<span class="recent-index" aria-hidden="true"><span class="recent-index-text">{formatIndex(index + 1)}</span></span>
 									<span class="recent-info">
 										<span class="recent-title"><span class="recent-title-text">{entry.title}</span><span class="recent-arrow" aria-hidden="true">{entry.external ? '↗' : '→'}</span></span>
@@ -730,9 +722,10 @@ p {
 				transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
 		}
 
+		// One line at every width: the date and kind keep their size and the note takes whatever is left,
+		// ending in an ellipsis where it runs out (the link's tooltip carries it in full).
 		.recent-detail {
 			display: flex;
-			flex-wrap: wrap;
 			align-items: baseline;
 			gap: 0 1.2rem;
 			color: $light-blue;
@@ -740,20 +733,23 @@ p {
 			font-size: 0.8em;
 			letter-spacing: 0.04em;
 			line-height: 1.6;
+			white-space: nowrap;
+
+			> * {
+				flex: none;
+			}
 		}
 
 		// The note is a commit message or release name, not a label: the body face, not small caps.
-		// Long ones are already cut to `noteLimit`; the CSS ellipsis covers narrow columns.
-		.recent-note {
+		.recent-detail > .recent-note {
 			overflow: hidden;
+			flex: 0 1 auto;
 			min-width: 0;
-			max-width: 100%;
 			font-family: $font-family-default;
 			font-size: 0.8em;
 			letter-spacing: 0;
 			transition: color 300ms ease-out;
 			text-overflow: ellipsis;
-			white-space: nowrap;
 		}
 
 		&:hover,
