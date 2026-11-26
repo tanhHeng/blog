@@ -485,12 +485,13 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
     // The pointer washes the opening mist away like watercolour, showing the meadow sharp and saturated beneath,
     // only while the mist is still showing. Behind the opening's text and the navbar the mist resists the brush,
     // more towards the middle of each line, and never thins past a readable limit.
+    const mistShowing = () => intro < 1 && !root.classList.contains('is-browsing');
     paintMistBrush(root.querySelector<HTMLCanvasElement>('[data-stage-mist]')!, scope, {
       narrow,
       reducedMotion,
       video,
       frameRatio,
-      active: () => intro < 1 && !root.classList.contains('is-browsing'),
+      active: mistShowing,
       still: () => root.classList.contains('is-paused'),
       guards: [
         root.querySelector('.intro-copy')!,
@@ -592,18 +593,37 @@ const [moonPath, starPath] = [1, -1].map((sign) => Array.from({ length: 61 }, (_
       if (!glideFrame) goTo(next);
     });
 
+    // While the mist can be painted, a finger dragging over it paints, so only a flick glides there: a swipe whose
+    // speed over its last `FLICK_WINDOW` ms reaches `FLICK_SPEED` (px/ms). `touchTrail` keeps the moves of the
+    // latest window plus the one before it, so the lift can find where the finger was when its window began.
+    const FLICK_WINDOW = 120;
+    const FLICK_SPEED = 0.5;
     let touchStartY: number | undefined;
+    let touchTrail: { y: number; time: number }[] = [];
     scope.listen(window, 'touchstart', (event) => {
       touchStartY = event.touches.length === 1 ? event.touches[0].clientY : undefined;
+      touchTrail = touchStartY === undefined ? [] : [{ y: touchStartY, time: event.timeStamp }];
     }, { passive: true });
     scope.listen(window, 'touchmove', (event) => {
       if (!panelOpen() && event.touches.length === 1) event.preventDefault();
+      if (touchStartY === undefined) return;
+      touchTrail.push({ y: event.touches[0].clientY, time: event.timeStamp });
+      while (touchTrail.length > 1 && event.timeStamp - touchTrail[1].time >= FLICK_WINDOW) touchTrail.shift();
     }, { passive: false });
     scope.listen(window, 'touchend', (event) => {
       if (touchStartY === undefined || panelOpen() || glideFrame) return;
-      const distance = touchStartY - event.changedTouches[0].clientY;
+      const endY = event.changedTouches[0].clientY;
+      const distance = touchStartY - endY;
       touchStartY = undefined;
-      if (Math.abs(distance) > 40) goTo(currentStop + Math.sign(distance));
+      if (Math.abs(distance) <= 40) return;
+      if (mistShowing() && !reducedMotion.matches) {
+        const windowStart = event.timeStamp - FLICK_WINDOW;
+        let anchor = touchTrail[0];
+        for (const sample of touchTrail) if (sample.time <= windowStart) anchor = sample;
+        const span = Math.max(event.timeStamp - Math.max(anchor.time, windowStart), 1);
+        if (Math.abs(anchor.y - endY) / span < FLICK_SPEED) return;
+      }
+      goTo(currentStop + Math.sign(distance));
     });
 
     // Invariant: outside a glide (and an open panel) the page rests exactly on a scene. Anything that leaves it

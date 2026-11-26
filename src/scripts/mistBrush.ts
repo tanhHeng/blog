@@ -177,6 +177,10 @@ export function paintMistBrush(
   let target: Point | undefined
   let frame = 0
   let lastTime = 0
+  // The touch drawing the current stroke; after it lifts (`releasing`) the brush still catches up with the
+  // last point before it is dropped, so the stroke reaches where the finger left.
+  let touchId: number | undefined
+  let releasing = false
   // Seconds of cloud flow; it advances only while the clouds may move.
   let flow = 0
 
@@ -509,6 +513,10 @@ export function paintMistBrush(
       stroke(brush, next)
       brush = next
       chasing = Math.hypot(target.x - next.x, target.y - next.y) > 0.5
+      if (releasing && !chasing) {
+        brush = target = undefined
+        releasing = false
+      }
     }
     if (wetCells) {
       const dry = elapsed / DRY
@@ -537,11 +545,13 @@ export function paintMistBrush(
     return { x: (event.clientX - box.left) * RESOLUTION, y: (event.clientY - box.top) * RESOLUTION }
   }
 
+  // A mouse or pen paints as it moves; a touch wets a patch where it lands and paints while it drags.
   scope.listen(
     window,
     "pointermove",
     (event) => {
-      if (event.pointerType === "touch" || options.reducedMotion.matches || !options.active()) {
+      if (event.pointerType === "touch" && event.pointerId !== touchId) return
+      if (options.reducedMotion.matches || !options.active()) {
         brush = target = undefined
         return
       }
@@ -556,17 +566,34 @@ export function paintMistBrush(
     window,
     "pointerdown",
     (event) => {
-      if (event.pointerType !== "touch" || options.reducedMotion.matches || !options.active())
+      if (
+        event.pointerType !== "touch" ||
+        !event.isPrimary ||
+        options.reducedMotion.matches ||
+        !options.active()
+      )
         return
+      touchId = event.pointerId
+      releasing = false
       const point = toCanvas(event)
       wetAt(point.x, point.y, 0.9, radius * 1.3)
+      brush = { ...point }
+      target = point
       start()
     },
     { passive: true },
   )
 
-  scope.listen(document.documentElement, "pointerleave", () => {
-    brush = target = undefined
+  const release = (event: PointerEvent) => {
+    if (event.pointerId !== touchId) return
+    touchId = undefined
+    releasing = true
+  }
+  scope.listen(window, "pointerup", release)
+  scope.listen(window, "pointercancel", release)
+
+  scope.listen(document.documentElement, "pointerleave", (event) => {
+    if (event.pointerType !== "touch") brush = target = undefined
   })
 
   const resize = new ResizeObserver(drawMist)
